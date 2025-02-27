@@ -25,7 +25,7 @@ jobs:
           trim: true
 
       - name: Report knip results to pull request
-        uses: gitcoindev/knip-reporter@main
+        uses: ubiquity/knip-reporter@main
         with:
           verbose: true
           comment_id: ${{ github.workflow }}-reporter
