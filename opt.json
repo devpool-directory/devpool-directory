@@ -1,5 +1,5 @@
 {
-  "in": ["ubiquity", "ubiquity-os-marketplace", "0x4007/uad.ubq.fi", "ubiquity-os"],
+  "in": ["ubiquity", "ubiquity-os-marketplace", "0x4007/uad.ubq.fi", "ubiquity-os", "ondecentral"],
   "out": [
     "ubiquity/series-a",
     "ubiquity/hackbar",
@@ -7,7 +7,6 @@
     "ubiquity/card-issuance",
     "ubiquity/research",
     "ubiquity/recruiting",
-    "ubiquity/business-development",
     "ubiquity/ubiquibar",
     "ubiquity/ubiquibot",
     "ubiquity/ubiquibot-telegram"
