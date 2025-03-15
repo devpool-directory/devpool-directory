@@ -66,15 +66,12 @@ describe("GitHub items", () => {
   });
 
   test("Get DevPool labels", () => {
-    const res = getDirectoryIssueLabelsFromPartnerIssue(
-      {
-        ...githubDevpoolIssueTemplate,
-        html_url: "https://github.com/owner/repo",
-        node_id: "2",
-      },
-      "https://github.com/owner/repo"
-    );
-    expect(res).toMatchObject(["Pricing: 200 USD", "Partner: owner/repo", "id: 2", "Time: 1h"]);
+    const res = getDirectoryIssueLabelsFromPartnerIssue({
+      ...githubDevpoolIssueTemplate,
+      html_url: "https://github.com/owner/repo",
+      node_id: "2",
+    });
+    expect(res).toMatchObject(["id: 2", "Pricing: 200 USD", "Time: 1h"]);
   });
 
   test("Get repo urls", async () => {
@@ -103,6 +100,13 @@ describe("GitHub items", () => {
   });
 
   test("Get all issues", async () => {
+    db.repo.create({
+      id: 3,
+      name: DEVPOOL_REPO_NAME,
+      owner: DEVPOOL_OWNER_NAME,
+      html_url: "https://github.com/ubiquity/devpool-directory",
+    });
+
     db.issue.create({ ...githubDevpoolIssueTemplate, repo: DEVPOOL_REPO_NAME, owner: DEVPOOL_OWNER_NAME });
     const issues = await getRepositoryIssues(DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME);
     expect(issues).toMatchObject([githubDevpoolIssueTemplate]);
