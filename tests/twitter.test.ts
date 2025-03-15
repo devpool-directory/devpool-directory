@@ -23,11 +23,13 @@ describe("Twitter", () => {
     // Use jest.resetModules to ensure the module is reloaded with new env vars
     jest.resetModules();
 
-    await expect(async () => {
-      const { default: twitterHelper } = await import("../src/twitter/twitter");
-      () => twitterHelper;
-    }).rejects.toThrow("Twitter environment variables are not set");
+    const consoleSpy = jest.spyOn(console, "log").mockImplementation(jest.fn());
 
+    const { default: twitterHelper } = await import("../src/twitter/twitter");
+    () => twitterHelper;
+    expect(consoleSpy).toHaveBeenCalledWith("Twitter environment variables not found! Skipping sync to social media.");
+
+    consoleSpy.mockRestore();
     process.env = originalEnv;
   });
 
@@ -43,11 +45,13 @@ describe("Twitter", () => {
     // Use jest.resetModules to ensure the module is reloaded with new env vars
     jest.resetModules();
 
-    await expect(async () => {
-      const { default: twitterHelper } = await import("../src/twitter/twitter");
-      console.log(twitterHelper);
-    }).rejects.toThrow("Twitter environment variables are not set");
+    const consoleSpy = jest.spyOn(console, "log").mockImplementation(jest.fn());
 
+    const { default: twitterHelper } = await import("../src/twitter/twitter");
+    () => twitterHelper;
+    expect(consoleSpy).toHaveBeenCalledWith("Twitter environment variables not found! Skipping sync to social media.");
+
+    consoleSpy.mockRestore();
     process.env = originalEnv;
   });
 
@@ -63,11 +67,13 @@ describe("Twitter", () => {
     // Use jest.resetModules to ensure the module is reloaded with new env vars
     jest.resetModules();
 
-    await expect(async () => {
-      const { default: twitterHelper } = await import("../src/twitter/twitter");
-      console.log(twitterHelper);
-    }).rejects.toThrow("Twitter environment variables are not set");
+    const consoleSpy = jest.spyOn(console, "log").mockImplementation(jest.fn());
 
+    const { default: twitterHelper } = await import("../src/twitter/twitter");
+    () => twitterHelper;
+    expect(consoleSpy).toHaveBeenCalledWith("Twitter environment variables not found! Skipping sync to social media.");
+
+    consoleSpy.mockRestore();
     process.env = originalEnv;
   });
 
@@ -83,11 +89,13 @@ describe("Twitter", () => {
     // Use jest.resetModules to ensure the module is reloaded with new env vars
     jest.resetModules();
 
-    await expect(async () => {
-      const { default: twitterHelper } = await import("../src/twitter/twitter");
-      console.log(twitterHelper);
-    }).rejects.toThrow("Twitter environment variables are not set");
+    const consoleSpy = jest.spyOn(console, "log").mockImplementation(jest.fn());
 
+    const { default: twitterHelper } = await import("../src/twitter/twitter");
+    () => twitterHelper;
+    expect(consoleSpy).toHaveBeenCalledWith("Twitter environment variables not found! Skipping sync to social media.");
+
+    consoleSpy.mockRestore();
     process.env = originalEnv;
   });
 
@@ -103,15 +111,18 @@ describe("Twitter", () => {
     // Use jest.resetModules to ensure the module is reloaded with new env vars
     jest.resetModules();
 
-    await expect(async () => {
-      const { default: twitterHelper } = await import("../src/twitter/twitter");
-      console.log(twitterHelper);
-    }).rejects.toThrow("Twitter environment variables are not set");
+    const consoleSpy = jest.spyOn(console, "log").mockImplementation(jest.fn());
 
+    const { default: twitterHelper } = await import("../src/twitter/twitter");
+    () => twitterHelper;
+    expect(consoleSpy).toHaveBeenCalledWith("Twitter environment variables not found! Skipping sync to social media.");
+
+    consoleSpy.mockRestore();
     process.env = originalEnv;
   });
 
   test("Post Tweet successfully", async () => {
+    const logSpy = jest.spyOn(console, "log").mockImplementation(jest.fn());
     dotenv.config({
       override: true,
     });
@@ -119,9 +130,16 @@ describe("Twitter", () => {
     process.env.TWITTER_API_KEY_SECRET = "foobar";
     process.env.TWITTER_ACCESS_TOKEN = "foobar";
     process.env.TWITTER_ACCESS_TOKEN_SECRET = "foobar";
-    const twitter = (await import("../src/twitter/twitter")).default;
-    const res = await twitter.postTweet("status");
-    expect(res).not.toBeUndefined();
+
+    jest.resetModules();
+
+    const { default: twitterHelper } = await import("../src/twitter/twitter");
+    const tweet = await twitterHelper.postTweet("status");
+
+    expect(tweet).not.toBeUndefined();
+    expect(logSpy).toHaveBeenCalledWith(`Tweet posted successfully, id: ${tweet?.id}, text: ${tweet?.text}`);
+
+    logSpy.mockRestore();
   });
 
   test("Delete Tweet successfully", async () => {
@@ -133,13 +151,18 @@ describe("Twitter", () => {
     process.env.TWITTER_API_KEY_SECRET = "foobar";
     process.env.TWITTER_ACCESS_TOKEN = "foobar";
     process.env.TWITTER_ACCESS_TOKEN_SECRET = "foobar";
+
+    jest.resetModules();
+
     const twitter = (await import("../src/twitter/twitter")).default;
     const tweet = await twitter.postTweet("status");
     await twitter.deleteTweet(tweet?.id as string);
-
     expect(logSpy).toHaveBeenCalledWith(`Tweet posted successfully, id: ${tweet?.id}, text: ${tweet?.text}`);
+
     await twitter.deleteTweet(tweet?.id as string);
-    expect(logSpy).toHaveBeenCalledWith(`Couldnt delete tweet, id ${tweet?.id}`);
+    expect(logSpy).toHaveBeenCalledWith(`Could not delete tweet, id ${tweet?.id}`);
+
+    logSpy.mockRestore();
   });
 
   test("Expect Tweet post failure on network error", async () => {

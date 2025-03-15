@@ -26,7 +26,7 @@ export type GitHubOrganization = RestEndpointMethodTypes["orgs"]["get"]["respons
 export type OrgNameAndAvatarUrl = {
   ownerName: string;
   avatar_url?: string;
-}
+};
 
 export type StateChanges<T extends string = "open" | "closed"> = {
   [key: string]: {

@@ -26,7 +26,7 @@ export async function main() {
 
     // get all pull requests (opened and closed)
     const [ownerName, repoName] = getRepoCredentials(partnerRepoUrl);
-    const pullRequests: GitHubPullRequest[] = await getRepositoryPullRequests(ownerName, repoName);  
+    const pullRequests: GitHubPullRequest[] = await getRepositoryPullRequests(ownerName, repoName);
     pullRequestList.push(...pullRequests);
 
     // get partner profile picture if not already in the map
