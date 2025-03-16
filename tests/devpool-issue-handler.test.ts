@@ -15,7 +15,6 @@ import { updateDirectoryIssue } from "../src/directory/update-issue";
 
 const DEVPOOL_OWNER_NAME = "ubiquity";
 const DEVPOOL_REPO_NAME = "devpool-directory";
-const UBIQUITY_TEST_REPO = "https://github.com/ubiquity/test-repo";
 
 const server = setupServer(...handlers);
 
@@ -1279,7 +1278,7 @@ describe("createDevPoolIssue", () => {
       } as GitHubIssue;
 
       logSpy.mockClear();
-      await newDirectoryIssue(partnerIssue, partnerIssue.html_url, UBIQUITY_TEST_REPO, twitterMap);
+      await newDirectoryIssue(partnerIssue, partnerIssue.html_url, twitterMap);
 
       expect(logSpy).toHaveBeenCalledWith(expect.stringContaining("Created"));
     });
@@ -1295,7 +1294,7 @@ describe("createDevPoolIssue", () => {
       });
       logSpy.mockClear();
 
-      await newDirectoryIssue(partnerIssue, partnerIssue.html_url, UBIQUITY_TEST_REPO, twitterMap);
+      await newDirectoryIssue(partnerIssue, partnerIssue.html_url, twitterMap);
 
       const devpoolIssue = db.issue.findFirst({
         where: {
@@ -1323,7 +1322,7 @@ describe("createDevPoolIssue", () => {
         body: partnerIssue.html_url,
       });
 
-      await newDirectoryIssue(partnerIssue, partnerIssue.html_url, UBIQUITY_TEST_REPO, twitterMap);
+      await newDirectoryIssue(partnerIssue, partnerIssue.html_url, twitterMap);
 
       const devpoolIssue = db.issue.findFirst({
         where: {
@@ -1344,7 +1343,7 @@ describe("createDevPoolIssue", () => {
         state: "closed",
       } as GitHubIssue;
 
-      await newDirectoryIssue(partnerIssue, partnerIssue.html_url, UBIQUITY_TEST_REPO, twitterMap);
+      await newDirectoryIssue(partnerIssue, partnerIssue.html_url, twitterMap);
 
       const devpoolIssue = db.issue.findFirst({
         where: {

@@ -66,14 +66,11 @@ describe("GitHub items", () => {
   });
 
   test("Get DevPool labels", () => {
-    const res = getDirectoryIssueLabelsFromPartnerIssue(
-      {
-        ...githubDevpoolIssueTemplate,
-        html_url: "https://github.com/owner/repo",
-        node_id: "2",
-      },
-      "https://github.com/owner/repo"
-    );
+    const res = getDirectoryIssueLabelsFromPartnerIssue({
+      ...githubDevpoolIssueTemplate,
+      html_url: "https://github.com/owner/repo",
+      node_id: "2",
+    });
     expect(res).toMatchObject(["Pricing: 200 USD", "Partner: owner/repo", "id: 2", "Time: 1h"]);
   });
 
