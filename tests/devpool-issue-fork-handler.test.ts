@@ -10,7 +10,6 @@ import { updateDirectoryIssue } from "../src/directory/update-issue";
 
 const DEVPOOL_OWNER_NAME = "ubiquity";
 const DEVPOOL_REPO_NAME = "devpool-directory";
-const REPO_URL = "https://github.com/not-ubiquity/devpool-directory";
 
 const server = setupServer(...handlers);
 
@@ -54,17 +53,11 @@ describe("handleForkedDevPoolIssue", () => {
       db.repo.create({
         id: 1,
         owner: "not-ubiquity",
-        name: DEVPOOL_REPO_NAME,
-        html_url: REPO_URL,
+        name: "test-repo",
+        html_url: `https://github.com/not-ubiquity/test-repo`,
       });
       db.repo.create({
         id: 2,
-        owner: DEVPOOL_OWNER_NAME,
-        name: "test-repo",
-        html_url: `https://github.com/${DEVPOOL_OWNER_NAME}/test-repo`,
-      });
-      db.repo.create({
-        id: 3,
         owner: DEVPOOL_OWNER_NAME,
         name: DEVPOOL_REPO_NAME,
         html_url: `https://github.com/${DEVPOOL_OWNER_NAME}/${DEVPOOL_REPO_NAME}`,
@@ -104,6 +97,7 @@ describe("handleForkedDevPoolIssue", () => {
 
       expect(updatedIssue).not.toBeNull();
       expect(updatedIssue?.title).toEqual("Updated Title");
+      expect(updatedIssue?.body).toEqual("https://www.github.com/not-ubiquity/test-repo/issues/1");
       expect(logSpy).toHaveBeenCalledWith(`Updated metadata for issue:`, {
         directoryIssueUrl: updatedIssue.html_url,
         partnerIssueUrl: partnerIssue.html_url,
