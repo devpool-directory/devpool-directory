@@ -20,6 +20,10 @@ afterAll(() => server.close());
 describe("GitHub items", () => {
   const githubDevpoolIssueTemplate = cfg as GitHubIssue;
 
+  beforeAll(() => {
+    jest.spyOn(console, "info").mockImplementation();
+  });
+
   beforeEach(() => {
     drop(db);
   });

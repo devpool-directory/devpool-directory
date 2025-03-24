@@ -144,6 +144,8 @@ describe("Twitter", () => {
 
   test("Delete Tweet successfully", async () => {
     const logSpy = jest.spyOn(console, "log").mockImplementation(jest.fn());
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(jest.fn());
+
     dotenv.config({
       override: true,
     });
@@ -163,6 +165,7 @@ describe("Twitter", () => {
     expect(logSpy).toHaveBeenCalledWith(`Could not delete tweet, id ${tweet?.id}`);
 
     logSpy.mockRestore();
+    errorSpy.mockRestore();
   });
 
   test("Expect Tweet post failure on network error", async () => {

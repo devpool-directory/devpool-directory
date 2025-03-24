@@ -10,8 +10,10 @@ import { checkIfForked } from "../src/directory/check-if-forked";
 import { GitHubIssue } from "../src/directory/directory";
 import { getPartnerUrls } from "../src/directory/get-partner-urls";
 import { getRepoUrls } from "../src/directory/get-repo-urls";
-import { newDirectoryIssue } from "../src/directory/new-directory-issue";
 import { updateDirectoryIssue } from "../src/directory/update-issue";
+
+jest.spyOn(console, "log").mockImplementation();
+import { newDirectoryIssue } from "../src/directory/new-directory-issue";
 
 const DEVPOOL_OWNER_NAME = "ubiquity";
 const DEVPOOL_REPO_NAME = "devpool-directory";
@@ -40,9 +42,11 @@ function createIssues(devpoolIssue: GitHubIssue, projectIssue: GitHubIssue) {
 
 describe("handleDevPoolIssue", () => {
   const logSpy = jest.spyOn(console, "log").mockImplementation();
+  const errorSpy = jest.spyOn(console, "error").mockImplementation();
 
   beforeEach(() => {
     logSpy.mockClear();
+    errorSpy.mockClear();
   });
 
   describe("Devpool Directory", () => {
@@ -994,6 +998,7 @@ describe("getProjectUrls", () => {
 
   beforeAll(() => {
     jest.spyOn(console, "log").mockImplementation();
+    jest.spyOn(console, "info").mockImplementation();
   });
 
   const opt = {
