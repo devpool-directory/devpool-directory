@@ -79,6 +79,10 @@ export const handlers = [
     });
     return HttpResponse.json(updatedItem);
   }),
+  http.post("https://api.github.com/repos/:owner/:repo/labels", async ({ request }) => {
+    const body = (await request.json()) as { labels: string[] };
+    return HttpResponse.json(body);
+  }),
 
   http.delete("https://api.github.com/repos/:owner/:repo/issues/:issue/labels/:label", async ({ params: { owner, issue, repo, label } }) => {
     const item = db.issue.findFirst({ where: { id: { equals: Number(issue) }, owner: { equals: owner as string }, repo: { equals: repo as string } } });

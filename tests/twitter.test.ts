@@ -163,7 +163,12 @@ describe("Twitter", () => {
 
     await twitter.deleteTweet(tweet?.id as string);
     expect(logSpy).toHaveBeenCalledWith(`Could not delete tweet, id ${tweet?.id}`);
-
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining("Error deleting tweet"),
+      expect.objectContaining({
+        code: 404,
+      })
+    );
     logSpy.mockRestore();
     errorSpy.mockRestore();
   });

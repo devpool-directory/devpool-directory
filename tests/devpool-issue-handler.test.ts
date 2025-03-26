@@ -11,8 +11,6 @@ import { GitHubIssue } from "../src/directory/directory";
 import { getPartnerUrls } from "../src/directory/get-partner-urls";
 import { getRepoUrls } from "../src/directory/get-repo-urls";
 import { updateDirectoryIssue } from "../src/directory/update-issue";
-
-jest.spyOn(console, "log").mockImplementation();
 import { newDirectoryIssue } from "../src/directory/new-directory-issue";
 
 const DEVPOOL_OWNER_NAME = "ubiquity";
@@ -42,11 +40,9 @@ function createIssues(devpoolIssue: GitHubIssue, projectIssue: GitHubIssue) {
 
 describe("handleDevPoolIssue", () => {
   const logSpy = jest.spyOn(console, "log").mockImplementation();
-  const errorSpy = jest.spyOn(console, "error").mockImplementation();
 
   beforeEach(() => {
     logSpy.mockClear();
-    errorSpy.mockClear();
   });
 
   describe("Devpool Directory", () => {
@@ -780,6 +776,7 @@ describe("handleDevPoolIssue", () => {
 
       jest.resetModules();
 
+      const errorSpy = jest.spyOn(console, "error").mockImplementation();
       (orgOrRepo as any) = ".";
 
       await getRepoUrls(orgOrRepo);
@@ -795,11 +792,13 @@ describe("handleDevPoolIssue", () => {
           expect(errThrown).toEqual(githubErr);
         }
       }
+      expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ status: 404 }));
 
       (orgOrRepo as any) = "-/test";
-
       await getRepoUrls(orgOrRepo);
       expect(warnSpy).toHaveBeenCalledWith(`Getting repo ${orgOrRepo} failed: HttpError`);
+      expect(errorSpy).toHaveBeenCalledWith(expect.objectContaining({ status: 404 }));
+      errorSpy.mockClear();
     });
   });
 
@@ -836,8 +835,8 @@ describe("handleDevPoolIssue", () => {
 
   async function validateOpen(projectIssue: GitHubIssue, devpoolIssue: GitHubIssue) {
     await updateDirectoryIssue({
-      directoryIssue: projectIssue,
-      partnerIssue: devpoolIssue,
+      directoryIssue: devpoolIssue,
+      partnerIssue: projectIssue,
     });
 
     const updatedIssue = getDb();
@@ -899,6 +898,8 @@ describe("createDevPoolIssue", () => {
     });
 
     test("does not create a new devpool issue if it's already a devpool issue", async () => {
+      const errorSpy = jest.spyOn(console, "error").mockImplementation();
+
       const partnerIssue = {
         ...issueTemplate,
       } as GitHubIssue;
@@ -910,6 +911,14 @@ describe("createDevPoolIssue", () => {
       logSpy.mockClear();
 
       await newDirectoryIssue(partnerIssue, partnerIssue.html_url, twitterMap);
+      expect(errorSpy).toHaveBeenCalledWith(
+        expect.stringContaining("Failed to create new issue:"),
+        expect.objectContaining({
+          error: expect.objectContaining({
+            status: 500,
+          }),
+        })
+      );
 
       const devpoolIssue = db.issue.findFirst({
         where: {
@@ -921,6 +930,8 @@ describe("createDevPoolIssue", () => {
 
       expect(devpoolIssue).not.toBeNull();
       expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining("Created"));
+
+      errorSpy.mockClear();
     });
 
     test("does not create a new devpool issue if it's closed", async () => {
@@ -1198,18 +1209,18 @@ describe("calculateStatistics", () => {
 
     createIssues(devpoolIssue, projectIssue1);
     await updateDirectoryIssue({
-      directoryIssue: projectIssue1,
-      partnerIssue: devpoolIssue,
+      directoryIssue: devpoolIssue,
+      partnerIssue: projectIssue1,
     });
     createIssues(devpoolIssue2, projectIssue2);
     await updateDirectoryIssue({
-      directoryIssue: projectIssue2,
-      partnerIssue: devpoolIssue2,
+      directoryIssue: devpoolIssue2,
+      partnerIssue: projectIssue2,
     });
     createIssues(devpoolIssue3, projectIssue3);
     await updateDirectoryIssue({
-      directoryIssue: projectIssue3,
-      partnerIssue: devpoolIssue3,
+      directoryIssue: devpoolIssue3,
+      partnerIssue: projectIssue3,
     });
 
     const issues = [devpoolIssue, devpoolIssue2, projectIssue1, projectIssue2, devpoolIssue3, projectIssue3];
