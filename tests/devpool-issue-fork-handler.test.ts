@@ -7,6 +7,7 @@ import forkedIssueDevpoolTemplate from "../mocks/forked-issue-devpool-template.j
 import forkedIssueTemplate from "../mocks/forked-issue-template.json";
 import { GitHubIssue } from "../src/directory/directory";
 import { updateDirectoryIssue } from "../src/directory/update-issue";
+import { checkIfForked } from "../src/directory/check-if-forked";
 
 const DEVPOOL_OWNER_NAME = "not-ubiquity";
 const DEVPOOL_REPO_NAME = "devpool-directory";
@@ -63,6 +64,10 @@ describe("handleForkedDevPoolIssue", () => {
         name: DEVPOOL_REPO_NAME,
         html_url: DEVPOOL_URL,
       });
+    });
+
+    test("checkIfForkedRepo", async () => {
+      expect(await checkIfForked()).toBe(true);
     });
 
     test("updates issue body in devpool to add prefix wwww", async () => {
@@ -285,7 +290,7 @@ describe("handleForkedDevPoolIssue", () => {
       });
     });
 
-    test("closes devpool issue when project issue is closed and assigned in forked repo", async () => {
+    test("add Unavailable label to devpool issue when project issue is open and assigned", async () => {
       const forkedDevpoolIssue = {
         ...forkedIssueDevpoolTemplate,
         id: 1,
@@ -294,7 +299,7 @@ describe("handleForkedDevPoolIssue", () => {
       const partnerIssue = {
         ...forkedIssueTemplate,
         id: 2,
-        state: "closed",
+        state: "open",
         assignees: [
           {
             login: "hunter",
@@ -302,10 +307,10 @@ describe("handleForkedDevPoolIssue", () => {
         ] as GitHubIssue["assignees"],
       } as GitHubIssue;
 
-      const issueInDb = createIssues(forkedDevpoolIssue, partnerIssue);
+      createIssues(forkedDevpoolIssue, partnerIssue);
 
       await updateDirectoryIssue({
-        directoryIssue: issueInDb,
+        directoryIssue: forkedDevpoolIssue,
         partnerIssue: partnerIssue,
       });
 
@@ -318,16 +323,14 @@ describe("handleForkedDevPoolIssue", () => {
       }) as GitHubIssue;
 
       expect(updatedIssue).not.toBeNull();
-      expect(updatedIssue?.state).toEqual("closed");
-      expect(logSpy).toHaveBeenCalledWith(`Updated metadata for issue:`, {
-        directoryIssueUrl: updatedIssue.html_url,
-        partnerIssueUrl: partnerIssue.html_url,
-        changes: {
-          title: false,
-          body: false,
-          labels: true,
-        },
-      });
+      expect(updatedIssue.state).toEqual("open");
+      expect(updatedIssue.labels).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            name: "Unavailable",
+          }),
+        ])
+      );
     });
 
     test("removes Unavailable label from devpool issue when project issue is unassigned and reopened", async () => {

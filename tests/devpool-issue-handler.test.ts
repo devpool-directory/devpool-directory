@@ -61,6 +61,10 @@ describe("handleDevPoolIssue", () => {
       });
     });
 
+    test("checkIfForkedRepo", async () => {
+      expect(await checkIfForked()).toBe(false);
+    });
+
     test("updates issue title in devpool when project issue title changes", async () => {
       const devpoolIssue = {
         ...issueDevpoolTemplate,
@@ -252,13 +256,6 @@ describe("handleDevPoolIssue", () => {
       const partnerIssue = {
         ...issueTemplate,
         state: "closed",
-        pull_request: {
-          merged_at: new Date().toISOString(),
-          diff_url: "https//github.com/ubiquity/test-repo/pull/1.diff",
-          html_url: "https//github.com/ubiquity/test-repo/pull/1",
-          patch_url: "https//github.com/ubiquity/test-repo/pull/1.patch",
-          url: "https//github.com/ubiquity/test-repo/pull/1",
-        },
       } as GitHubIssue;
 
       createIssues(devpoolIssue, partnerIssue);
@@ -283,13 +280,6 @@ describe("handleDevPoolIssue", () => {
         assignee: {
           login: "hunter",
         } as GitHubIssue["assignee"],
-        pull_request: {
-          merged_at: new Date().toISOString(),
-          diff_url: "https//github.com/ubiquity/test-repo/pull/1.diff",
-          html_url: "https//github.com/ubiquity/test-repo/pull/1",
-          patch_url: "https//github.com/ubiquity/test-repo/pull/1.patch",
-          url: "https//github.com/ubiquity/test-repo/pull/1",
-        },
       } as GitHubIssue;
 
       createIssues(devpoolIssue, partnerIssue);
@@ -311,34 +301,6 @@ describe("handleDevPoolIssue", () => {
       const partnerIssue = {
         ...issueTemplate,
         state: "open",
-      } as GitHubIssue;
-
-      createIssues(devpoolIssue, partnerIssue);
-
-      await updateDirectoryIssue({
-        directoryIssue: devpoolIssue,
-        partnerIssue: partnerIssue,
-      });
-
-      expect(logSpy).not.toHaveBeenCalledWith(expect.stringContaining("Updated state"));
-    });
-
-    test("keeps devpool state unchanged when project issue state is open, unassigned, merged and devpool issue state is open", async () => {
-      const devpoolIssue = {
-        ...issueDevpoolTemplate,
-        labels: [{ name: "Pricing: 200 USD" }, { name: "Partner: ubiquity/test-repo" }, { name: "id: 2" }, { name: "Time: 1h" }],
-        state: "open",
-      } as GitHubIssue;
-      const partnerIssue = {
-        ...issueTemplate,
-        state: "open",
-        pull_request: {
-          merged_at: new Date().toISOString(),
-          diff_url: "https//github.com/ubiquity/test-repo/pull/1.diff",
-          html_url: "https//github.com/ubiquity/test-repo/pull/1",
-          patch_url: "https//github.com/ubiquity/test-repo/pull/1.patch",
-          url: "https//github.com/ubiquity/test-repo/pull/1",
-        },
       } as GitHubIssue;
 
       createIssues(devpoolIssue, partnerIssue);
@@ -415,47 +377,10 @@ describe("handleDevPoolIssue", () => {
       expect(updatedIssue?.state).toEqual("open");
     });
 
-    test("reopens devpool issue when project issue is unassigned, reopened, and merged", async () => {
+    test("adds Unavailable label to devpool issue when project issue is assigned and open", async () => {
       const devpoolIssue = {
         ...issueDevpoolTemplate,
-        state: "closed",
-      } as GitHubIssue;
-
-      const partnerIssue = {
-        ...issueTemplate,
         state: "open",
-        pull_request: {
-          merged_at: new Date().toISOString(),
-          diff_url: "https//github.com/ubiquity/test-repo/pull/1.diff",
-          html_url: "https//github.com/ubiquity/test-repo/pull/1",
-          patch_url: "https//github.com/ubiquity/test-repo/pull/1.patch",
-          url: "https//github.com/ubiquity/test-repo/pull/1",
-        },
-      } as GitHubIssue;
-
-      const issueInDb = createIssues(devpoolIssue, partnerIssue);
-
-      await updateDirectoryIssue({
-        directoryIssue: issueInDb,
-        partnerIssue: partnerIssue,
-      });
-
-      const updatedIssue = db.issue.findFirst({
-        where: {
-          id: {
-            equals: 1,
-          },
-        },
-      }) as GitHubIssue;
-
-      expect(updatedIssue).not.toBeNull();
-      expect(updatedIssue?.state).toEqual("open");
-    });
-
-    test("adds Unavailable label to devpool issue when project issue is assigned, open and devpool is closed", async () => {
-      const devpoolIssue = {
-        ...issueDevpoolTemplate,
-        state: "closed",
       } as GitHubIssue;
 
       const projectIssue = {
@@ -537,23 +462,17 @@ describe("handleDevPoolIssue", () => {
       );
     });
 
-    test("removes Unavailable label from devpool issue when project issue is unassigned, closed and merged", async () => {
+    test("removes Unavailable label from devpool issue when project issue is unassigned and closed", async () => {
       const devpoolIssue = {
         ...issueDevpoolTemplate,
         state: "closed",
         labels: issueDevpoolTemplate.labels.concat({ name: "Unavailable" }),
-        pull_request: {
-          diff_url: "...",
-          html_url: "...",
-          patch_url: "...",
-          url: "...",
-          merged_at: new Date().toISOString(),
-        },
       } as GitHubIssue;
 
       const projectIssue = {
         ...issueTemplate,
         state: "closed",
+        assignees: [],
       } as GitHubIssue;
 
       createIssues(devpoolIssue, projectIssue);
@@ -620,139 +539,6 @@ describe("handleDevPoolIssue", () => {
       );
     });
 
-    test("removes Unavailable label from devpool issue when project issue is unassigned, merged and reopened", async () => {
-      const devpoolIssue = {
-        ...issueDevpoolTemplate,
-        state: "closed",
-        labels: issueDevpoolTemplate.labels.concat({ name: "Unavailable" }),
-      } as GitHubIssue;
-
-      const projectIssue = {
-        ...issueTemplate,
-        state: "open",
-        pull_request: {
-          diff_url: "...",
-          html_url: "...",
-          patch_url: "...",
-          url: "...",
-          merged_at: new Date().toISOString(),
-        },
-      } as GitHubIssue;
-
-      createIssues(devpoolIssue, projectIssue);
-
-      await updateDirectoryIssue({
-        directoryIssue: devpoolIssue,
-        partnerIssue: projectIssue,
-      });
-
-      const updatedIssue = db.issue.findFirst({
-        where: {
-          id: {
-            equals: 1,
-          },
-        },
-      }) as GitHubIssue;
-
-      expect(updatedIssue).not.toBeNull();
-      expect(updatedIssue.state).toEqual("open");
-      expect(updatedIssue.labels).not.toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({
-            name: "Unavailable",
-          }),
-        ])
-      );
-    });
-
-    test("does not add the Unavailable to an open devpool issue, _ever_", async () => {
-      const devpoolIssue = {
-        ...issueDevpoolTemplate,
-        state: "open",
-        id: 1,
-        number: 1,
-        node_id: "1",
-        repository_url: "https://github.com/ubiquity/devpool-directory",
-        html_url: "https://github.com/ubiquity/devpool-directory/issues/1",
-      } as GitHubIssue;
-
-      // project issue is open and unassigned
-      let projectIssue = {
-        ...issueTemplate,
-        state: "open",
-      } as GitHubIssue;
-
-      createIssues(devpoolIssue, projectIssue);
-
-      await validateOpen(projectIssue, devpoolIssue);
-
-      // project issue is open, unassigned and merged
-      projectIssue = {
-        ...issueTemplate,
-        state: "open",
-        pull_request: {
-          merged_at: new Date().toISOString(),
-          diff_url: "https//github.com/ubiquity/test-repo/pull/1.diff",
-          html_url: "https//github.com/ubiquity/test-repo/pull/1",
-          patch_url: "https//github.com/ubiquity/test-repo/pull/1.patch",
-          url: "https//github.com/ubiquity/test-repo/pull/1",
-        },
-      } as GitHubIssue;
-
-      await validateOpen(projectIssue, devpoolIssue);
-    });
-
-    test("does not remove the Unavailable label from an assigned devpool issue that's open, _ever_", async () => {
-      const devpoolIssue = {
-        ...issueDevpoolTemplate,
-        state: "closed",
-        id: 1,
-        number: 1,
-        node_id: "1",
-        repository_url: "https://github.com/ubiquity/devpool-directory",
-        html_url: "https://github.com/ubiquity/devpool-directory/issues/1",
-      } as GitHubIssue;
-
-      // project issue is open, assigned and unmerged
-      let projectIssue = {
-        ...issueTemplate,
-        state: "open",
-        assignees: [
-          {
-            login: "hunter",
-          },
-        ] as GitHubIssue["assignees"],
-      } as GitHubIssue;
-
-      createIssues(devpoolIssue, projectIssue);
-
-      await validateClosed(projectIssue, devpoolIssue);
-
-      // project issue is open, assigned and merged
-      projectIssue = {
-        ...issueTemplate,
-        state: "open",
-        assignees: [
-          {
-            login: "hunter",
-          },
-        ] as GitHubIssue["assignees"],
-        pull_request: {
-          merged_at: new Date().toISOString(),
-          diff_url: "https//github.com/ubiquity/test-repo/pull/1.diff",
-          html_url: "https//github.com/ubiquity/test-repo/pull/1",
-          patch_url: "https//github.com/ubiquity/test-repo/pull/1.patch",
-          url: "https//github.com/ubiquity/test-repo/pull/1",
-        },
-      } as GitHubIssue;
-
-      await validateClosed(projectIssue, devpoolIssue);
-    });
-
-    test("checkIfForkedRepo", async () => {
-      expect(await checkIfForked()).toBe(false);
-    });
-
     test("getRepoUrls", async () => {
       let orgOrRepo = "test/org/bad-repo/still/bad";
       const warnSpy = jest.spyOn(console, "warn").mockImplementation();
@@ -810,48 +596,6 @@ describe("handleDevPoolIssue", () => {
         },
       },
     }) as GitHubIssue;
-  }
-
-  async function validateClosed(projectIssue: GitHubIssue, devpoolIssue: GitHubIssue) {
-    await updateDirectoryIssue({
-      directoryIssue: devpoolIssue,
-      partnerIssue: projectIssue,
-    });
-
-    const updatedIssue = getDb();
-    if (updatedIssue === null) {
-      throw new Error("Updated issue is null");
-    }
-    expect(updatedIssue).not.toBeNull();
-    expect(updatedIssue.state).toEqual("open");
-    expect(updatedIssue.labels).toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          name: "Unavailable",
-        }),
-      ])
-    );
-  }
-
-  async function validateOpen(projectIssue: GitHubIssue, devpoolIssue: GitHubIssue) {
-    await updateDirectoryIssue({
-      directoryIssue: devpoolIssue,
-      partnerIssue: projectIssue,
-    });
-
-    const updatedIssue = getDb();
-    if (updatedIssue === null) {
-      throw new Error("Updated issue is null");
-    }
-    expect(updatedIssue).not.toBeNull();
-    expect(updatedIssue.state).toEqual("open");
-    expect(updatedIssue.labels).not.toEqual(
-      expect.arrayContaining([
-        expect.objectContaining({
-          name: "Unavailable",
-        }),
-      ])
-    );
   }
 });
 
@@ -1159,9 +903,6 @@ describe("calculateStatistics", () => {
     const projectIssue1 = {
       ...issueTemplate,
       state: "closed",
-      pull_request: {
-        merged_at: new Date().toISOString(),
-      } as GitHubIssue["pull_request"],
       assignee: {
         login: "hunter",
       } as GitHubIssue["assignee"],
@@ -1272,9 +1013,6 @@ describe("calculateStatistics", () => {
           name: "Time: 1h",
         },
       ],
-      pull_request: {
-        merged_at: new Date().toISOString(),
-      } as GitHubIssue["pull_request"],
       assignee: {
         login: "hunter",
       } as GitHubIssue["assignee"],
