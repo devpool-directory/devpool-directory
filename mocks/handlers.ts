@@ -34,13 +34,14 @@ export const handlers = [
   http.get("https://api.github.com/repos/:owner/:repo/issues", ({ params: { owner, repo } }) => {
     return HttpResponse.json(db.issue.findMany({ where: { owner: { equals: owner as string }, repo: { equals: repo as string } } }));
   }),
-  http.post("https://api.github.com/repos/:owner/:repo/issues", ({ params: { owner, repo } }) => {
+  http.post("https://api.github.com/repos/:owner/:repo/issues", async ({ request, params: { owner, repo } }) => {
     let newItem: GitHubIssue;
     const id = db.issue.count() + 1;
+    const body = (await request.json()) as { title: string; body: string };
     if (owner === DEVPOOL_OWNER_NAME && repo === DEVPOOL_REPO_NAME) {
-      newItem = { ...issueDevpoolTemplate, id } as GitHubIssue;
+      newItem = { ...issueDevpoolTemplate, id, title: body.title, body: body.body } as GitHubIssue;
     } else {
-      newItem = { ...issueTemplate, id } as GitHubIssue;
+      newItem = { ...issueTemplate, id, title: body.title, body: body.body } as GitHubIssue;
     }
     db.issue.create(newItem);
     return HttpResponse.json(newItem);
