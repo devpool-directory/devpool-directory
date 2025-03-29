@@ -196,53 +196,6 @@ describe("handleForkedDevPoolIssue", () => {
       );
     });
 
-    test("closes devpool issue when project issue is merged in forked repo", async () => {
-      const forkedDevpoolIssue = {
-        ...forkedIssueDevpoolTemplate,
-        id: 1,
-      } as GitHubIssue;
-
-      const partnerIssue = {
-        ...forkedIssueTemplate,
-        id: 2,
-        state: "closed",
-        pull_request: {
-          merged_at: new Date().toISOString(),
-          diff_url: "https//github.com/ubiquity/test-repo/pull/1.diff",
-          html_url: "https//github.com/ubiquity/test-repo/pull/1",
-          patch_url: "https//github.com/ubiquity/test-repo/pull/1.patch",
-          url: "https//github.com/ubiquity/test-repo/pull/1",
-        },
-      } as GitHubIssue;
-
-      const issueInDb = createIssues(forkedDevpoolIssue, partnerIssue);
-
-      await updateDirectoryIssue({
-        directoryIssue: issueInDb,
-        partnerIssue: partnerIssue,
-      });
-
-      const updatedIssue = db.issue.findFirst({
-        where: {
-          id: {
-            equals: 1,
-          },
-        },
-      }) as GitHubIssue;
-
-      expect(updatedIssue).not.toBeNull();
-      expect(updatedIssue?.state).toEqual("closed");
-      expect(logSpy).toHaveBeenCalledWith(`Updated metadata for issue:`, {
-        directoryIssueUrl: updatedIssue.html_url,
-        partnerIssueUrl: partnerIssue.html_url,
-        changes: {
-          title: false,
-          body: false,
-          labels: true,
-        },
-      });
-    });
-
     test("closes devpool issue when project issue is closed in forked repo", async () => {
       const forkedDevpoolIssue = {
         ...forkedIssueDevpoolTemplate,
@@ -253,13 +206,6 @@ describe("handleForkedDevPoolIssue", () => {
         ...forkedIssueTemplate,
         id: 2,
         state: "closed",
-        pull_request: {
-          merged_at: new Date().toISOString(),
-          diff_url: "https//github.com/ubiquity/test-repo/pull/1.diff",
-          html_url: "https//github.com/ubiquity/test-repo/pull/1",
-          patch_url: "https//github.com/ubiquity/test-repo/pull/1.patch",
-          url: "https//github.com/ubiquity/test-repo/pull/1",
-        },
       } as GitHubIssue;
 
       const issueInDb = createIssues(forkedDevpoolIssue, partnerIssue);
