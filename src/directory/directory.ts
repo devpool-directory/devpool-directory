@@ -21,12 +21,13 @@ if (typeof DEVPOOL_OWNER_NAME !== "string" || typeof DEVPOOL_REPO_NAME !== "stri
 export type GitHubIssue = RestEndpointMethodTypes["issues"]["get"]["response"]["data"];
 export type GitHubLabel = RestEndpointMethodTypes["issues"]["listLabelsOnIssue"]["response"]["data"][0];
 export type GitHubPullRequest = RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
+export type GithubComment = RestEndpointMethodTypes["issues"]["listCommentsForRepo"]["response"]["data"][0];
 export type GitHubOrganization = RestEndpointMethodTypes["orgs"]["get"]["response"]["data"];
 
 export type OrgNameAndAvatarUrl = {
   ownerName: string;
   avatar_url?: string;
-}
+};
 
 export type StateChanges<T extends string = "open" | "closed"> = {
   [key: string]: {

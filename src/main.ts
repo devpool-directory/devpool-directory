@@ -1,13 +1,14 @@
 import { calculateStatistics } from "./directory/calculate-statistics";
-import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME, GitHubIssue, GitHubPullRequest, OrgNameAndAvatarUrl } from "./directory/directory";
+import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME, GithubComment, GitHubIssue, GitHubPullRequest, OrgNameAndAvatarUrl } from "./directory/directory";
 import { getPartnerAvatars } from "./directory/get-partner-avatars";
 import { getPartnerUrls as getPartnerRepoUrls } from "./directory/get-partner-urls";
 import { getRepoCredentials } from "./directory/get-repo-credentials";
+import { getRepositoryComments } from "./directory/get-repository-comments";
 import { getRepositoryIssues } from "./directory/get-repository-issues";
 import { getRepositoryPullRequests } from "./directory/get-repository-pull-requests";
 import { Statistics } from "./directory/statistics";
 import { syncPartnerRepoIssues } from "./directory/sync-partner-repo-issues";
-import { commitPartnerAvatars, commitPullRequests, commitStatistics, commitTasks } from "./git";
+import { commitComments, commitPartnerAvatars, commitPullRequests, commitStatistics, commitTasks } from "./git";
 import { initializeTwitterMap, TwitterMap } from "./twitter/initialize-twitter-map";
 
 export async function main() {
@@ -16,6 +17,7 @@ export async function main() {
   const partnerRepoUrls = await getPartnerRepoUrls();
   const taskList: GitHubIssue[] = [];
   const pullRequestList: GitHubPullRequest[] = [];
+  const commentsList: GithubComment[] = [];
   const partnerAvatarMap: Map<string, OrgNameAndAvatarUrl> = new Map();
 
   // for each project URL
@@ -26,8 +28,12 @@ export async function main() {
 
     // get all pull requests (opened and closed)
     const [ownerName, repoName] = getRepoCredentials(partnerRepoUrl);
-    const pullRequests: GitHubPullRequest[] = await getRepositoryPullRequests(ownerName, repoName);  
+    const pullRequests: GitHubPullRequest[] = await getRepositoryPullRequests(ownerName, repoName);
     pullRequestList.push(...pullRequests);
+
+    // get all comments
+    const comments: GithubComment[] = await getRepositoryComments(ownerName, repoName);
+    commentsList.push(...comments);
 
     // get partner profile picture if not already in the map
     if (!partnerAvatarMap.has(ownerName)) {
@@ -40,6 +46,7 @@ export async function main() {
 
   await commitTasks(taskList);
   await commitPullRequests(pullRequestList);
+  await commitComments(commentsList);
   await commitPartnerAvatars(partnerAvatarList);
 
   // Calculate total rewards from devpool issues
