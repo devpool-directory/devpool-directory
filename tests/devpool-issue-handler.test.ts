@@ -54,26 +54,13 @@ describe("handleDevPoolIssue", () => {
     beforeEach(async () => {
       jest.resetModules();
 
-      import("../src/directory/check-if-forked")
-        .then((mod) => {
-          checkIfForked = mod.checkIfForked;
-        })
-        .catch((err) => {
-          console.error(err);
-        });
-
-      import("../src/directory/update-issue")
-        .then((mod) => {
-          updateDirectoryIssue = mod.updateDirectoryIssue;
-        })
-        .catch((err) => {
-          console.error(err);
-        });
-
       dotenv.config({
         override: true,
       });
       process.env.DEVPOOL_OWNER_NAME = repoOwner;
+
+      checkIfForked = (await import("../src/directory/check-if-forked")).checkIfForked;
+      updateDirectoryIssue = (await import("../src/directory/update-issue")).updateDirectoryIssue;
 
       db.repo.create({
         id: 1,
@@ -565,29 +552,16 @@ describe("createDevPoolIssue", () => {
     let checkIfForked: () => any;
     let newDirectoryIssue: (partnerIssue: GitHubIssue, projectUrl: string, twitterMap: TwitterMap) => any;
 
-    beforeEach(() => {
+    beforeEach(async () => {
       jest.resetModules();
-
-      import("../src/directory/check-if-forked")
-        .then((mod) => {
-          checkIfForked = mod.checkIfForked;
-        })
-        .catch((err) => {
-          console.error(err);
-        });
-
-      import("../src/directory/new-directory-issue")
-        .then((mod) => {
-          newDirectoryIssue = mod.newDirectoryIssue;
-        })
-        .catch((err) => {
-          console.error(err);
-        });
 
       dotenv.config({
         override: true,
       });
       process.env.DEVPOOL_OWNER_NAME = repoOwner;
+
+      checkIfForked = (await import("../src/directory/check-if-forked")).checkIfForked;
+      newDirectoryIssue = (await import("../src/directory/new-directory-issue")).newDirectoryIssue;
 
       db.repo.create({
         id: 1,
