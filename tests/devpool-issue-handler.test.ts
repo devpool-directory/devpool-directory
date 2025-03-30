@@ -13,7 +13,6 @@ import { updateDirectoryIssue } from "../src/directory/update-issue";
 import forkedIssueDevpoolTemplate from "../mocks/forked-issue-devpool-template.json";
 import forkedIssueTemplate from "../mocks/forked-issue-template.json";
 import dotenv from "dotenv";
-import { TwitterMap } from "../src/twitter/initialize-twitter-map";
 
 const server = setupServer(...handlers);
 
@@ -48,8 +47,8 @@ describe("handleDevPoolIssue", () => {
     { repoOwner: "ubiquity", description: "Devpool", issueDevpoolTemplate: issueDevpoolTemplate, issueTemplate: issueTemplate },
     { repoOwner: "not-ubiquity", description: "Forked Devpool", issueDevpoolTemplate: forkedIssueDevpoolTemplate, issueTemplate: forkedIssueTemplate },
   ])("$description directory", ({ repoOwner, issueDevpoolTemplate, issueTemplate }) => {
-    let checkIfForked: () => any;
-    let updateDirectoryIssue: ({ directoryIssue, partnerIssue }: any) => any;
+    let checkIfForked: typeof import("../src/directory/check-if-forked").checkIfForked;
+    let updateDirectoryIssue: typeof import("../src/directory/update-issue").updateDirectoryIssue;
 
     beforeEach(async () => {
       jest.resetModules();
@@ -549,8 +548,8 @@ describe("createDevPoolIssue", () => {
     { repoOwner: "ubiquity", description: "Devpool", issueDevpoolTemplate: issueDevpoolTemplate, issueTemplate: issueTemplate },
     { repoOwner: "not-ubiquity", description: "Forked Devpool", issueDevpoolTemplate: forkedIssueDevpoolTemplate, issueTemplate: forkedIssueTemplate },
   ])("$description directory", ({ repoOwner, issueDevpoolTemplate, issueTemplate }) => {
-    let checkIfForked: () => any;
-    let newDirectoryIssue: (partnerIssue: GitHubIssue, projectUrl: string, twitterMap: TwitterMap) => any;
+    let checkIfForked: typeof import("../src/directory/check-if-forked").checkIfForked;
+    let newDirectoryIssue: typeof import("../src/directory/new-directory-issue").newDirectoryIssue;
 
     beforeEach(async () => {
       jest.resetModules();
