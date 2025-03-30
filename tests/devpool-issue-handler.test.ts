@@ -10,10 +10,10 @@ import { GitHubIssue } from "../src/directory/directory";
 import { getPartnerUrls } from "../src/directory/get-partner-urls";
 import { getRepoUrls } from "../src/directory/get-repo-urls";
 import { updateDirectoryIssue } from "../src/directory/update-issue";
-import { newDirectoryIssue } from "../src/directory/new-directory-issue";
 import forkedIssueDevpoolTemplate from "../mocks/forked-issue-devpool-template.json";
 import forkedIssueTemplate from "../mocks/forked-issue-template.json";
 import dotenv from "dotenv";
+import { TwitterMap } from "../src/twitter/initialize-twitter-map";
 
 const server = setupServer(...handlers);
 
@@ -48,8 +48,27 @@ describe("handleDevPoolIssue", () => {
     { repoOwner: "ubiquity", description: "Devpool", issueDevpoolTemplate: issueDevpoolTemplate, issueTemplate: issueTemplate },
     { repoOwner: "not-ubiquity", description: "Forked Devpool", issueDevpoolTemplate: forkedIssueDevpoolTemplate, issueTemplate: forkedIssueTemplate },
   ])("$description directory", ({ repoOwner, issueDevpoolTemplate, issueTemplate }) => {
-    beforeEach(() => {
+    let checkIfForked: () => any;
+    let updateDirectoryIssue: ({ directoryIssue, partnerIssue }: any) => any;
+
+    beforeEach(async () => {
       jest.resetModules();
+
+      import("../src/directory/check-if-forked")
+        .then((mod) => {
+          checkIfForked = mod.checkIfForked;
+        })
+        .catch((err) => {
+          console.error(err);
+        });
+
+      import("../src/directory/update-issue")
+        .then((mod) => {
+          updateDirectoryIssue = mod.updateDirectoryIssue;
+        })
+        .catch((err) => {
+          console.error(err);
+        });
 
       dotenv.config({
         override: true,
@@ -75,13 +94,10 @@ describe("handleDevPoolIssue", () => {
     });
 
     test("checkIfForkedRepo", async () => {
-      const { checkIfForked } = await import("../src/directory/check-if-forked");
       expect(await checkIfForked()).toBe(repoOwner !== "ubiquity");
     });
 
     test("updates issue title in devpool when project issue title changes", async () => {
-      const { updateDirectoryIssue } = await import("../src/directory/update-issue");
-
       const devpoolIssue = {
         ...issueDevpoolTemplate,
         id: 1,
@@ -123,8 +139,6 @@ describe("handleDevPoolIssue", () => {
     });
 
     test("updates issue labels in devpool when project issue labels change", async () => {
-      const { updateDirectoryIssue } = await import("../src/directory/update-issue");
-
       const devpoolIssue = {
         ...issueDevpoolTemplate,
         labels: [{ name: "Pricing: 200 USD" }, { name: "Partner: ubiquity/test-repo" }, { name: "id: 2" }, { name: "Time: 1h" }],
@@ -170,9 +184,6 @@ describe("handleDevPoolIssue", () => {
     });
 
     test("updates issue body in devpool when project issue url changes", async () => {
-      const { checkIfForked } = await import("../src/directory/check-if-forked");
-      const { updateDirectoryIssue } = await import("../src/directory/update-issue");
-
       const devpoolIssue = {
         ...issueDevpoolTemplate,
         labels: [{ name: "Pricing: 200 USD" }, { name: "id: 2" }, { name: "Time: 1h" }],
@@ -216,8 +227,6 @@ describe("handleDevPoolIssue", () => {
     });
 
     test("does not update issue when no metadata changes are detected", async () => {
-      const { updateDirectoryIssue } = await import("../src/directory/update-issue");
-
       const devpoolIssue = {
         ...issueDevpoolTemplate,
         labels: [{ name: "Pricing: 200 USD" }, { name: "id: 1" }, { name: "Time: 1h" }],
@@ -248,8 +257,6 @@ describe("handleDevPoolIssue", () => {
     });
 
     test("keeps devpool issue state unchanged when project issue state is open and devpool issue state is open", async () => {
-      const { updateDirectoryIssue } = await import("../src/directory/update-issue");
-
       const devpoolIssue = {
         ...issueDevpoolTemplate,
         labels: [{ name: "Pricing: 200 USD" }, { name: "Partner: ubiquity/test-repo" }, { name: "id: 2" }, { name: "Time: 1h" }],
@@ -271,8 +278,6 @@ describe("handleDevPoolIssue", () => {
     });
 
     test("keeps devpool issue state unchanged when project issue state is closed and devpool issue state is closed", async () => {
-      const { updateDirectoryIssue } = await import("../src/directory/update-issue");
-
       const devpoolIssue = {
         ...issueDevpoolTemplate,
         labels: [{ name: "Pricing: 200 USD" }, { name: "Partner: ubiquity/test-repo" }, { name: "id: 2" }, { name: "Time: 1h" }],
@@ -299,8 +304,6 @@ describe("handleDevPoolIssue", () => {
     // cause: projectIssue.state == "closed" && devpoolIssue.state == "open"
     // comment: "Closed (not merged):"
     test("closes devpool issue when project issue is closed", async () => {
-      const { updateDirectoryIssue } = await import("../src/directory/update-issue");
-
       const devpoolIssue = {
         ...issueDevpoolTemplate,
         state: "open",
@@ -333,8 +336,6 @@ describe("handleDevPoolIssue", () => {
     // cause: projectIssue.state == "open" && devpoolIssue.state == "closed" && !projectIssue.assignee?.login
     // comment: "Reopened (unassigned):",
     test("reopens devpool issue when project issue is reopened", async () => {
-      const { updateDirectoryIssue } = await import("../src/directory/update-issue");
-
       const devpoolIssue = {
         ...issueDevpoolTemplate,
         state: "closed",
@@ -365,8 +366,6 @@ describe("handleDevPoolIssue", () => {
     });
 
     test("adds Unavailable label to devpool issue when project issue is assigned and open", async () => {
-      const { updateDirectoryIssue } = await import("../src/directory/update-issue");
-
       const devpoolIssue = {
         ...issueDevpoolTemplate,
         state: "open",
@@ -409,8 +408,6 @@ describe("handleDevPoolIssue", () => {
     });
 
     test("removes Unavailable label from devpool issue when project issue is closed", async () => {
-      const { updateDirectoryIssue } = await import("../src/directory/update-issue");
-
       const devpoolIssue = {
         ...issueDevpoolTemplate,
         state: "closed",
@@ -454,8 +451,6 @@ describe("handleDevPoolIssue", () => {
     });
 
     test("removes Unavailable label from devpool issue when project issue is unassigned and reopened", async () => {
-      const { updateDirectoryIssue } = await import("../src/directory/update-issue");
-
       const devpoolIssue = {
         ...issueDevpoolTemplate,
         state: "closed",
@@ -567,8 +562,27 @@ describe("createDevPoolIssue", () => {
     { repoOwner: "ubiquity", description: "Devpool", issueDevpoolTemplate: issueDevpoolTemplate, issueTemplate: issueTemplate },
     { repoOwner: "not-ubiquity", description: "Forked Devpool", issueDevpoolTemplate: forkedIssueDevpoolTemplate, issueTemplate: forkedIssueTemplate },
   ])("$description directory", ({ repoOwner, issueDevpoolTemplate, issueTemplate }) => {
+    let checkIfForked: () => any;
+    let newDirectoryIssue: (partnerIssue: GitHubIssue, projectUrl: string, twitterMap: TwitterMap) => any;
+
     beforeEach(() => {
       jest.resetModules();
+
+      import("../src/directory/check-if-forked")
+        .then((mod) => {
+          checkIfForked = mod.checkIfForked;
+        })
+        .catch((err) => {
+          console.error(err);
+        });
+
+      import("../src/directory/new-directory-issue")
+        .then((mod) => {
+          newDirectoryIssue = mod.newDirectoryIssue;
+        })
+        .catch((err) => {
+          console.error(err);
+        });
 
       dotenv.config({
         override: true,
@@ -594,9 +608,6 @@ describe("createDevPoolIssue", () => {
     });
 
     test("only creates a new devpool issue if it's unassigned, opened and not already a devpool issue", async () => {
-      const { checkIfForked } = await import("../src/directory/check-if-forked");
-      const { newDirectoryIssue } = await import("../src/directory/new-directory-issue");
-
       const partnerIssue = {
         ...issueTemplate,
         assignee: null,
