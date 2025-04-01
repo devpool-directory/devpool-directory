@@ -17,7 +17,7 @@ export async function setMetaChanges({ issueDelta: metaChanges, partnerIssue, di
         owner: DEVPOOL_OWNER_NAME,
         repo: DEVPOOL_REPO_NAME,
         issue_number: directoryIssue.number,
-        title: directoryIssue.title,
+        title: metaChanges.title ? partnerIssue.title : directoryIssue.title,
         body: directoryIssueBody,
         labels: metaChanges.labels ? labelRemoved : originalLabels,
         state: partnerIssue.state === "closed" ? "closed" : "open",

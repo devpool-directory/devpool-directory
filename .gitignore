@@ -17,3 +17,4 @@ static/dist
 coverage
 junit.xml
 cypress/screenshots
+test-dashboard.md

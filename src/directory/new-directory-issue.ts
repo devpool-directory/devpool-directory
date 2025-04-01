@@ -65,7 +65,7 @@ export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: s
       partnerIssueTitle: partnerIssue.title,
       partnerIssueUrl: partnerIssue.html_url,
       projectUrl,
-      error: err.message,
+      error: err,
     });
     return;
   }
