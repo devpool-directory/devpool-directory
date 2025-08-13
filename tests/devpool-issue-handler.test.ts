@@ -45,6 +45,7 @@ describe("handleDevPoolIssue", () => {
 
   describe.each([
     { repoOwner: "ubiquity", description: "Devpool", issueDevpoolTemplate: issueDevpoolTemplate, issueTemplate: issueTemplate },
+    { repoOwner: "devpool-directory", description: "Devpool (transferred)", issueDevpoolTemplate: issueDevpoolTemplate, issueTemplate: issueTemplate },
     { repoOwner: "not-ubiquity", description: "Forked Devpool", issueDevpoolTemplate: forkedIssueDevpoolTemplate, issueTemplate: forkedIssueTemplate },
   ])("$description directory", ({ repoOwner, issueDevpoolTemplate, issueTemplate }) => {
     let checkIfForked: typeof import("../src/directory/check-if-forked").checkIfForked;
@@ -80,7 +81,8 @@ describe("handleDevPoolIssue", () => {
     });
 
     test("checkIfForkedRepo", async () => {
-      expect(await checkIfForked()).toBe(repoOwner !== "ubiquity");
+      const officialOwners = ["ubiquity", "devpool-directory"];
+      expect(await checkIfForked()).toBe(!officialOwners.includes(repoOwner));
     });
 
     test("updates issue title in devpool when project issue title changes", async () => {
@@ -546,6 +548,7 @@ describe("createDevPoolIssue", () => {
 
   describe.each([
     { repoOwner: "ubiquity", description: "Devpool", issueDevpoolTemplate: issueDevpoolTemplate, issueTemplate: issueTemplate },
+    { repoOwner: "devpool-directory", description: "Devpool (transferred)", issueDevpoolTemplate: issueDevpoolTemplate, issueTemplate: issueTemplate },
     { repoOwner: "not-ubiquity", description: "Forked Devpool", issueDevpoolTemplate: forkedIssueDevpoolTemplate, issueTemplate: forkedIssueTemplate },
   ])("$description directory", ({ repoOwner, issueDevpoolTemplate, issueTemplate }) => {
     let checkIfForked: typeof import("../src/directory/check-if-forked").checkIfForked;
