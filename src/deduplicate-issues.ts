@@ -13,37 +13,65 @@ export async function deduplicateIssues(isDryRun = false) {
 
   // Check authentication and permissions
   try {
-    // Check who is authenticated with the API token
-    const { data: user } = await octokit.rest.users.getAuthenticated();
-    console.log(`\nAuthenticated as: ${user.login} (${user.name || 'No name'}) - ID: ${user.id}`);
-    console.log(`User type: ${user.type}`);
-    
-    // Check rate limit to see if authenticated
+    // First check rate limit to see if we're authenticated
     const { data: rateLimit } = await octokit.rest.rateLimit.get();
-    console.log(`API Rate limit: ${rateLimit.rate.remaining}/${rateLimit.rate.limit}`);
+    console.log(`\nAPI Rate limit: ${rateLimit.rate.remaining}/${rateLimit.rate.limit}`);
     
-    // Check GH CLI authentication
+    // Try to get authenticated user info (works for PATs, fails for GitHub Apps)
     try {
-      const ghAuthStatus = execSync('gh auth status', { encoding: 'utf8', stdio: 'pipe' });
-      console.log('\nGH CLI authentication status:', ghAuthStatus);
-      
-      // Also check who gh is logged in as
-      const ghUser = execSync('gh api user --jq .login', { encoding: 'utf8', stdio: 'pipe' }).trim();
-      const ghUserId = execSync('gh api user --jq .id', { encoding: 'utf8', stdio: 'pipe' }).trim();
-      console.log(`GH CLI authenticated as: ${ghUser} (ID: ${ghUserId})`);
-    } catch (error) {
-      console.error('GH CLI not authenticated or error checking status:', error);
+      const { data: user } = await octokit.rest.users.getAuthenticated();
+      console.log(`Authenticated as user: ${user.login} (${user.name || 'No name'}) - ID: ${user.id}`);
+      console.log(`User type: ${user.type}`);
+    } catch (userError: any) {
+      if (userError.status === 403 && userError.message?.includes('Resource not accessible by integration')) {
+        console.log('Authenticated as GitHub App (not a personal access token)');
+        
+        // Try to get app info
+        try {
+          const { data: app } = await octokit.rest.apps.getAuthenticated();
+          console.log(`GitHub App: ${app.name} (ID: ${app.id})`);
+          console.log(`App permissions:`, app.permissions);
+        } catch (appError) {
+          console.log('Could not retrieve GitHub App details');
+        }
+      } else {
+        throw userError;
+      }
     }
     
-    // Check repository permissions
-    const { data: repo } = await octokit.rest.repos.get({
-      owner: DEVPOOL_OWNER_NAME,
-      repo: DEVPOOL_REPO_NAME
-    });
-    console.log(`Repository permissions: ${JSON.stringify(repo.permissions)}`);
+    // Check GH CLI authentication (this is what actually deletes issues)
+    console.log('\n--- GH CLI Authentication ---');
+    try {
+      // Check if gh is authenticated
+      execSync('gh auth status 2>&1', { encoding: 'utf8', stdio: 'pipe' });
+      
+      // Get the authenticated user for gh CLI
+      const ghUser = execSync('gh api user --jq .login 2>/dev/null', { encoding: 'utf8', stdio: 'pipe' }).trim();
+      const ghUserId = execSync('gh api user --jq .id 2>/dev/null', { encoding: 'utf8', stdio: 'pipe' }).trim();
+      console.log(`GH CLI authenticated as: ${ghUser} (ID: ${ghUserId})`);
+      
+      // Check if gh can access the repo
+      const repoCheck = execSync(`gh api repos/${DEVPOOL_OWNER_NAME}/${DEVPOOL_REPO_NAME} --jq .permissions 2>/dev/null`, { 
+        encoding: 'utf8', 
+        stdio: 'pipe' 
+      }).trim();
+      console.log(`GH CLI repository permissions: ${repoCheck}`);
+    } catch (error: any) {
+      console.error('GH CLI not authenticated or cannot access repository');
+      console.error('Error:', error.message || error);
+      console.log('\n⚠️  IMPORTANT: The gh CLI must be authenticated with a token that has permission to delete issues.');
+      console.log('The API token (GITHUB_TOKEN) is used for reading issues, but gh CLI is used for deletion.');
+      
+      if (!isDryRun) {
+        throw new Error('Cannot proceed without gh CLI authentication for deletions');
+      }
+    }
     
-  } catch (error) {
-    console.error('Failed to check authentication:', error);
+  } catch (error: any) {
+    console.error('Failed to check authentication:', error.message || error);
+    if (!isDryRun && error.message?.includes('Cannot proceed')) {
+      throw error;
+    }
     console.log('\nContinuing anyway...');
   }
 
