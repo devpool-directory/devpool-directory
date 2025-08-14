@@ -27,9 +27,14 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: "20"
+      
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
 
       - name: Install dependencies
-        run: npm ci
+        run: bun install
 
       - name: Run deduplication script
         env:
@@ -41,10 +46,10 @@ jobs:
         run: |
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
             echo "Running in dry-run mode..."
-            npx tsx src/deduplicate-issues.ts --dry-run
+            bun run deduplicate:dry
           else
             echo "Running deduplication (will delete duplicate issues)..."
-            npx tsx src/deduplicate-issues.ts
+            bun run deduplicate
           fi
 
       - name: Summary
