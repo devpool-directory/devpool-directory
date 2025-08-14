@@ -1,4 +1,4 @@
-import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME, GitHubIssue, GitHubLabel } from "./directory/directory";
+import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME, GitHubIssue, GitHubLabel, octokit } from "./directory/directory";
 import { getRepositoryIssues } from "./directory/get-repository-issues";
 import { execSync } from "child_process";
 
@@ -10,6 +10,42 @@ interface IssueGroup {
 export async function deduplicateIssues(isDryRun = false) {
   console.log(`Starting deduplication process for ${DEVPOOL_OWNER_NAME}/${DEVPOOL_REPO_NAME}...`);
   console.log(`Dry run: ${isDryRun}`);
+
+  // Check authentication and permissions
+  try {
+    // Check who is authenticated with the API token
+    const { data: user } = await octokit.rest.users.getAuthenticated();
+    console.log(`\nAuthenticated as: ${user.login} (${user.name || 'No name'}) - ID: ${user.id}`);
+    console.log(`User type: ${user.type}`);
+    
+    // Check rate limit to see if authenticated
+    const { data: rateLimit } = await octokit.rest.rateLimit.get();
+    console.log(`API Rate limit: ${rateLimit.rate.remaining}/${rateLimit.rate.limit}`);
+    
+    // Check GH CLI authentication
+    try {
+      const ghAuthStatus = execSync('gh auth status', { encoding: 'utf8', stdio: 'pipe' });
+      console.log('\nGH CLI authentication status:', ghAuthStatus);
+      
+      // Also check who gh is logged in as
+      const ghUser = execSync('gh api user --jq .login', { encoding: 'utf8', stdio: 'pipe' }).trim();
+      const ghUserId = execSync('gh api user --jq .id', { encoding: 'utf8', stdio: 'pipe' }).trim();
+      console.log(`GH CLI authenticated as: ${ghUser} (ID: ${ghUserId})`);
+    } catch (error) {
+      console.error('GH CLI not authenticated or error checking status:', error);
+    }
+    
+    // Check repository permissions
+    const { data: repo } = await octokit.rest.repos.get({
+      owner: DEVPOOL_OWNER_NAME,
+      repo: DEVPOOL_REPO_NAME
+    });
+    console.log(`Repository permissions: ${JSON.stringify(repo.permissions)}`);
+    
+  } catch (error) {
+    console.error('Failed to check authentication:', error);
+    console.log('\nContinuing anyway...');
+  }
 
   // Fetch all issues
   const allIssues = await getRepositoryIssues(DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME);
