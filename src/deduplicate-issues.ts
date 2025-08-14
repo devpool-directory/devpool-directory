@@ -10,6 +10,16 @@ interface IssueGroup {
 export async function deduplicateIssues(isDryRun = false) {
   console.log(`Starting deduplication process for ${DEVPOOL_OWNER_NAME}/${DEVPOOL_REPO_NAME}...`);
   console.log(`Dry run: ${isDryRun}`);
+  
+  // Debug token information
+  console.log('\n--- Token Debug Information ---');
+  const ghToken = process.env.GH_TOKEN;
+  const githubToken = process.env.GITHUB_TOKEN;
+  const devpoolToken = process.env.DEVPOOL_GITHUB_API_TOKEN;
+  
+  console.log('GH_TOKEN:', ghToken ? `${ghToken.substring(0, 8)}...${ghToken.substring(ghToken.length - 4)}` : 'NOT SET');
+  console.log('GITHUB_TOKEN:', githubToken ? `${githubToken.substring(0, 8)}...${githubToken.substring(githubToken.length - 4)}` : 'NOT SET');
+  console.log('DEVPOOL_GITHUB_API_TOKEN:', devpoolToken ? `${devpoolToken.substring(0, 8)}...${devpoolToken.substring(devpoolToken.length - 4)}` : 'NOT SET');
 
   // Check authentication and permissions
   try {
@@ -41,10 +51,14 @@ export async function deduplicateIssues(isDryRun = false) {
     
     // Check GH CLI authentication (this is what actually deletes issues)
     console.log('\n--- GH CLI Authentication ---');
-    console.log('Note: GH_TOKEN environment variable is:', process.env.GH_TOKEN ? 'SET' : 'NOT SET');
-    console.log('Note: GITHUB_TOKEN environment variable is:', process.env.GITHUB_TOKEN ? 'SET' : 'NOT SET');
     
     try {
+      // First, let's see what token gh is using
+      const ghAuthToken = execSync('gh auth token 2>/dev/null || echo "NO_TOKEN"', { encoding: 'utf8', stdio: 'pipe' }).trim();
+      if (ghAuthToken && ghAuthToken !== 'NO_TOKEN') {
+        console.log('GH CLI token:', `${ghAuthToken.substring(0, 8)}...${ghAuthToken.substring(ghAuthToken.length - 4)}`);
+      }
+      
       // Check if gh is authenticated
       execSync('gh auth status 2>&1', { encoding: 'utf8', stdio: 'pipe' });
       
