@@ -41,6 +41,9 @@ export async function deduplicateIssues(isDryRun = false) {
     
     // Check GH CLI authentication (this is what actually deletes issues)
     console.log('\n--- GH CLI Authentication ---');
+    console.log('Note: GH_TOKEN environment variable is:', process.env.GH_TOKEN ? 'SET' : 'NOT SET');
+    console.log('Note: GITHUB_TOKEN environment variable is:', process.env.GITHUB_TOKEN ? 'SET' : 'NOT SET');
+    
     try {
       // Check if gh is authenticated
       execSync('gh auth status 2>&1', { encoding: 'utf8', stdio: 'pipe' });
@@ -48,7 +51,14 @@ export async function deduplicateIssues(isDryRun = false) {
       // Get the authenticated user for gh CLI
       const ghUser = execSync('gh api user --jq .login 2>/dev/null', { encoding: 'utf8', stdio: 'pipe' }).trim();
       const ghUserId = execSync('gh api user --jq .id 2>/dev/null', { encoding: 'utf8', stdio: 'pipe' }).trim();
-      console.log(`GH CLI authenticated as: ${ghUser} (ID: ${ghUserId})`);
+      const ghUserType = execSync('gh api user --jq .type 2>/dev/null', { encoding: 'utf8', stdio: 'pipe' }).trim();
+      console.log(`GH CLI authenticated as: ${ghUser} (ID: ${ghUserId}, Type: ${ghUserType})`);
+      
+      // Check what permissions this user has
+      const ghScopes = execSync('gh api user --jq ".[]" 2>/dev/null || echo "Could not get scopes"', { 
+        encoding: 'utf8', 
+        stdio: 'pipe' 
+      }).trim();
       
       // Check if gh can access the repo
       const repoCheck = execSync(`gh api repos/${DEVPOOL_OWNER_NAME}/${DEVPOOL_REPO_NAME} --jq .permissions 2>/dev/null`, { 
@@ -56,11 +66,18 @@ export async function deduplicateIssues(isDryRun = false) {
         stdio: 'pipe' 
       }).trim();
       console.log(`GH CLI repository permissions: ${repoCheck}`);
+      
+      // Check if this user can delete issues (requires write access)
+      const canDelete = repoCheck.includes('"push":true') || repoCheck.includes('"admin":true');
+      if (!canDelete) {
+        console.warn(`⚠️  WARNING: User ${ghUser} may not have permission to delete issues (needs write access)`);
+      }
     } catch (error: any) {
       console.error('GH CLI not authenticated or cannot access repository');
       console.error('Error:', error.message || error);
       console.log('\n⚠️  IMPORTANT: The gh CLI must be authenticated with a token that has permission to delete issues.');
       console.log('The API token (GITHUB_TOKEN) is used for reading issues, but gh CLI is used for deletion.');
+      console.log('Make sure GH_TOKEN secret is set to a PAT with repo scope from a user with write access.');
       
       if (!isDryRun) {
         throw new Error('Cannot proceed without gh CLI authentication for deletions');

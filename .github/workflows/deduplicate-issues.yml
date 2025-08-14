@@ -36,20 +36,13 @@ jobs:
       - name: Install dependencies
         run: bun install
 
-      - name: Get GitHub App token
-        uses: tibdex/github-app-token@v1.7.0
-        id: get_installation_token
-        with:
-          app_id: ${{ secrets.APP_ID }}
-          private_key: ${{ secrets.APP_PRIVATE_KEY }}
-
       - name: Run deduplication script
         env:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
-          DEVPOOL_GITHUB_API_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          DEVPOOL_GITHUB_API_TOKEN: ${{ secrets.GH_TOKEN }}
           DEVPOOL_OWNER_NAME: ${{ github.repository_owner }}
           DEVPOOL_REPO_NAME: devpool-directory
-          GH_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then
             echo "Running in dry-run mode..."
