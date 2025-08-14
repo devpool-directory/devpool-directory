@@ -4,7 +4,9 @@ import dotenv from "dotenv";
 import _projects from "../../projects.json";
 dotenv.config();
 
-export const octokit = new Octokit({ auth: process.env.DEVPOOL_GITHUB_API_TOKEN });
+// Try GITHUB_TOKEN first, then fall back to DEVPOOL_GITHUB_API_TOKEN
+const GITHUB_API_TOKEN = process.env.GITHUB_TOKEN || process.env.DEVPOOL_GITHUB_API_TOKEN;
+export const octokit = new Octokit({ auth: GITHUB_API_TOKEN });
 
 export const PRICING_NOT_SET = "Pricing: not set";
 

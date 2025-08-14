@@ -1,5 +1,5 @@
 import { TwitterMap } from "../twitter/initialize-twitter-map";
-import { GitHubIssue } from "./directory";
+import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME, GitHubIssue } from "./directory";
 import { getIssueByLabel } from "./get-issue-by-label";
 import { getRepoCredentials } from "./get-repo-credentials";
 import { getRepositoryIssues } from "./get-repository-issues";
@@ -41,8 +41,21 @@ export async function syncPartnerRepoIssues({
         directoryIssue: directoryIssue,
       });
     } else {
-      // if it doesn't exist in the Directory, then create it
-      await newDirectoryIssue(partnerIssue, partnerRepoUrl, twitterMap);
+      // Double-check right before creating to prevent race conditions
+      const freshDirectoryIssues = await getRepositoryIssues(DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME);
+      const existingIssue = getIssueByLabel(freshDirectoryIssues, `id: ${partnerIssue.node_id}`);
+
+      if (existingIssue) {
+        console.log(`Issue already exists (found in fresh check): ${existingIssue.html_url} for partner issue: ${partnerIssue.html_url}`);
+        // Update the existing issue instead of creating a duplicate
+        await updateDirectoryIssue({
+          partnerIssue: partnerIssue,
+          directoryIssue: existingIssue,
+        });
+      } else {
+        // if it doesn't exist in the Directory, then create it
+        await newDirectoryIssue(partnerIssue, partnerRepoUrl, twitterMap);
+      }
     }
 
     return directoryIssue;

@@ -6,6 +6,16 @@ import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME, GitHubIssue, GitHubLabel, Labels
 import { getDirectoryIssueLabelsFromPartnerIssue } from "./get-directory-issue-labels";
 import { getSocialMediaText } from "./get-social-media-text";
 
+interface GitHubError extends Error {
+  status?: number;
+  response?: {
+    data?: {
+      message?: string;
+      errors?: Array<{ code?: string }>;
+    };
+  };
+}
+
 export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: string, twitterMap: TwitterMap) {
   if (partnerIssue.state === "closed") return; // if issue is "closed" then skip it, no need to copy/paste already "closed" issues
 
@@ -27,7 +37,15 @@ export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: s
       name: `id: ${partnerIssue.node_id}`,
     });
   } catch (err) {
-    console.error("Failed to create a label:", err);
+    // If label already exists, that's fine
+    const error = err as GitHubError;
+    if (error.status === 422 && error.response?.data?.errors?.[0]?.code === "already_exists") {
+      console.log(`Label 'id: ${partnerIssue.node_id}' already exists, continuing...`);
+    } else {
+      // For any other error, we should not proceed with issue creation
+      console.error("Failed to create a label:", err);
+      throw new Error(`Failed to create label 'id: ${partnerIssue.node_id}': ${error.message}`);
+    }
   }
 
   // create a new issue
@@ -61,12 +79,23 @@ export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: s
       }
     }
   } catch (err) {
-    console.error("Failed to create new issue:", {
-      partnerIssueTitle: partnerIssue.title,
-      partnerIssueUrl: partnerIssue.html_url,
-      projectUrl,
-      error: err,
-    });
+    // Check if the error is because the issue already exists (based on title or other constraints)
+    const error = err as GitHubError;
+    if (error.status === 422) {
+      console.warn("Issue creation failed with validation error - possible duplicate:", {
+        partnerIssueTitle: partnerIssue.title,
+        partnerIssueUrl: partnerIssue.html_url,
+        projectUrl,
+        error: error.response?.data?.message || error.message,
+      });
+    } else {
+      console.error("Failed to create new issue:", {
+        partnerIssueTitle: partnerIssue.title,
+        partnerIssueUrl: partnerIssue.html_url,
+        projectUrl,
+        error: err,
+      });
+    }
     return;
   }
 }
