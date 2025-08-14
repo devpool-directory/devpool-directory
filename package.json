@@ -13,7 +13,9 @@
     "format:lint": "eslint --fix .",
     "format:prettier": "prettier --write .",
     "prepare": "husky install",
-    "test": "jest --setupFiles dotenv/config --coverage"
+    "test": "jest --setupFiles dotenv/config --coverage",
+    "deduplicate": "tsx src/deduplicate-issues.ts",
+    "deduplicate:dry": "tsx src/deduplicate-issues.ts --dry-run"
   },
   "keywords": [
     "typescript",

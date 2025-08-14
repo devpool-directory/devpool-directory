@@ -12,7 +12,7 @@ import { initializeTwitterMap, TwitterMap } from "./twitter/initialize-twitter-m
 
 export async function main() {
   const twitterMap: TwitterMap = await initializeTwitterMap();
-  const directoryIssues: GitHubIssue[] = await getRepositoryIssues(DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME);
+  let directoryIssues: GitHubIssue[] = await getRepositoryIssues(DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME);
   const partnerRepoUrls = await getPartnerRepoUrls();
   const taskList: GitHubIssue[] = [];
   const pullRequestList: GitHubPullRequest[] = [];
@@ -23,6 +23,9 @@ export async function main() {
     // get owner and repository names from project URL
     const result: GitHubIssue[] = await syncPartnerRepoIssues({ partnerRepoUrl, directoryIssues, twitterMap });
     taskList.push(...result);
+
+    // Refresh directory issues after each partner repo sync to catch newly created issues
+    directoryIssues = await getRepositoryIssues(DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME);
 
     // get all pull requests (opened and closed)
     const [ownerName, repoName] = getRepoCredentials(partnerRepoUrl);
