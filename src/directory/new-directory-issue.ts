@@ -58,6 +58,7 @@ export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: s
         repo: DEVPOOL_REPO_NAME,
         labels: `id: ${partnerIssue.node_id}`,
         state: "all",
+        per_page: 1,  // Only need to check if any issue exists
       });
 
       if (existingIssues.length > 0) {
@@ -67,6 +68,7 @@ export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: s
       }
     } catch (err) {
       console.error("Failed to check for existing issues:", err);
+      throw new Error("Failed to check for existing issues, aborting to prevent potential duplicate creation.");
     }
   }
 
