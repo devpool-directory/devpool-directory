@@ -39,8 +39,8 @@ export async function deduplicateIssues(isDryRun = false) {
         // Try to get app info
         try {
           const { data: app } = await octokit.rest.apps.getAuthenticated();
-          console.log(`GitHub App: ${app.name} (ID: ${app.id})`);
-          console.log(`App permissions:`, app.permissions);
+          console.log(`GitHub App: ${app?.name} (ID: ${app?.id})`);
+          console.log(`App permissions:`, app?.permissions);
         } catch (appError) {
           console.log('Could not retrieve GitHub App details');
         }
