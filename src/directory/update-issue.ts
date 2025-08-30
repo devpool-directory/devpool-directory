@@ -1,13 +1,15 @@
 import { checkIfForked } from "./check-if-forked";
-import { GitHubIssue, GitHubLabel, Labels } from "./directory";
+import { GitHubIssue, GitHubIssueWithStateReason, GitHubLabel, Labels, octokit, DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME } from "./directory";
 import { getDirectoryIssueLabelsFromPartnerIssue } from "./get-directory-issue-labels";
 import { setMetaChanges } from "./set-meta-changes";
 import { setUnavailableLabelToIssue } from "./set-unavailable-label-to-issue";
 
 export async function updateDirectoryIssue({ directoryIssue, partnerIssue }: { directoryIssue: GitHubIssue; partnerIssue: GitHubIssue }) {
+  // Cast to extended interface to access state_reason
+  const partnerIssueWithReason = partnerIssue as GitHubIssueWithStateReason;
+  
   // If partner issue is closed as unplanned, close the directory issue
-  if (partnerIssue.state === "closed" && (partnerIssue as any).state_reason === "not_planned" && directoryIssue.state === "open") {
-    const { octokit, DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME } = await import("./directory");
+  if (partnerIssueWithReason.state === "closed" && partnerIssueWithReason.state_reason === "not_planned" && directoryIssue.state === "open") {
     try {
       await octokit.rest.issues.update({
         owner: DEVPOOL_OWNER_NAME,

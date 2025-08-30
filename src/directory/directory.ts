@@ -25,6 +25,11 @@ export type GitHubLabel = RestEndpointMethodTypes["issues"]["listLabelsOnIssue"]
 export type GitHubPullRequest = RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
 export type GitHubOrganization = RestEndpointMethodTypes["orgs"]["get"]["response"]["data"];
 
+// Extended interface for issues that includes state_reason
+export interface GitHubIssueWithStateReason extends GitHubIssue {
+  state_reason?: "completed" | "not_planned" | "reopened" | null;
+}
+
 export type OrgNameAndAvatarUrl = {
   ownerName: string;
   avatar_url?: string;
