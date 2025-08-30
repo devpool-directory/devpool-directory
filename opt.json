@@ -1,9 +1,15 @@
 {
-  "in": ["ubiquity", "ubiquity-os-marketplace", "0x4007/uad.ubq.fi", "ubiquity-os", "ondecentral"],
+  "in": [
+    "ubiquity",
+    "ubiquity-os-marketplace",
+    "0x4007/uad.ubq.fi",
+    "ubiquity-os",
+    "ondecentral",
+    "devpool-directory/devpool-directory-tasks"
+  ],
   "out": [
     "ubiquity/series-a",
     "ubiquity/hackbar",
-    "ubiquity/devpool-directory",
     "ubiquity/card-issuance",
     "ubiquity/research",
     "ubiquity/recruiting",
