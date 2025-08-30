@@ -5,6 +5,24 @@ import { setMetaChanges } from "./set-meta-changes";
 import { setUnavailableLabelToIssue } from "./set-unavailable-label-to-issue";
 
 export async function updateDirectoryIssue({ directoryIssue, partnerIssue }: { directoryIssue: GitHubIssue; partnerIssue: GitHubIssue }) {
+  // If partner issue is closed as unplanned, close the directory issue
+  if (partnerIssue.state === "closed" && (partnerIssue as any).state_reason === "not_planned" && directoryIssue.state === "open") {
+    const { octokit, DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME } = await import("./directory");
+    try {
+      await octokit.rest.issues.update({
+        owner: DEVPOOL_OWNER_NAME,
+        repo: DEVPOOL_REPO_NAME,
+        issue_number: directoryIssue.number,
+        state: "closed",
+        state_reason: "not_planned",
+      });
+      console.log(`Closed directory issue #${directoryIssue.number} as unplanned (partner issue was closed as unplanned)`);
+      return;
+    } catch (err) {
+      console.error(`Error closing directory issue #${directoryIssue.number}:`, err);
+    }
+  }
+  
   // remove the "unavailable" label as this adds it and statistics rely on it
   const labelRemoved = getDirectoryIssueLabelsFromPartnerIssue(partnerIssue).filter((label) => label != Labels.UNAVAILABLE);
   const originalLabels = partnerIssue.labels.map((label) => (label as GitHubLabel).name);

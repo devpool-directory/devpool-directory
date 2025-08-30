@@ -19,6 +19,11 @@ export async function syncPartnerRepoIssues({
   const partnerRepoIssues: GitHubIssue[] = await getRepositoryIssues(ownerName, repoName);
   const buffer: (GitHubIssue | null)[] = [];
   for (const partnerIssue of partnerRepoIssues) {
+    // Skip issues that are closed as "not_planned" (unplanned)
+    if (partnerIssue.state === "closed" && (partnerIssue as any).state_reason === "not_planned") {
+      continue;
+    }
+    
     // if the issue is open, then add it to the buffer
     if (partnerIssue.state === "open") {
       buffer.push(partnerIssue);
