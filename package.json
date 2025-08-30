@@ -14,6 +14,8 @@
     "format:prettier": "prettier --write .",
     "prepare": "husky install",
     "test": "DOTENV_CONFIG_PATH=.env.test jest --setupFiles dotenv/config --coverage",
+    "test:integration": "jest --config jest.integration.config.json --runInBand",
+    "test:unit": "DOTENV_CONFIG_PATH=.env.test jest --setupFiles dotenv/config --testPathIgnorePatterns=integration",
     "deduplicate": "tsx src/deduplicate-issues.ts",
     "deduplicate:dry": "tsx src/deduplicate-issues.ts --dry-run"
   },
