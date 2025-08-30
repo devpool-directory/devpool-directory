@@ -30,6 +30,7 @@ export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: s
 
   // create a new `id: XXX` label
   // NOTICE: this is a workaround until https://github.com/octokit/rest.js/issues/479 is solved
+  let labelAlreadyExists = false;
   try {
     await octokit.rest.issues.createLabel({
       owner: DEVPOOL_OWNER_NAME,
@@ -40,11 +41,32 @@ export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: s
     // If label already exists, that's fine
     const error = err as GitHubError;
     if (error.status === 422 && error.response?.data?.errors?.[0]?.code === "already_exists") {
-      console.log(`Label 'id: ${partnerIssue.node_id}' already exists, continuing...`);
+      console.log(`Label 'id: ${partnerIssue.node_id}' already exists`);
+      labelAlreadyExists = true;
     } else {
       // For any other error, we should not proceed with issue creation
       console.error("Failed to create a label:", err);
       throw new Error(`Failed to create label 'id: ${partnerIssue.node_id}': ${error.message}`);
+    }
+  }
+
+  // If label already exists, check if an issue with this label already exists
+  if (labelAlreadyExists) {
+    try {
+      const { data: existingIssues } = await octokit.rest.issues.listForRepo({
+        owner: DEVPOOL_OWNER_NAME,
+        repo: DEVPOOL_REPO_NAME,
+        labels: `id: ${partnerIssue.node_id}`,
+        state: "all",
+      });
+
+      if (existingIssues.length > 0) {
+        console.log(`Issue with label 'id: ${partnerIssue.node_id}' already exists: ${existingIssues[0].html_url}`);
+        console.log(`Skipping duplicate creation for partner issue: ${partnerIssue.html_url}`);
+        return;
+      }
+    } catch (err) {
+      console.error("Failed to check for existing issues:", err);
     }
   }
 
