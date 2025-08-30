@@ -1,4 +1,4 @@
-import { describe, test } from "@jest/globals";
+import { describe, test, beforeAll, afterEach, afterAll, expect } from "@jest/globals";
 import { drop } from "@mswjs/data";
 import { db } from "../mocks/db";
 import cfg from "../mocks/issue-devpool-template.json";
@@ -75,7 +75,7 @@ describe("GitHub items", () => {
       html_url: "https://github.com/owner/repo",
       node_id: "2",
     });
-    expect(res).toMatchObject(["id: 2", "Pricing: 200 USD", "Time: 1h"]);
+    expect(res).toEqual(["id: 2", "Pricing: 200 USD", "Time: 1h"]);
   });
 
   test("Get repo urls", async () => {
@@ -98,9 +98,9 @@ describe("GitHub items", () => {
       html_url: "https://github.com/ubiquity/devpool-directory",
     });
     let res = await getRepoUrls("owner/repo");
-    expect(res).toMatchObject(["https://github.com/owner/repo"]);
+    expect(res).toEqual(["https://github.com/owner/repo"]);
     res = await getRepoUrls(DEVPOOL_OWNER_NAME);
-    expect(res).toMatchObject(["https://github.com/ubiquity/test-repo", "https://github.com/ubiquity/devpool-directory"]);
+    expect(res).toEqual(["https://github.com/ubiquity/test-repo", "https://github.com/ubiquity/devpool-directory"]);
   });
 
   test("Get all issues", async () => {

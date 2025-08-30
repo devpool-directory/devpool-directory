@@ -94,8 +94,8 @@ export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: s
         const socialMediaText = getSocialMediaText(createdIssue.data);
         const tweetId = await twitter.postTweet(socialMediaText);
 
-        if (tweetId) {
-          twitterMap[createdIssue.data.node_id] = tweetId?.id ?? "";
+        if (tweetId && tweetId.id) {
+          twitterMap[createdIssue.data.node_id] = tweetId.id;
           await commitTwitterMap(twitterMap);
         }
       } catch (err) {

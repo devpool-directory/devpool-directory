@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import { describe, test, beforeEach, expect, jest } from "@jest/globals";
 import { drop } from "@mswjs/data";
 import { setupServer } from "msw/node";
 import { db } from "../mocks/db";
@@ -37,7 +38,7 @@ function createIssues(devpoolIssue: GitHubIssue, projectIssue: GitHubIssue) {
 }
 
 describe("handleDevPoolIssue", () => {
-  const logSpy = jest.spyOn(console, "log").mockImplementation();
+  const logSpy = jest.spyOn(console, "log").mockImplementation(jest.fn());
 
   beforeEach(() => {
     logSpy.mockClear();
@@ -479,7 +480,7 @@ describe("handleDevPoolIssue", () => {
 
   test("getRepoUrls", async () => {
     let orgOrRepo = "test/org/bad-repo/still/bad";
-    const warnSpy = jest.spyOn(console, "warn").mockImplementation();
+    const warnSpy = jest.spyOn(console, "warn").mockImplementation(jest.fn());
     await getRepoUrls(orgOrRepo);
 
     expect(warnSpy).toHaveBeenCalledWith(`Neither org or nor repo GitHub provided: test/org/bad-repo/still/bad.`);
@@ -500,7 +501,7 @@ describe("handleDevPoolIssue", () => {
 
     jest.resetModules();
 
-    const errorSpy = jest.spyOn(console, "error").mockImplementation();
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(jest.fn());
     (orgOrRepo as any) = ".";
 
     await getRepoUrls(orgOrRepo);
@@ -537,7 +538,7 @@ describe("handleDevPoolIssue", () => {
 });
 
 describe("createDevPoolIssue", () => {
-  const logSpy = jest.spyOn(console, "log").mockImplementation();
+  const logSpy = jest.spyOn(console, "log").mockImplementation(jest.fn());
   const twitterMap: { [key: string]: string } = {
     "ubiquity/test-repo": "ubiquity",
   };
@@ -609,7 +610,7 @@ describe("createDevPoolIssue", () => {
     });
 
     test("does not create a new devpool issue if it's already a devpool issue", async () => {
-      const errorSpy = jest.spyOn(console, "error").mockImplementation();
+      const errorSpy = jest.spyOn(console, "error").mockImplementation(jest.fn());
 
       const partnerIssue = {
         ...issueTemplate,
@@ -718,8 +719,8 @@ describe("getProjectUrls", () => {
   };
 
   beforeAll(() => {
-    jest.spyOn(console, "log").mockImplementation();
-    jest.spyOn(console, "info").mockImplementation();
+    jest.spyOn(console, "log").mockImplementation(jest.fn());
+    jest.spyOn(console, "info").mockImplementation(jest.fn());
   });
 
   const opt = {
@@ -950,7 +951,7 @@ describe("calculateStatistics", () => {
   });
 
   test("ignores invalid pricing labels and logs an error", async () => {
-    const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation();
+    const consoleErrorSpy = jest.spyOn(console, "error").mockImplementation(jest.fn());
 
     const devpoolIssue = {
       ...issueDevpoolTemplate,

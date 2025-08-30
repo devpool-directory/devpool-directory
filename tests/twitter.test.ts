@@ -1,4 +1,4 @@
-import { describe, test } from "@jest/globals";
+import { describe, test, beforeAll, afterEach, afterAll, expect, jest } from "@jest/globals";
 import dotenv from "dotenv";
 import { http, HttpResponse } from "msw";
 import { server } from "../mocks/node";
@@ -123,9 +123,8 @@ describe("Twitter", () => {
 
   test("Post Tweet successfully", async () => {
     const logSpy = jest.spyOn(console, "log").mockImplementation(jest.fn());
-    dotenv.config({
-      override: true,
-    });
+    
+    // Set env vars before importing the module
     process.env.TWITTER_API_KEY = "foobar";
     process.env.TWITTER_API_KEY_SECRET = "foobar";
     process.env.TWITTER_ACCESS_TOKEN = "foobar";
@@ -133,8 +132,8 @@ describe("Twitter", () => {
 
     jest.resetModules();
 
-    const { default: twitterHelper } = await import("../src/twitter/twitter");
-    const tweet = await twitterHelper.postTweet("status");
+    const { postTweet } = await import("../src/twitter/post-tweet");
+    const tweet = await postTweet("status");
 
     expect(tweet).not.toBeUndefined();
     expect(logSpy).toHaveBeenCalledWith(`Tweet posted successfully, id: ${tweet?.id}, text: ${tweet?.text}`);
@@ -146,9 +145,7 @@ describe("Twitter", () => {
     const logSpy = jest.spyOn(console, "log").mockImplementation(jest.fn());
     const errorSpy = jest.spyOn(console, "error").mockImplementation(jest.fn());
 
-    dotenv.config({
-      override: true,
-    });
+    // Set env vars before importing the module
     process.env.TWITTER_API_KEY = "foobar";
     process.env.TWITTER_API_KEY_SECRET = "foobar";
     process.env.TWITTER_ACCESS_TOKEN = "foobar";
@@ -156,12 +153,14 @@ describe("Twitter", () => {
 
     jest.resetModules();
 
-    const twitter = (await import("../src/twitter/twitter")).default;
-    const tweet = await twitter.postTweet("status");
-    await twitter.deleteTweet(tweet?.id as string);
+    const { postTweet } = await import("../src/twitter/post-tweet");
+    const { deleteTweet } = await import("../src/twitter/delete-tweet");
+    
+    const tweet = await postTweet("status");
+    await deleteTweet(tweet?.id as string);
     expect(logSpy).toHaveBeenCalledWith(`Tweet posted successfully, id: ${tweet?.id}, text: ${tweet?.text}`);
 
-    await twitter.deleteTweet(tweet?.id as string);
+    await deleteTweet(tweet?.id as string);
     expect(logSpy).toHaveBeenCalledWith(`Could not delete tweet, id ${tweet?.id}`);
     expect(errorSpy).toHaveBeenCalledWith(
       expect.stringContaining("Error deleting tweet"),
