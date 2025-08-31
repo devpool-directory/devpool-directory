@@ -1,4 +1,4 @@
-import { Issue } from '../../../domain/entities/issue';
+import { Issue } from "../../../domain/entities/issue";
 
 export interface SyncPartnerIssuesRequest {
   partnerOrganizations: string[];
@@ -24,7 +24,7 @@ export interface SyncPartnerIssuesResponse {
 export interface SyncedIssue {
   originalIssue: Issue;
   syncedIssueNumber?: number;
-  action: 'created' | 'updated' | 'skipped';
+  action: "created" | "updated" | "skipped";
   reason?: string;
 }
 

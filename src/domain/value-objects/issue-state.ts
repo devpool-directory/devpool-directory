@@ -1,7 +1,7 @@
-export type IssueStateValue = 'open' | 'closed' | 'all';
+export type IssueStateValue = "open" | "closed" | "all";
 
 export class IssueState {
-  private static readonly VALID_STATES: IssueStateValue[] = ['open', 'closed', 'all'];
+  private static readonly VALID_STATES: IssueStateValue[] = ["open", "closed", "all"];
 
   constructor(private readonly _value: IssueStateValue) {
     if (!IssueState.VALID_STATES.includes(_value)) {
@@ -10,24 +10,24 @@ export class IssueState {
   }
 
   static open(): IssueState {
-    return new IssueState('open');
+    return new IssueState("open");
   }
 
   static closed(): IssueState {
-    return new IssueState('closed');
+    return new IssueState("closed");
   }
 
   static all(): IssueState {
-    return new IssueState('all');
+    return new IssueState("all");
   }
 
   static fromString(state: string): IssueState {
     const normalized = state.toLowerCase() as IssueStateValue;
-    
+
     if (!IssueState.VALID_STATES.includes(normalized)) {
       throw new Error(`Invalid issue state: ${state}`);
     }
-    
+
     return new IssueState(normalized);
   }
 
@@ -36,15 +36,15 @@ export class IssueState {
   }
 
   isOpen(): boolean {
-    return this._value === 'open';
+    return this._value === "open";
   }
 
   isClosed(): boolean {
-    return this._value === 'closed';
+    return this._value === "closed";
   }
 
   isAll(): boolean {
-    return this._value === 'all';
+    return this._value === "all";
   }
 
   equals(other: IssueState): boolean {

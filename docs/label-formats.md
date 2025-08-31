@@ -3,6 +3,7 @@
 ## Label Formats
 
 ### DevPool Directory Issues
+
 Issues in the DevPool directory use these label formats:
 
 - **Pricing**: `Pricing: XXX USD` (e.g., "Pricing: 600 USD")
@@ -13,6 +14,7 @@ Issues in the DevPool directory use these label formats:
 - **Status**: `Unavailable` (when issue is assigned in partner repo)
 
 ### Partner Repository Issues
+
 Issues in partner repositories use slightly different formats:
 
 - **Price**: `Price: XXX USD` (e.g., "Price: 100 USD")

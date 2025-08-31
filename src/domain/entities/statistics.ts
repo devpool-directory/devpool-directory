@@ -114,8 +114,8 @@ export class Statistics {
         pricedRate: this.getPricedRate(),
         mergeRate: this.getMergeRate(),
         assignmentRate: this.getAssignmentRate(),
-        averageReward: this.getAverageReward()
-      }
+        averageReward: this.getAverageReward(),
+      },
     };
   }
 }

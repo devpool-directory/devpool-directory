@@ -1,2 +1,2 @@
 #!/usr/bin/env node
-import './src/presentation/cli/index';
+import "./src/presentation/cli/index";

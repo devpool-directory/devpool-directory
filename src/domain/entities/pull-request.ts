@@ -3,7 +3,7 @@ export interface PullRequestEntity {
   number: number;
   title: string;
   body: string;
-  state: 'open' | 'closed' | 'merged';
+  state: "open" | "closed" | "merged";
   issueNumber?: number;
   repositoryUrl: string;
   organizationName: string;
@@ -23,7 +23,7 @@ export class PullRequest implements PullRequestEntity {
     public readonly number: number,
     public readonly title: string,
     public readonly body: string,
-    public readonly state: 'open' | 'closed' | 'merged',
+    public readonly state: "open" | "closed" | "merged",
     public readonly repositoryUrl: string,
     public readonly organizationName: string,
     public readonly repositoryName: string,
@@ -59,15 +59,15 @@ export class PullRequest implements PullRequestEntity {
   }
 
   isOpen(): boolean {
-    return this.state === 'open';
+    return this.state === "open";
   }
 
   isClosed(): boolean {
-    return this.state === 'closed';
+    return this.state === "closed";
   }
 
   isMerged(): boolean {
-    return this.state === 'merged';
+    return this.state === "merged";
   }
 
   isLinkedToIssue(): boolean {
@@ -80,7 +80,7 @@ export class PullRequest implements PullRequestEntity {
 
   extractIssueNumber(): number | undefined {
     if (this.issueNumber) return this.issueNumber;
-    
+
     const match = this.title.match(/#(\d+)/);
     return match ? parseInt(match[1], 10) : undefined;
   }

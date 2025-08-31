@@ -12,31 +12,31 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           echo "=== Testing GH_TOKEN Identity ==="
-          
+
           # Show partial token
           if [ -n "$GH_TOKEN" ]; then
             echo "GH_TOKEN: ${GH_TOKEN:0:8}...${GH_TOKEN: -4}"
           else
             echo "GH_TOKEN: NOT SET"
           fi
-          
+
           # Try to get user info using curl
           echo -e "\n--- Using curl to check token ---"
           curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/user | jq '{login, id, name, type, created_at}' || echo "Failed to get user info"
-          
+
           # Check rate limit
           echo -e "\n--- Rate limit info ---"
           curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/rate_limit | jq '.rate' || echo "Failed to get rate limit"
-          
+
           # Check repository access
           echo -e "\n--- Repository access ---"
           curl -s -H "Authorization: token $GH_TOKEN" https://api.github.com/repos/${{ github.repository }} | jq '{full_name, permissions}' || echo "Failed to get repo info"
-          
+
           # Try gh CLI
           echo -e "\n--- Using gh CLI ---"
           gh auth status || echo "gh CLI not authenticated"
           gh api user --jq '{login: .login, id: .id, name: .name}' || echo "Failed to get user via gh"
-          
+
           # Check scopes
           echo -e "\n--- Token scopes ---"
           curl -s -I -H "Authorization: token $GH_TOKEN" https://api.github.com/user | grep -i "x-oauth-scopes" || echo "Could not get scopes"

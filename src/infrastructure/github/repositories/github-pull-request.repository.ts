@@ -1,23 +1,20 @@
-import { injectable, inject } from 'inversify';
-import { TYPES } from '../../../shared/types';
-import { PullRequestRepository, PullRequestFilter } from '../../../domain/repositories/pull-request-repository.interface';
-import { PullRequest } from '../../../domain/entities/pull-request';
-import { GitHubClient } from '../github-client';
-import { Logger } from '../../../shared/logger';
+import { injectable, inject } from "inversify";
+import { TYPES } from "../../../shared/types";
+import { PullRequestRepository, PullRequestFilter } from "../../../domain/repositories/pull-request-repository.interface";
+import { PullRequest } from "../../../domain/entities/pull-request";
+import { GitHubClient } from "../github-client";
+import { Logger } from "../../../shared/logger";
 
 @injectable()
 export class GitHubPullRequestRepository implements PullRequestRepository {
-  constructor(
-    @inject(TYPES.GitHubClient) private githubClient: GitHubClient,
-    @inject(TYPES.Logger) private logger: Logger
-  ) {}
+  constructor(@inject(TYPES.GitHubClient) private githubClient: GitHubClient, @inject(TYPES.Logger) private logger: Logger) {}
 
   async findById(owner: string, repo: string, pullNumber: number): Promise<PullRequest | null> {
     try {
       const { data } = await this.githubClient.rest.pulls.get({
         owner,
         repo,
-        pull_number: pullNumber
+        pull_number: pullNumber,
       });
 
       return this.mapToPullRequest(data);
@@ -25,7 +22,7 @@ export class GitHubPullRequestRepository implements PullRequestRepository {
       if (error.status === 404) {
         return null;
       }
-      this.logger.error('Failed to fetch pull request', { owner, repo, pullNumber, error });
+      this.logger.error("Failed to fetch pull request", { owner, repo, pullNumber, error });
       throw error;
     }
   }
@@ -35,18 +32,18 @@ export class GitHubPullRequestRepository implements PullRequestRepository {
       const { data } = await this.githubClient.rest.pulls.list({
         owner,
         repo,
-        state: filter?.state || 'open',
+        state: filter?.state || "open",
         head: filter?.head,
         base: filter?.base,
-        sort: filter?.sort || 'created',
-        direction: filter?.direction || 'desc',
+        sort: filter?.sort || "created",
+        direction: filter?.direction || "desc",
         per_page: filter?.perPage || 100,
-        page: filter?.page || 1
+        page: filter?.page || 1,
       });
 
-      return data.map(pr => this.mapToPullRequest(pr));
+      return data.map((pr) => this.mapToPullRequest(pr));
     } catch (error) {
-      this.logger.error('Failed to fetch pull requests', { owner, repo, filter, error });
+      this.logger.error("Failed to fetch pull requests", { owner, repo, filter, error });
       throw error;
     }
   }
@@ -54,25 +51,30 @@ export class GitHubPullRequestRepository implements PullRequestRepository {
   async findByIssue(owner: string, repo: string, issueNumber: number): Promise<PullRequest[]> {
     try {
       const pulls = await this.findAll(owner, repo);
-      return pulls.filter(pr => 
-        pr.body?.includes(`#${issueNumber}`) ||
-        pr.body?.includes(`fixes #${issueNumber}`) ||
-        pr.body?.includes(`closes #${issueNumber}`) ||
-        pr.body?.includes(`resolves #${issueNumber}`)
+      return pulls.filter(
+        (pr) =>
+          pr.body?.includes(`#${issueNumber}`) ||
+          pr.body?.includes(`fixes #${issueNumber}`) ||
+          pr.body?.includes(`closes #${issueNumber}`) ||
+          pr.body?.includes(`resolves #${issueNumber}`)
       );
     } catch (error) {
-      this.logger.error('Failed to find PRs by issue', { owner, repo, issueNumber, error });
+      this.logger.error("Failed to find PRs by issue", { owner, repo, issueNumber, error });
       throw error;
     }
   }
 
-  async create(owner: string, repo: string, pullRequest: {
-    title: string;
-    body: string;
-    head: string;
-    base: string;
-    draft?: boolean;
-  }): Promise<PullRequest> {
+  async create(
+    owner: string,
+    repo: string,
+    pullRequest: {
+      title: string;
+      body: string;
+      head: string;
+      base: string;
+      draft?: boolean;
+    }
+  ): Promise<PullRequest> {
     try {
       const { data } = await this.githubClient.rest.pulls.create({
         owner,
@@ -81,22 +83,27 @@ export class GitHubPullRequestRepository implements PullRequestRepository {
         body: pullRequest.body,
         head: pullRequest.head,
         base: pullRequest.base,
-        draft: pullRequest.draft
+        draft: pullRequest.draft,
       });
 
       return this.mapToPullRequest(data);
     } catch (error) {
-      this.logger.error('Failed to create pull request', { owner, repo, pullRequest, error });
+      this.logger.error("Failed to create pull request", { owner, repo, pullRequest, error });
       throw error;
     }
   }
 
-  async update(owner: string, repo: string, pullNumber: number, updates: {
-    title?: string;
-    body?: string;
-    state?: 'open' | 'closed';
-    base?: string;
-  }): Promise<PullRequest> {
+  async update(
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    updates: {
+      title?: string;
+      body?: string;
+      state?: "open" | "closed";
+      base?: string;
+    }
+  ): Promise<PullRequest> {
     try {
       const { data } = await this.githubClient.rest.pulls.update({
         owner,
@@ -105,42 +112,47 @@ export class GitHubPullRequestRepository implements PullRequestRepository {
         title: updates.title,
         body: updates.body,
         state: updates.state,
-        base: updates.base
+        base: updates.base,
       });
 
       return this.mapToPullRequest(data);
     } catch (error) {
-      this.logger.error('Failed to update pull request', { owner, repo, pullNumber, updates, error });
+      this.logger.error("Failed to update pull request", { owner, repo, pullNumber, updates, error });
       throw error;
     }
   }
 
-  async merge(owner: string, repo: string, pullNumber: number, options?: {
-    mergeMethod?: 'merge' | 'squash' | 'rebase';
-    commitTitle?: string;
-    commitMessage?: string;
-  }): Promise<void> {
+  async merge(
+    owner: string,
+    repo: string,
+    pullNumber: number,
+    options?: {
+      mergeMethod?: "merge" | "squash" | "rebase";
+      commitTitle?: string;
+      commitMessage?: string;
+    }
+  ): Promise<void> {
     try {
       await this.githubClient.rest.pulls.merge({
         owner,
         repo,
         pull_number: pullNumber,
-        merge_method: options?.mergeMethod || 'merge',
+        merge_method: options?.mergeMethod || "merge",
         commit_title: options?.commitTitle,
-        commit_message: options?.commitMessage
+        commit_message: options?.commitMessage,
       });
     } catch (error) {
-      this.logger.error('Failed to merge pull request', { owner, repo, pullNumber, options, error });
+      this.logger.error("Failed to merge pull request", { owner, repo, pullNumber, options, error });
       throw error;
     }
   }
 
   async close(owner: string, repo: string, pullNumber: number): Promise<PullRequest> {
-    return this.update(owner, repo, pullNumber, { state: 'closed' });
+    return this.update(owner, repo, pullNumber, { state: "closed" });
   }
 
   async reopen(owner: string, repo: string, pullNumber: number): Promise<PullRequest> {
-    return this.update(owner, repo, pullNumber, { state: 'open' });
+    return this.update(owner, repo, pullNumber, { state: "open" });
   }
 
   async getCommits(owner: string, repo: string, pullNumber: number): Promise<any[]> {
@@ -149,12 +161,12 @@ export class GitHubPullRequestRepository implements PullRequestRepository {
         owner,
         repo,
         pull_number: pullNumber,
-        per_page: 100
+        per_page: 100,
       });
 
       return data;
     } catch (error) {
-      this.logger.error('Failed to get PR commits', { owner, repo, pullNumber, error });
+      this.logger.error("Failed to get PR commits", { owner, repo, pullNumber, error });
       throw error;
     }
   }
@@ -165,12 +177,12 @@ export class GitHubPullRequestRepository implements PullRequestRepository {
         owner,
         repo,
         pull_number: pullNumber,
-        per_page: 100
+        per_page: 100,
       });
 
       return data;
     } catch (error) {
-      this.logger.error('Failed to get PR files', { owner, repo, pullNumber, error });
+      this.logger.error("Failed to get PR files", { owner, repo, pullNumber, error });
       throw error;
     }
   }
@@ -181,12 +193,12 @@ export class GitHubPullRequestRepository implements PullRequestRepository {
         owner,
         repo,
         pull_number: pullNumber,
-        per_page: 100
+        per_page: 100,
       });
 
       return data;
     } catch (error) {
-      this.logger.error('Failed to get PR reviews', { owner, repo, pullNumber, error });
+      this.logger.error("Failed to get PR reviews", { owner, repo, pullNumber, error });
       throw error;
     }
   }
@@ -197,10 +209,10 @@ export class GitHubPullRequestRepository implements PullRequestRepository {
         owner,
         repo,
         pull_number: pullNumber,
-        reviewers
+        reviewers,
       });
     } catch (error) {
-      this.logger.error('Failed to request review', { owner, repo, pullNumber, reviewers, error });
+      this.logger.error("Failed to request review", { owner, repo, pullNumber, reviewers, error });
       throw error;
     }
   }
@@ -212,13 +224,11 @@ export class GitHubPullRequestRepository implements PullRequestRepository {
         throw new Error(`Pull request #${pullNumber} not found`);
       }
 
-      const updatedBody = pr.body ? 
-        `${pr.body}\n\nCloses #${issueNumber}` : 
-        `Closes #${issueNumber}`;
+      const updatedBody = pr.body ? `${pr.body}\n\nCloses #${issueNumber}` : `Closes #${issueNumber}`;
 
       await this.update(owner, repo, pullNumber, { body: updatedBody });
     } catch (error) {
-      this.logger.error('Failed to link PR to issue', { owner, repo, pullNumber, issueNumber, error });
+      this.logger.error("Failed to link PR to issue", { owner, repo, pullNumber, issueNumber, error });
       throw error;
     }
   }
@@ -229,7 +239,7 @@ export class GitHubPullRequestRepository implements PullRequestRepository {
       nodeId: data.node_id,
       number: data.number,
       title: data.title,
-      body: data.body || '',
+      body: data.body || "",
       state: data.state,
       locked: data.locked,
       createdAt: new Date(data.created_at),
@@ -242,7 +252,7 @@ export class GitHubPullRequestRepository implements PullRequestRepository {
         id: data.user.id,
         nodeId: data.user.node_id,
         avatarUrl: data.user.avatar_url,
-        type: data.user.type
+        type: data.user.type,
       },
       htmlUrl: data.html_url,
       headRef: data.head.ref,
@@ -267,7 +277,7 @@ export class GitHubPullRequestRepository implements PullRequestRepository {
       commits: data.commits || 0,
       additions: data.additions || 0,
       deletions: data.deletions || 0,
-      changedFiles: data.changed_files || 0
+      changedFiles: data.changed_files || 0,
     });
   }
 }

@@ -73,10 +73,10 @@ export class Repository implements RepositoryEntity {
   }
 
   getOwnerAndName(): { owner: string; name: string } {
-    const parts = this.fullName.split('/');
+    const parts = this.fullName.split("/");
     return {
       owner: parts[0],
-      name: parts[1]
+      name: parts[1],
     };
   }
 

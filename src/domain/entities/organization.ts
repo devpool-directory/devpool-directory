@@ -9,7 +9,7 @@ export interface OrganizationEntity {
   createdAt: Date;
   updatedAt: Date;
   publicReposCount: number;
-  type: 'Organization' | 'User';
+  type: "Organization" | "User";
   isVerified?: boolean;
   hasOrganizationProjects?: boolean;
   hasRepositoryProjects?: boolean;
@@ -25,7 +25,7 @@ export class Organization implements OrganizationEntity {
     public readonly createdAt: Date,
     public readonly updatedAt: Date,
     public readonly publicReposCount: number,
-    public readonly type: 'Organization' | 'User',
+    public readonly type: "Organization" | "User",
     public readonly name?: string,
     public readonly description?: string,
     public readonly isVerified?: boolean,
@@ -53,11 +53,11 @@ export class Organization implements OrganizationEntity {
   }
 
   isOrganization(): boolean {
-    return this.type === 'Organization';
+    return this.type === "Organization";
   }
 
   isUser(): boolean {
-    return this.type === 'User';
+    return this.type === "User";
   }
 
   getDisplayName(): string {

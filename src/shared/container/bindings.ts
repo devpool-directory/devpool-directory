@@ -1,37 +1,36 @@
-import { Container } from 'inversify';
-import { TYPES } from './types';
+import { Container } from "inversify";
+import { TYPES } from "./types";
 
 // Infrastructure
-import { GitHubClient } from '../../infrastructure/github/github-client';
-import { GitHubIssueRepository } from '../../infrastructure/github/repositories/github-issue.repository';
-import { GitHubPullRequestRepository } from '../../infrastructure/github/repositories/github-pull-request.repository';
-import { GitHubOrganizationRepository } from '../../infrastructure/github/repositories/github-organization.repository';
-import { WinstonLogger } from '../../infrastructure/logging/winston.logger';
-import { EnvironmentConfig } from '../../infrastructure/config/environment.config';
-import { TwitterClient } from '../../infrastructure/twitter/twitter-client';
-import { GitStorageRepository } from '../../infrastructure/storage/git-storage.repository';
+import { GitHubClient } from "../../infrastructure/github/github-client";
+import { GitHubIssueRepository } from "../../infrastructure/github/repositories/github-issue.repository";
+import { GitHubPullRequestRepository } from "../../infrastructure/github/repositories/github-pull-request.repository";
+import { GitHubOrganizationRepository } from "../../infrastructure/github/repositories/github-organization.repository";
+import { WinstonLogger } from "../../infrastructure/logging/winston.logger";
+import { EnvironmentConfig } from "../../infrastructure/config/environment.config";
+import { TwitterClient } from "../../infrastructure/twitter/twitter-client";
+import { GitStorageRepository } from "../../infrastructure/storage/git-storage.repository";
 
 // Domain Services
-import { IssueAggregatorService } from '../../domain/services/issue-aggregator.service';
-import { DuplicateDetectorService } from '../../domain/services/duplicate-detector.service';
-import { PriceCalculatorService } from '../../domain/services/price-calculator.service';
+import { IssueAggregatorService } from "../../domain/services/issue-aggregator.service";
+import { DuplicateDetectorService } from "../../domain/services/duplicate-detector.service";
 
 // Application Services
-import { TwitterMappingService } from '../../application/services/twitter-mapping.service';
+import { TwitterMappingService } from "../../application/services/twitter-mapping.service";
 
 // Use Cases
-import { SyncPartnerIssuesUseCase } from '../../application/use-cases/sync-partner-issues/sync-partner-issues.use-case';
-import { CalculateStatisticsUseCase } from '../../application/use-cases/calculate-statistics/calculate-statistics.use-case';
-import { DetectDuplicatesUseCase } from '../../application/use-cases/detect-duplicates/detect-duplicates.use-case';
-import { UpdateIssueLabelsUseCase } from '../../application/use-cases/update-issue-labels/update-issue-labels.use-case';
+import { SyncPartnerIssuesUseCase } from "../../application/use-cases/sync-partner-issues/sync-partner-issues.use-case";
+import { CalculateStatisticsUseCase } from "../../application/use-cases/calculate-statistics/calculate-statistics.use-case";
+import { DetectDuplicatesUseCase } from "../../application/use-cases/detect-duplicates/detect-duplicates.use-case";
+import { UpdateIssueLabelsUseCase } from "../../application/use-cases/update-issue-labels/update-issue-labels.use-case";
 
 // Repository Interfaces
-import { IssueRepository } from '../../domain/repositories/issue-repository.interface';
-import { PullRequestRepository } from '../../domain/repositories/pull-request-repository.interface';
-import { OrganizationRepository } from '../../domain/repositories/organization-repository.interface';
+import { IssueRepository } from "../../domain/repositories/issue-repository.interface";
+import { PullRequestRepository } from "../../domain/repositories/pull-request-repository.interface";
+import { OrganizationRepository } from "../../domain/repositories/organization-repository.interface";
 
 // Logger Interface
-import { Logger } from '../../shared/logger';
+import { Logger } from "../../shared/logger";
 
 export function bindDependencies(container: Container): void {
   // Config
@@ -60,7 +59,6 @@ export function bindDependencies(container: Container): void {
   // Domain Services
   container.bind(TYPES.IssueAggregatorService).to(IssueAggregatorService).inSingletonScope();
   container.bind(TYPES.DuplicateDetectorService).to(DuplicateDetectorService).inSingletonScope();
-  container.bind(TYPES.PriceCalculatorService).to(PriceCalculatorService).inSingletonScope();
 
   // Application Services
   container.bind(TYPES.TwitterMappingService).to(TwitterMappingService).inSingletonScope();

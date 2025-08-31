@@ -1,6 +1,6 @@
-import { IssuePrice } from '../value-objects/issue-price';
-import { IssueState } from '../value-objects/issue-state';
-import { Label } from '../value-objects/label';
+import { IssuePrice } from "../value-objects/issue-price";
+import { IssueState } from "../value-objects/issue-state";
+import { Label } from "../value-objects/label";
 
 export interface IssueEntity {
   id: string;
@@ -81,7 +81,7 @@ export class Issue implements IssueEntity {
   }
 
   hasLabel(labelName: string): boolean {
-    return this.labels.some(label => label.name === labelName);
+    return this.labels.some((label) => label.name === labelName);
   }
 
   getFullIdentifier(): string {

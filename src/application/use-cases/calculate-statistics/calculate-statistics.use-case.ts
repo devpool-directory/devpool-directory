@@ -1,10 +1,10 @@
-import { injectable, inject } from 'inversify';
-import { TYPES } from '../../../shared/types';
-import { IssueRepository } from '../../../domain/repositories/issue-repository.interface';
-import { PullRequestRepository } from '../../../domain/repositories/pull-request-repository.interface';
-import { Statistics } from '../../../domain/entities/statistics';
-import { Logger } from '../../../shared/logger';
-import { GitStorageRepository } from '../../../infrastructure/storage/git-storage.repository';
+import { injectable, inject } from "inversify";
+import { TYPES } from "../../../shared/types";
+import { IssueRepository } from "../../../domain/repositories/issue-repository.interface";
+import { PullRequestRepository } from "../../../domain/repositories/pull-request-repository.interface";
+import { Statistics } from "../../../domain/entities/statistics";
+import { Logger } from "../../../shared/logger";
+import { GitStorageRepository } from "../../../infrastructure/storage/git-storage.repository";
 
 export interface CalculateStatisticsInput {
   owner: string;
@@ -27,19 +27,19 @@ export class CalculateStatisticsUseCase {
   ) {}
 
   async execute(input: CalculateStatisticsInput): Promise<CalculateStatisticsOutput> {
-    this.logger.info('Calculating statistics', { owner: input.owner, repo: input.repo });
+    this.logger.info("Calculating statistics", { owner: input.owner, repo: input.repo });
 
     try {
       // Fetch all issues from the directory repository
       const issues = await this.issueRepository.findAll(input.owner, input.repo, {
-        state: 'all',
-        perPage: 100
+        state: "all",
+        perPage: 100,
       });
 
       // Fetch all pull requests
       const pullRequests = await this.pullRequestRepository.findAll(input.owner, input.repo, {
-        state: 'all',
-        perPage: 100
+        state: "all",
+        perPage: 100,
       });
 
       // Calculate statistics
@@ -47,50 +47,47 @@ export class CalculateStatisticsUseCase {
         timestamp: new Date(),
         issues: {
           total: issues.length,
-          open: issues.filter(i => i.state === 'open').length,
-          closed: issues.filter(i => i.state === 'closed').length,
-          labeled: issues.filter(i => i.labels.length > 0).length,
-          assigned: issues.filter(i => i.assignees.length > 0).length,
-          priced: issues.filter(i => this.hasPriceLabel(i.labels)).length
+          open: issues.filter((i) => i.state === "open").length,
+          closed: issues.filter((i) => i.state === "closed").length,
+          labeled: issues.filter((i) => i.labels.length > 0).length,
+          assigned: issues.filter((i) => i.assignees.length > 0).length,
+          priced: issues.filter((i) => this.hasPriceLabel(i.labels)).length,
         },
         pullRequests: {
           total: pullRequests.length,
-          open: pullRequests.filter(pr => pr.state === 'open').length,
-          closed: pullRequests.filter(pr => pr.state === 'closed').length,
-          merged: pullRequests.filter(pr => pr.merged).length,
-          draft: pullRequests.filter(pr => pr.draft).length
+          open: pullRequests.filter((pr) => pr.state === "open").length,
+          closed: pullRequests.filter((pr) => pr.state === "closed").length,
+          merged: pullRequests.filter((pr) => pr.merged).length,
+          draft: pullRequests.filter((pr) => pr.draft).length,
         },
         rewards: this.calculateRewards(issues),
         contributors: this.getUniqueContributors(issues, pullRequests),
         partnerRepositories: input.partnerRepos?.length || 0,
-        lastUpdated: new Date()
+        lastUpdated: new Date(),
       });
 
       // Save statistics to storage
       let savedToStorage = false;
       try {
-        await this.storage.write('devpool-statistics.json', statistics.toJSON());
+        await this.storage.write("devpool-statistics.json", statistics.toJSON());
         savedToStorage = true;
-        this.logger.info('Statistics saved to storage');
+        this.logger.info("Statistics saved to storage");
       } catch (error) {
-        this.logger.error('Failed to save statistics to storage', error);
+        this.logger.error("Failed to save statistics to storage", error);
       }
 
       return {
         statistics,
-        savedToStorage
+        savedToStorage,
       };
     } catch (error) {
-      this.logger.error('Failed to calculate statistics', error);
+      this.logger.error("Failed to calculate statistics", error);
       throw error;
     }
   }
 
   private hasPriceLabel(labels: any[]): boolean {
-    return labels.some(label => 
-      typeof label === 'object' && label.name && 
-      label.name.toLowerCase().includes('price:')
-    );
+    return labels.some((label) => typeof label === "object" && label.name && label.name.toLowerCase().includes("price:"));
   }
 
   private calculateRewards(issues: any[]): {
@@ -103,13 +100,11 @@ export class CalculateStatisticsUseCase {
       total: 0,
       paid: 0,
       pending: 0,
-      byTier: {} as Record<string, number>
+      byTier: {} as Record<string, number>,
     };
 
     for (const issue of issues) {
-      const priceLabel = issue.labels.find((label: any) => 
-        label.name && label.name.toLowerCase().includes('price:')
-      );
+      const priceLabel = issue.labels.find((label: any) => label.name && label.name.toLowerCase().includes("price:"));
 
       if (priceLabel) {
         const priceMatch = priceLabel.name.match(/price:\s*(\d+)/i);
@@ -117,7 +112,7 @@ export class CalculateStatisticsUseCase {
           const price = parseInt(priceMatch[1], 10);
           rewards.total += price;
 
-          if (issue.state === 'closed') {
+          if (issue.state === "closed") {
             rewards.paid += price;
           } else {
             rewards.pending += price;
@@ -134,14 +129,17 @@ export class CalculateStatisticsUseCase {
   }
 
   private getPriceTier(price: number): string {
-    if (price <= 25) return 'micro';
-    if (price <= 100) return 'small';
-    if (price <= 500) return 'medium';
-    if (price <= 1000) return 'large';
-    return 'xlarge';
+    if (price <= 25) return "micro";
+    if (price <= 100) return "small";
+    if (price <= 500) return "medium";
+    if (price <= 1000) return "large";
+    return "xlarge";
   }
 
-  private getUniqueContributors(issues: any[], pullRequests: any[]): {
+  private getUniqueContributors(
+    issues: any[],
+    pullRequests: any[]
+  ): {
     total: number;
     active: number;
     new: number;
@@ -155,7 +153,7 @@ export class CalculateStatisticsUseCase {
     for (const issue of issues) {
       if (issue.user?.login) {
         allContributors.add(issue.user.login);
-        
+
         if (new Date(issue.createdAt) > oneMonthAgo) {
           activeContributors.add(issue.user.login);
         }
@@ -173,7 +171,7 @@ export class CalculateStatisticsUseCase {
     for (const pr of pullRequests) {
       if (pr.user?.login) {
         allContributors.add(pr.user.login);
-        
+
         if (new Date(pr.createdAt) > oneMonthAgo) {
           activeContributors.add(pr.user.login);
         }
@@ -183,7 +181,7 @@ export class CalculateStatisticsUseCase {
     return {
       total: allContributors.size,
       active: activeContributors.size,
-      new: activeContributors.size // Simplified for now
+      new: activeContributors.size, // Simplified for now
     };
   }
 }

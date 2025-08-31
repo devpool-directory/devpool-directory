@@ -1,13 +1,13 @@
-import 'reflect-metadata';
-import { Container } from 'inversify';
-import { CalculateStatisticsUseCase } from '../../../../src/application/use-cases/calculate-statistics/calculate-statistics.use-case';
-import { IssueRepository } from '../../../../src/domain/repositories/issue-repository.interface';
-import { PullRequestRepository } from '../../../../src/domain/repositories/pull-request-repository.interface';
-import { GitStorageRepository } from '../../../../src/infrastructure/storage/git-storage.repository';
-import { Logger } from '../../../../src/shared/logger';
-import { TYPES } from '../../../../src/shared/types';
+import "reflect-metadata";
+import { Container } from "inversify";
+import { CalculateStatisticsUseCase } from "../../../../src/application/use-cases/calculate-statistics/calculate-statistics.use-case";
+import { IssueRepository } from "../../../../src/domain/repositories/issue-repository.interface";
+import { PullRequestRepository } from "../../../../src/domain/repositories/pull-request-repository.interface";
+import { GitStorageRepository } from "../../../../src/infrastructure/storage/git-storage.repository";
+import { Logger } from "../../../../src/shared/logger";
+import { TYPES } from "../../../../src/shared/types";
 
-describe('CalculateStatisticsUseCase', () => {
+describe("CalculateStatisticsUseCase", () => {
   let container: Container;
   let useCase: CalculateStatisticsUseCase;
   let mockIssueRepository: jest.Mocked<IssueRepository>;
@@ -28,15 +28,15 @@ describe('CalculateStatisticsUseCase', () => {
       addLabels: jest.fn(),
       removeLabel: jest.fn(),
       getLabel: jest.fn(),
-      createLabel: jest.fn()
+      createLabel: jest.fn(),
     } as any;
 
     mockPullRequestRepository = {
-      findAll: jest.fn()
+      findAll: jest.fn(),
     } as any;
 
     mockStorageRepository = {
-      write: jest.fn()
+      write: jest.fn(),
     } as any;
 
     mockLogger = {
@@ -44,7 +44,7 @@ describe('CalculateStatisticsUseCase', () => {
       error: jest.fn(),
       warn: jest.fn(),
       debug: jest.fn(),
-      verbose: jest.fn()
+      verbose: jest.fn(),
     };
 
     // Bind mocks to container
@@ -54,71 +54,66 @@ describe('CalculateStatisticsUseCase', () => {
     container.bind(TYPES.Logger).toConstantValue(mockLogger);
 
     // Create use case
-    useCase = new CalculateStatisticsUseCase(
-      mockIssueRepository,
-      mockPullRequestRepository,
-      mockStorageRepository,
-      mockLogger
-    );
+    useCase = new CalculateStatisticsUseCase(mockIssueRepository, mockPullRequestRepository, mockStorageRepository, mockLogger);
   });
 
-  describe('execute', () => {
-    it('should calculate statistics for issues and pull requests', async () => {
+  describe("execute", () => {
+    it("should calculate statistics for issues and pull requests", async () => {
       // Arrange
       const mockIssues = [
         {
           id: 1,
           number: 1,
-          title: 'Issue 1',
-          state: 'open',
-          labels: [{ name: 'price: 100' }],
-          assignees: [{ login: 'user1' }],
-          user: { login: 'creator1' },
-          createdAt: new Date()
+          title: "Issue 1",
+          state: "open",
+          labels: [{ name: "price: 100" }],
+          assignees: [{ login: "user1" }],
+          user: { login: "creator1" },
+          createdAt: new Date(),
         },
         {
           id: 2,
           number: 2,
-          title: 'Issue 2',
-          state: 'closed',
-          labels: [{ name: 'price: 200' }],
+          title: "Issue 2",
+          state: "closed",
+          labels: [{ name: "price: 200" }],
           assignees: [],
-          user: { login: 'creator2' },
-          createdAt: new Date()
+          user: { login: "creator2" },
+          createdAt: new Date(),
         },
         {
           id: 3,
           number: 3,
-          title: 'Issue 3',
-          state: 'open',
+          title: "Issue 3",
+          state: "open",
           labels: [],
-          assignees: [{ login: 'user2' }],
-          user: { login: 'creator3' },
-          createdAt: new Date()
-        }
+          assignees: [{ login: "user2" }],
+          user: { login: "creator3" },
+          createdAt: new Date(),
+        },
       ];
 
       const mockPullRequests = [
         {
           id: 1,
           number: 1,
-          title: 'PR 1',
-          state: 'open',
+          title: "PR 1",
+          state: "open",
           merged: false,
           draft: false,
-          user: { login: 'contributor1' },
-          createdAt: new Date()
+          user: { login: "contributor1" },
+          createdAt: new Date(),
         },
         {
           id: 2,
           number: 2,
-          title: 'PR 2',
-          state: 'closed',
+          title: "PR 2",
+          state: "closed",
           merged: true,
           draft: false,
-          user: { login: 'contributor2' },
-          createdAt: new Date()
-        }
+          user: { login: "contributor2" },
+          createdAt: new Date(),
+        },
       ];
 
       mockIssueRepository.findAll.mockResolvedValue(mockIssues as any);
@@ -127,9 +122,9 @@ describe('CalculateStatisticsUseCase', () => {
 
       // Act
       const result = await useCase.execute({
-        owner: 'test-owner',
-        repo: 'test-repo',
-        partnerRepos: ['repo1', 'repo2']
+        owner: "test-owner",
+        repo: "test-repo",
+        partnerRepos: ["repo1", "repo2"],
       });
 
       // Assert
@@ -152,71 +147,65 @@ describe('CalculateStatisticsUseCase', () => {
       expect(result.statistics.partnerRepositories).toBe(2);
       expect(result.savedToStorage).toBe(true);
 
-      expect(mockStorageRepository.write).toHaveBeenCalledWith(
-        'devpool-statistics.json',
-        expect.any(Object)
-      );
+      expect(mockStorageRepository.write).toHaveBeenCalledWith("devpool-statistics.json", expect.any(Object));
     });
 
-    it('should handle storage failures gracefully', async () => {
+    it("should handle storage failures gracefully", async () => {
       // Arrange
       mockIssueRepository.findAll.mockResolvedValue([]);
       mockPullRequestRepository.findAll.mockResolvedValue([]);
-      mockStorageRepository.write.mockRejectedValue(new Error('Storage error'));
+      mockStorageRepository.write.mockRejectedValue(new Error("Storage error"));
 
       // Act
       const result = await useCase.execute({
-        owner: 'test-owner',
-        repo: 'test-repo'
+        owner: "test-owner",
+        repo: "test-repo",
       });
 
       // Assert
       expect(result.statistics).toBeDefined();
       expect(result.savedToStorage).toBe(false);
-      expect(mockLogger.error).toHaveBeenCalledWith(
-        'Failed to save statistics to storage',
-        expect.any(Error)
-      );
+      expect(mockLogger.error).toHaveBeenCalledWith("Failed to save statistics to storage", expect.any(Error));
     });
 
-    it('should categorize rewards by tier correctly', async () => {
+    it("should categorize rewards by tier correctly", async () => {
       // Arrange
       const mockIssues = [
-        { 
-          state: 'open', 
-          labels: [{ name: 'price: 10' }], 
+        {
+          state: "open",
+          labels: [{ name: "price: 10" }],
           assignees: [],
-          user: { login: 'user1' },
-          createdAt: new Date()
+          user: { login: "user1" },
+          createdAt: new Date(),
         }, // micro
-        { 
-          state: 'open', 
-          labels: [{ name: 'price: 50' }], 
+        {
+          state: "open",
+          labels: [{ name: "price: 50" }],
           assignees: [],
-          user: { login: 'user2' },
-          createdAt: new Date()
+          user: { login: "user2" },
+          createdAt: new Date(),
         }, // small
-        { 
-          state: 'open', 
-          labels: [{ name: 'price: 250' }], 
+        {
+          state: "open",
+          labels: [{ name: "price: 250" }],
           assignees: [],
-          user: { login: 'user3' },
-          createdAt: new Date()
+          user: { login: "user3" },
+          createdAt: new Date(),
         }, // medium
-        { 
-          state: 'open', 
-          labels: [{ name: 'price: 750' }], 
+        {
+          state: "open",
+          labels: [{ name: "price: 750" }],
           assignees: [],
-          user: { login: 'user4' },
-          createdAt: new Date()
+          user: { login: "user4" },
+          createdAt: new Date(),
         }, // large
-        { 
-          state: 'open', 
-          labels: [{ name: 'price: 2000' }], 
+        {
+          state: "open",
+          labels: [{ name: "price: 2000" }],
           assignees: [],
-          user: { login: 'user5' },
-          createdAt: new Date()
-        }  // xlarge
+          user: { login: "user5" },
+          createdAt: new Date(),
+        }, // xlarge
       ];
 
       mockIssueRepository.findAll.mockResolvedValue(mockIssues as any);
@@ -224,8 +213,8 @@ describe('CalculateStatisticsUseCase', () => {
 
       // Act
       const result = await useCase.execute({
-        owner: 'test-owner',
-        repo: 'test-repo'
+        owner: "test-owner",
+        repo: "test-repo",
       });
 
       // Assert
@@ -234,7 +223,7 @@ describe('CalculateStatisticsUseCase', () => {
         small: 1,
         medium: 1,
         large: 1,
-        xlarge: 1
+        xlarge: 1,
       });
     });
   });

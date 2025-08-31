@@ -1,11 +1,13 @@
 # DevPool Directory - Migration Guide
 
 ## Overview
+
 This guide helps migrate from the old monolithic structure to the new clean architecture implementation.
 
 ## Current Migration Status
 
 ### ✅ Completed
+
 - **Infrastructure Layer**: GitHub client, logging, configuration, error handling
 - **Domain Layer**: Entities (Issue, PullRequest, Organization, Repository, Statistics), Value Objects, Services
 - **Repository Implementations**: IssueRepository, PullRequestRepository, OrganizationRepository
@@ -17,6 +19,7 @@ This guide helps migrate from the old monolithic structure to the new clean arch
 - **Package Scripts**: Updated for new architecture
 
 ### 🚧 Pending
+
 - Full migration of existing directory functionality
 - Integration testing setup
 - GitHub workflows verification
@@ -24,16 +27,18 @@ This guide helps migrate from the old monolithic structure to the new clean arch
 ## Architecture Changes
 
 ### Old Structure
+
 ```
 src/
 ├── directory/        # Mixed business logic and infrastructure
 ├── twitter/         # Twitter integration
-├── fixtures/        # Test data  
+├── fixtures/        # Test data
 ├── utils/          # Utilities
 └── main.ts         # Monolithic orchestration
 ```
 
 ### New Structure
+
 ```
 src/
 ├── domain/          # Pure business logic
@@ -60,6 +65,7 @@ src/
 ## Quick Start
 
 ### 1. Install Dependencies
+
 ```bash
 bun install
 ```
@@ -67,6 +73,7 @@ bun install
 ### 2. Run Commands
 
 #### New Architecture Commands
+
 ```bash
 # Full synchronization (equivalent to old index.ts)
 bun start
@@ -85,6 +92,7 @@ bun run deduplicate:dry
 ```
 
 #### Legacy Commands (still available)
+
 ```bash
 # Old synchronization
 bun run legacy:sync
@@ -94,6 +102,7 @@ bun run legacy:deduplicate
 ```
 
 ### 3. Environment Configuration
+
 Your existing `.env` file should work as-is. The new architecture maintains backward compatibility with existing environment variables:
 
 ```env
@@ -118,15 +127,17 @@ LOG_LEVEL=info
 ### 1. Using the New Dependency Injection Container
 
 Old approach:
+
 ```typescript
 import { octokit } from './directory/directory';
 const issues = await octokit.issues.listForRepo({...});
 ```
 
 New approach:
+
 ```typescript
-import { container, TYPES } from './shared/container/container';
-import { IssueRepository } from './domain/repositories/issue-repository.interface';
+import { container, TYPES } from "./shared/container/container";
+import { IssueRepository } from "./domain/repositories/issue-repository.interface";
 
 const issueRepo = container.get<IssueRepository>(TYPES.IssueRepository);
 const issues = await issueRepo.findAll(owner, repo);
@@ -135,28 +146,31 @@ const issues = await issueRepo.findAll(owner, repo);
 ### 2. Using Use Cases Instead of Direct Functions
 
 Old approach:
+
 ```typescript
-import { syncPartnerRepoIssues } from './directory/sync-partner-repo-issues';
+import { syncPartnerRepoIssues } from "./directory/sync-partner-repo-issues";
 await syncPartnerRepoIssues(repoUrl);
 ```
 
 New approach:
+
 ```typescript
-import { container, TYPES } from './shared/container/container';
-import { SyncPartnerIssuesUseCase } from './application/use-cases/sync-partner-issues/sync-partner-issues.use-case';
+import { container, TYPES } from "./shared/container/container";
+import { SyncPartnerIssuesUseCase } from "./application/use-cases/sync-partner-issues/sync-partner-issues.use-case";
 
 const syncUseCase = container.get<SyncPartnerIssuesUseCase>(TYPES.SyncPartnerIssuesUseCase);
 await syncUseCase.execute({
-  sourceOwner: 'partner-org',
-  sourceRepo: 'partner-repo',
-  targetOwner: 'devpool',
-  targetRepo: 'directory'
+  sourceOwner: "partner-org",
+  sourceRepo: "partner-repo",
+  targetOwner: "devpool",
+  targetRepo: "directory",
 });
 ```
 
 ### 3. Error Handling
 
 Old approach:
+
 ```typescript
 try {
   // operation
@@ -166,6 +180,7 @@ try {
 ```
 
 New approach:
+
 ```typescript
 import { container, TYPES } from './shared/container/container';
 import { Logger } from './shared/logger';
@@ -182,16 +197,19 @@ try {
 ## Testing
 
 ### Unit Tests
+
 ```bash
 bun test:unit
 ```
 
 ### Integration Tests
+
 ```bash
 bun test:integration
 ```
 
 ### All Tests
+
 ```bash
 bun test
 ```
@@ -209,11 +227,13 @@ bun test
 ## Breaking Changes
 
 ### API Changes
+
 - Direct GitHub Octokit access is encapsulated
 - Functions are replaced with use cases
 - Configuration uses Zod validation
 
 ### Behavioral Changes
+
 - Logging uses Winston instead of console
 - Errors are structured classes
 - Twitter integration is optional and fails gracefully
@@ -221,6 +241,7 @@ bun test
 ## Backward Compatibility
 
 The system maintains backward compatibility by:
+
 - Supporting existing environment variables
 - Providing legacy command aliases
 - Reading existing `projects.json` format
@@ -229,15 +250,19 @@ The system maintains backward compatibility by:
 ## Troubleshooting
 
 ### Issue: Commands not found
+
 Solution: Use `bun run` prefix for all commands
 
 ### Issue: Dependency injection errors
+
 Solution: Ensure `reflect-metadata` is imported and TypeScript decorators are enabled
 
 ### Issue: Storage branch not found
+
 Solution: The system will automatically create the `__STORAGE__` branch on first run
 
 ### Issue: Twitter integration fails
+
 Solution: Twitter is optional - the system continues without it if credentials are missing
 
 ## Next Steps
@@ -250,6 +275,7 @@ Solution: Twitter is optional - the system continues without it if credentials a
 ## Support
 
 For questions or issues with the migration:
+
 1. Check existing tests for usage examples
 2. Review the use case implementations
 3. Consult the domain models for business logic

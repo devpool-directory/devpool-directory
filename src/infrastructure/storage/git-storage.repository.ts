@@ -1,7 +1,7 @@
-import { injectable, inject } from 'inversify';
-import { TYPES } from '../../shared/types';
-import { GitHubClient } from '../github/github-client';
-import { Logger } from '../../shared/logger';
+import { injectable, inject } from "inversify";
+import { TYPES } from "../../shared/types";
+import { GitHubClient } from "../github/github-client";
+import { Logger } from "../../shared/logger";
 
 export interface StorageData {
   issues?: any[];
@@ -13,7 +13,7 @@ export interface StorageData {
 
 @injectable()
 export class GitStorageRepository {
-  private static readonly STORAGE_BRANCH = '__STORAGE__';
+  private static readonly STORAGE_BRANCH = "__STORAGE__";
   private static readonly MAX_PAYLOAD_SIZE = 100 * 1024 * 1024; // 100MB
 
   constructor(
@@ -28,11 +28,11 @@ export class GitStorageRepository {
         owner: this.config.github.owner,
         repo: this.config.github.repo,
         path: filename,
-        ref: GitStorageRepository.STORAGE_BRANCH
+        ref: GitStorageRepository.STORAGE_BRANCH,
       });
 
-      if ('content' in data && typeof data.content === 'string') {
-        const content = Buffer.from(data.content, 'base64').toString('utf-8');
+      if ("content" in data && typeof data.content === "string") {
+        const content = Buffer.from(data.content, "base64").toString("utf-8");
         return JSON.parse(content);
       }
 
@@ -49,7 +49,7 @@ export class GitStorageRepository {
 
   async write(filename: string, data: any): Promise<void> {
     const content = JSON.stringify(data, null, 2);
-    const contentBase64 = Buffer.from(content).toString('base64');
+    const contentBase64 = Buffer.from(content).toString("base64");
 
     try {
       await this.ensureStorageBranch();
@@ -60,10 +60,10 @@ export class GitStorageRepository {
           owner: this.config.github.owner,
           repo: this.config.github.repo,
           path: filename,
-          ref: GitStorageRepository.STORAGE_BRANCH
+          ref: GitStorageRepository.STORAGE_BRANCH,
         });
 
-        if ('sha' in existing.data) {
+        if ("sha" in existing.data) {
           sha = existing.data.sha;
         }
       } catch (error: any) {
@@ -82,7 +82,7 @@ export class GitStorageRepository {
           message: `Update ${filename}`,
           content: contentBase64,
           branch: GitStorageRepository.STORAGE_BRANCH,
-          sha
+          sha,
         });
       }
 
@@ -102,42 +102,42 @@ export class GitStorageRepository {
         const content = JSON.stringify(data, null, 2);
         tree.push({
           path: filename,
-          mode: '100644',
-          type: 'blob',
-          content
+          mode: "100644",
+          type: "blob",
+          content,
         });
       }
 
       const { data: treeData } = await this.githubClient.rest.git.createTree({
         owner: this.config.github.owner,
         repo: this.config.github.repo,
-        tree
+        tree,
       });
 
       const { data: refData } = await this.githubClient.rest.git.getRef({
         owner: this.config.github.owner,
         repo: this.config.github.repo,
-        ref: `heads/${GitStorageRepository.STORAGE_BRANCH}`
+        ref: `heads/${GitStorageRepository.STORAGE_BRANCH}`,
       });
 
       const { data: commitData } = await this.githubClient.rest.git.createCommit({
         owner: this.config.github.owner,
         repo: this.config.github.repo,
-        message: 'Update multiple storage files',
+        message: "Update multiple storage files",
         tree: treeData.sha,
-        parents: [refData.object.sha]
+        parents: [refData.object.sha],
       });
 
       await this.githubClient.rest.git.updateRef({
         owner: this.config.github.owner,
         repo: this.config.github.repo,
         ref: `heads/${GitStorageRepository.STORAGE_BRANCH}`,
-        sha: commitData.sha
+        sha: commitData.sha,
       });
 
       this.logger.info(`Successfully wrote ${files.size} files to storage`);
     } catch (error) {
-      this.logger.error('Failed to write multiple files to storage', error);
+      this.logger.error("Failed to write multiple files to storage", error);
       throw error;
     }
   }
@@ -148,17 +148,17 @@ export class GitStorageRepository {
         owner: this.config.github.owner,
         repo: this.config.github.repo,
         path: filename,
-        ref: GitStorageRepository.STORAGE_BRANCH
+        ref: GitStorageRepository.STORAGE_BRANCH,
       });
 
-      if ('sha' in data) {
+      if ("sha" in data) {
         await this.githubClient.rest.repos.deleteFile({
           owner: this.config.github.owner,
           repo: this.config.github.repo,
           path: filename,
           message: `Delete ${filename}`,
           sha: data.sha,
-          branch: GitStorageRepository.STORAGE_BRANCH
+          branch: GitStorageRepository.STORAGE_BRANCH,
         });
 
         this.logger.info(`Successfully deleted ${filename} from storage`);
@@ -173,19 +173,17 @@ export class GitStorageRepository {
     }
   }
 
-  async list(path: string = ''): Promise<string[]> {
+  async list(path: string = ""): Promise<string[]> {
     try {
       const { data } = await this.githubClient.rest.repos.getContent({
         owner: this.config.github.owner,
         repo: this.config.github.repo,
         path,
-        ref: GitStorageRepository.STORAGE_BRANCH
+        ref: GitStorageRepository.STORAGE_BRANCH,
       });
 
       if (Array.isArray(data)) {
-        return data
-          .filter(item => item.type === 'file')
-          .map(item => item.path);
+        return data.filter((item) => item.type === "file").map((item) => item.path);
       }
 
       return [];
@@ -193,7 +191,7 @@ export class GitStorageRepository {
       if (error.status === 404) {
         return [];
       }
-      this.logger.error('Failed to list storage files', error);
+      this.logger.error("Failed to list storage files", error);
       throw error;
     }
   }
@@ -203,7 +201,7 @@ export class GitStorageRepository {
       await this.githubClient.rest.repos.getBranch({
         owner: this.config.github.owner,
         repo: this.config.github.repo,
-        branch: GitStorageRepository.STORAGE_BRANCH
+        branch: GitStorageRepository.STORAGE_BRANCH,
       });
     } catch (error: any) {
       if (error.status === 404) {
@@ -219,19 +217,19 @@ export class GitStorageRepository {
       const { data: defaultBranch } = await this.githubClient.rest.repos.getBranch({
         owner: this.config.github.owner,
         repo: this.config.github.repo,
-        branch: this.config.github.defaultBranch || 'main'
+        branch: this.config.github.defaultBranch || "main",
       });
 
       await this.githubClient.rest.git.createRef({
         owner: this.config.github.owner,
         repo: this.config.github.repo,
         ref: `refs/heads/${GitStorageRepository.STORAGE_BRANCH}`,
-        sha: defaultBranch.commit.sha
+        sha: defaultBranch.commit.sha,
       });
 
-      this.logger.info('Created storage branch');
+      this.logger.info("Created storage branch");
     } catch (error) {
-      this.logger.error('Failed to create storage branch', error);
+      this.logger.error("Failed to create storage branch", error);
       throw error;
     }
   }
@@ -246,10 +244,10 @@ export class GitStorageRepository {
 
     await this.writeMultiple(chunkFiles);
 
-    chunkFiles.set(filename, { 
-      type: 'chunked', 
+    chunkFiles.set(filename, {
+      type: "chunked",
       chunks: chunks.length,
-      files: Array.from({ length: chunks.length }, (_, i) => `${filename}.${i}`)
+      files: Array.from({ length: chunks.length }, (_, i) => `${filename}.${i}`),
     });
 
     await this.write(filename, chunkFiles.get(filename));
@@ -265,8 +263,8 @@ export class GitStorageRepository {
 
   async readChunkedFile(filename: string): Promise<any> {
     const metadata = await this.read(filename);
-    
-    if (metadata?.type !== 'chunked') {
+
+    if (metadata?.type !== "chunked") {
       return metadata;
     }
 
@@ -276,7 +274,7 @@ export class GitStorageRepository {
       chunks.push(chunkData.data);
     }
 
-    const fullContent = chunks.join('');
+    const fullContent = chunks.join("");
     return JSON.parse(fullContent);
   }
 }

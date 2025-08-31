@@ -7,8 +7,8 @@ const config: KnipConfig = {
   ignoreExportsUsedInFile: true,
   // eslint can also be safely ignored as per the docs: https://knip.dev/guides/handling-issues#eslint--jest
   ignoreDependencies: [
-    "eslint-config-prettier", 
-    "eslint-plugin-prettier", 
+    "eslint-config-prettier",
+    "eslint-plugin-prettier",
     "@types/jest",
     "@commitlint/cli",
     "@octokit/types",
@@ -21,7 +21,7 @@ const config: KnipConfig = {
     "simple-git",
     "@cspell/dict-node",
     "@cspell/dict-software-terms",
-    "@cspell/dict-typescript"
+    "@cspell/dict-typescript",
   ],
   ignoreBinaries: ["format:cspell"],
   eslint: true,

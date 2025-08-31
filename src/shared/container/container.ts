@@ -1,11 +1,11 @@
-import 'reflect-metadata';
-import { Container } from 'inversify';
-import { TYPES } from './types';
-import { bindDependencies } from './bindings';
+import "reflect-metadata";
+import { Container } from "inversify";
+import { TYPES } from "./types";
+import { bindDependencies } from "./bindings";
 
 const container = new Container({
-  defaultScope: 'Singleton',
-  skipBaseClassChecks: true
+  defaultScope: "Singleton",
+  skipBaseClassChecks: true,
 });
 
 // Bind all dependencies

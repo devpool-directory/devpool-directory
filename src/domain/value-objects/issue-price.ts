@@ -12,24 +12,24 @@ export class IssuePrice {
   }
 
   static fromString(priceString: string): IssuePrice {
-    const cleanedString = priceString.replace(/[^0-9.-]/g, '');
+    const cleanedString = priceString.replace(/[^0-9.-]/g, "");
     const value = parseFloat(cleanedString);
-    
+
     if (isNaN(value)) {
       return new IssuePrice(0);
     }
-    
+
     return new IssuePrice(value);
   }
 
   static fromLabel(label: string): IssuePrice {
     const priceMatch = label.match(/Price:\s*[\$€£¥]?\s*([\d,]+(?:\.\d{2})?)/i);
-    
+
     if (!priceMatch) {
       return new IssuePrice(0);
     }
-    
-    const priceString = priceMatch[1].replace(/,/g, '');
+
+    const priceString = priceMatch[1].replace(/,/g, "");
     return IssuePrice.fromString(priceString);
   }
 
