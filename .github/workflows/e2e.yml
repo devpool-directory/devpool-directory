@@ -51,10 +51,19 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
           CONFIG_PATH: ./config/e2e.config.json
 
+      - name: Create GitHub App token for testing repo
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: devpool-directory
+          repositories: devpool-directory-testing
+
       - name: Create partner test issue
         id: create_issue
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           TITLE="[E2E] Sample task $(date +%s)"
           BODY=$'Implement a small change for E2E validation.\n\nAcceptance criteria:\n- trivial content\n- safe to mirror\n'
@@ -88,7 +97,7 @@ jobs:
           npm run build --silent --if-present
           npm run aggregate
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
           DIRECTORY_OWNER: devpool-directory
           DIRECTORY_REPO: devpool-directory-testing
           DATA_BRANCH: __STORAGE__
@@ -103,7 +112,7 @@ jobs:
       - name: Find and close mirrored directory issue (cleanup)
         if: always()
         env:
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           # Close the partner test issue (if created)
           if [ -n "${{ steps.create_issue.outputs.number }}" ] && [ "${{ steps.create_issue.outputs.number }}" != "null" ]; then
