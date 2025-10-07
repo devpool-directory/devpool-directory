@@ -27,7 +27,9 @@ jobs:
       - run: npm ci --include=dev || npm install
       - run: npm run build --silent --if-present
       - name: Generate plan
-        run: npm run plan > plan.json
+        run: |
+          npm run build --silent --if-present
+          node dist/cli/plan.js > plan.json
         env:
           # Use default Actions token for read-only planning (avoids PAT scope mismatches)
           GITHUB_TOKEN: ${{ github.token }}
