@@ -101,3 +101,12 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm run summary >> $GITHUB_STEP_SUMMARY
+
+  debug-matrix:
+    needs: plan
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "matrix_include: ${{ needs.plan.outputs.matrix_include }}"
+          echo "shards_json:   ${{ needs.plan.outputs.shards_json }}"
+          echo "max_parallel:  ${{ needs.plan.outputs.max_parallel }}"
