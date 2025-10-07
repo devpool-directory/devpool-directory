@@ -16,10 +16,17 @@ export async function ensureBranch(octokit: Octokit, owner: string, repo: string
     } catch (e: any) {
       // Handle empty repository (no default branch yet)
       if (e?.status === 404 || e?.status === 409) {
-        const { data: emptyTree } = await octokit.git.createTree({ owner, repo, tree: [] });
-        const { data: initialCommit } = await octokit.git.createCommit({ owner, repo, message: "init", tree: emptyTree.sha, parents: [] });
-        await octokit.git.createRef({ owner, repo, ref: `refs/heads/${defaultBranch}`, sha: initialCommit.sha });
-        baseSha = initialCommit.sha;
+        // Initialize repository by creating a README on the default branch
+        const content = Buffer.from(`# ${repo}\n\nInitialized by workflow.\n`).toString("base64");
+        const created = await octokit.repos.createOrUpdateFileContents({
+          owner,
+          repo,
+          path: "README.md",
+          message: "chore(init): bootstrap default branch",
+          content,
+          branch: defaultBranch
+        });
+        baseSha = created.data.commit.sha!;
         info(`Initialized empty repo with default branch ${defaultBranch}`);
       } else {
         throw e;
