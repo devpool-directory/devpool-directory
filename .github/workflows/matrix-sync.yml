@@ -5,6 +5,11 @@ on:
     - cron: "*/15 * * * *"
   workflow_dispatch:
 
+permissions:
+  contents: write
+  issues: write
+  actions: read
+
 concurrency:
   group: directory-sync
   cancel-in-progress: true
