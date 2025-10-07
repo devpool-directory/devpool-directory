@@ -1,20 +1,8 @@
-# dependencies
-node_modules
-
-.env
-.pnp.cjs
-.gitignore
-.yarn
-.pnp.loader.mjs
+node_modules/
 .DS_Store
-
-coverage
-coverage.txt
-junit.xml
-test-script.ts
+dist/
 .env
-static/dist
-coverage
-junit.xml
-cypress/screenshots
-test-dashboard.md
+.env.*
+coverage/
+*.log
+

@@ -1,0 +1,86 @@
+name: Matrix Sync
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: directory-sync
+  cancel-in-progress: true
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.out.outputs.matrix }}
+      max_parallel: ${{ steps.out.outputs.max_parallel }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci || npm install
+      - name: Generate plan
+        run: npm run plan > plan.json
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - id: out
+        run: |
+          echo "matrix=$(jq -c .matrix plan.json)" >> $GITHUB_OUTPUT
+          echo "max_parallel=$(jq -r .maxParallel plan.json)" >> $GITHUB_OUTPUT
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plan
+          path: plan.json
+
+  sync-shard:
+    needs: plan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+      max-parallel: ${{ needs.plan.outputs.max_parallel }}
+      fail-fast: false
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci || npm install
+      - uses: actions/download-artifact@v4
+        with: { name: plan }
+      - name: Run shard
+        run: npm run sync:shard -- --shard ${{ matrix.shard_id }}
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          TWEET_ON_CREATE: "true"
+          DELETE_TWEET_ON_COMPLETE: "true"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shard-${{ matrix.shard_id }}
+          path: out/shard-${{ matrix.shard_id }}-*.json
+          if-no-files-found: ignore
+
+  aggregate:
+    needs: [plan, sync-shard]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci || npm install
+      - uses: actions/download-artifact@v4
+        with: { path: ./shards }
+      - name: Aggregate & write artifacts
+        run: npm run aggregate
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DATA_BRANCH: __STORAGE__
+
+  summary:
+    needs: aggregate
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm run summary >> $GITHUB_STEP_SUMMARY
