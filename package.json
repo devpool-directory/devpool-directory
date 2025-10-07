@@ -8,11 +8,11 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "plan": "tsx src/cli/plan.ts",
-    "sync:shard": "tsx src/cli/sync-shard.ts",
-    "aggregate": "tsx src/cli/aggregate.ts",
-    "summary": "tsx src/cli/summary.ts",
-    "deduplicate": "tsx src/cli/dedup.ts"
+    "plan": "node dist/src/cli/plan.js",
+    "sync:shard": "node dist/src/cli/sync-shard.js",
+    "aggregate": "node dist/src/cli/aggregate.js",
+    "summary": "node dist/src/cli/summary.js",
+    "deduplicate": "node dist/src/cli/dedup.js"
   },
   "dependencies": {
     "@octokit/graphql": "^7.1.1",
@@ -24,7 +24,6 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
-    "tsx": "^4.19.0",
     "typescript": "^5.6.2"
   }
 }

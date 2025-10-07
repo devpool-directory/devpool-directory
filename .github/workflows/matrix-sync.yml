@@ -25,6 +25,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm ci || npm install
+      - run: npm run build --silent --if-present
       - name: Generate plan
         run: npm run plan > plan.json
         env:
@@ -50,6 +51,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm ci || npm install
+      - run: npm run build --silent --if-present
       - uses: actions/download-artifact@v4
         with: { name: plan }
       - name: Run shard
@@ -73,6 +75,7 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - run: npm ci || npm install
+      - run: npm run build --silent --if-present
       - uses: actions/download-artifact@v4
         with: { path: ./shards }
       - name: Aggregate & write artifacts

@@ -14,12 +14,6 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - name: Get GitHub App token
-        id: get_installation_token
-        uses: tibdex/github-app-token@v1.7.0
-        with:
-          app_id: ${{ secrets.APP_ID }}
-          private_key: ${{ secrets.APP_PRIVATE_KEY }}
       - name: Install
         run: npm ci || npm install
 
@@ -41,29 +35,20 @@ jobs:
           }
           JSON
 
-      - name: Create partner test issue
-        id: create_issue
-        env:
-          GH_TOKEN: ${{ steps.get_installation_token.outputs.token }}
-        run: |
-          TITLE="[E2E] directory sync test $(date +%s)"
-          BODY="This is an ephemeral partner issue for E2E."
-          RESP=$(gh api repos/devpool-directory/devpool-directory-testing/issues -f title="$TITLE" -f body="$BODY")
-          echo "$RESP" | jq -r '.html_url,.number' | paste -sd' ' - | awk '{print "url=" $1 "\nnumber=" $2}' >> $GITHUB_OUTPUT
-
       - name: Plan (K=1)
         run: npm run plan > plan.json
         env:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CONFIG_PATH: ./config/e2e.config.json
 
-      - name: Run shard 0
+      - name: Run shard 0 (DRY_RUN)
         run: npm run sync:shard -- --shard 0
         env:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DIRECTORY_OWNER: devpool-directory
           DIRECTORY_REPO: devpool-directory-testing
           CONFIG_PATH: ./config/e2e.config.json
+          DRY_RUN: "true"
 
       - name: Upload shard outputs
         uses: actions/upload-artifact@v4
@@ -72,10 +57,10 @@ jobs:
           path: out/shard-0-*.json
           if-no-files-found: warn
 
-      - name: Aggregate (dry-run)
+      - name: Aggregate (DRY_RUN)
         run: npm run aggregate
         env:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DIRECTORY_OWNER: devpool-directory
           DIRECTORY_REPO: devpool-directory-testing
           DATA_BRANCH: __STORAGE__
@@ -87,16 +72,3 @@ jobs:
           name: out-agg
           path: out-agg/*.json
           if-no-files-found: warn
-
-      - name: Close created directory issues (cleanup)
-        if: always()
-        env:
-          GH_TOKEN: ${{ steps.get_installation_token.outputs.token }}
-        run: |
-          # Close the partner test issue
-          gh issue close ${{ steps.create_issue.outputs.number }} -R devpool-directory/devpool-directory-testing || true
-          # Close any mirrored issues with the E2E title signature
-          mapfile -t IDS < <(gh issue list -R devpool-directory/devpool-directory-testing --state all --search "[E2E] in:title" --json number --jq '.[].number')
-          for n in "${IDS[@]}"; do
-            gh issue close "$n" -R devpool-directory/devpool-directory-testing || true
-          done
