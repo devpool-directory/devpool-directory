@@ -14,12 +14,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - name: Get GitHub App token
-        id: get_installation_token
-        uses: tibdex/github-app-token@v1.7.0
-        with:
-          app_id: ${{ secrets.APP_ID }}
-          private_key: ${{ secrets.APP_PRIVATE_KEY }}
+      # Use existing PAT secrets (GH_TOKEN) for all API writes
       - name: Install
         run: npm ci --include=dev || npm install
 
@@ -52,13 +47,13 @@ jobs:
           ls -la dist || true
           npm run plan > plan.json
         env:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           CONFIG_PATH: ./config/e2e.config.json
 
       - name: Create partner test issue
         id: create_issue
         env:
-          GH_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           TITLE="[E2E] Sample task $(date +%s)"
           BODY=$'Implement a small change for E2E validation.\n\nAcceptance criteria:\n- trivial content\n- safe to mirror\n'
@@ -74,7 +69,7 @@ jobs:
           npm run build --silent --if-present
           npm run sync:shard -- --shard 0
         env:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           DIRECTORY_OWNER: devpool-directory
           DIRECTORY_REPO: devpool-directory-testing
           CONFIG_PATH: ./config/e2e.config.json
@@ -91,9 +86,9 @@ jobs:
           npm run build --silent --if-present
           npm run aggregate
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          DIRECTORY_OWNER: ${{ github.repository_owner }}
-          DIRECTORY_REPO: ${{ github.event.repository.name }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          DIRECTORY_OWNER: devpool-directory
+          DIRECTORY_REPO: devpool-directory-testing
           DATA_BRANCH: __STORAGE__
 
       - name: Upload aggregated outputs
@@ -106,7 +101,7 @@ jobs:
       - name: Find and close mirrored directory issue (cleanup)
         if: always()
         env:
-          GH_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
         run: |
           # Close the partner test issue (if created)
           if [ -n "${{ steps.create_issue.outputs.number }}" ] && [ "${{ steps.create_issue.outputs.number }}" != "null" ]; then

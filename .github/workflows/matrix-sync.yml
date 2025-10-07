@@ -29,7 +29,7 @@ jobs:
       - name: Generate plan
         run: npm run plan > plan.json
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
       - id: out
         run: |
           echo "matrix=$(jq -c .matrix plan.json)" >> $GITHUB_OUTPUT
@@ -57,7 +57,7 @@ jobs:
       - name: Run shard
         run: npm run sync:shard -- --shard ${{ matrix.shard_id }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           TWEET_ON_CREATE: "true"
           DELETE_TWEET_ON_COMPLETE: "true"
@@ -81,7 +81,7 @@ jobs:
       - name: Aggregate & write artifacts
         run: npm run aggregate
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           DIRECTORY_OWNER: ${{ github.repository_owner }}
           DIRECTORY_REPO: ${{ github.event.repository.name }}
           DATA_BRANCH: __STORAGE__
