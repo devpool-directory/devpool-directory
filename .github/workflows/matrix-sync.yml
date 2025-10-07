@@ -65,7 +65,8 @@ jobs:
     strategy:
       matrix:
         shard_id: ${{ fromJson(needs.plan.outputs.shards_list) }}
-      max-parallel: 16
+      # Bump to the max default for public OSS repos (Linux): 20
+      max-parallel: 20
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
