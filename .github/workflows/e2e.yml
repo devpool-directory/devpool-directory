@@ -42,7 +42,9 @@ jobs:
           JSON
 
       - name: Plan (K=1)
-        run: npm run plan > plan.json
+        run: |
+          npm run build --silent --if-present
+          npm run plan > plan.json
         env:
           GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           CONFIG_PATH: ./config/e2e.config.json
@@ -58,7 +60,9 @@ jobs:
           echo "$RESP" | jq -r '.html_url,.number' | paste -sd' ' - | awk '{print "url=" $1 "\nnumber=" $2}' >> $GITHUB_OUTPUT
 
       - name: Run shard 0
-        run: npm run sync:shard -- --shard 0
+        run: |
+          npm run build --silent --if-present
+          npm run sync:shard -- --shard 0
         env:
           GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           DIRECTORY_OWNER: devpool-directory
@@ -73,7 +77,9 @@ jobs:
           if-no-files-found: warn
 
       - name: Aggregate
-        run: npm run aggregate
+        run: |
+          npm run build --silent --if-present
+          npm run aggregate
         env:
           GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           DIRECTORY_OWNER: devpool-directory
@@ -92,8 +98,10 @@ jobs:
         env:
           GH_TOKEN: ${{ steps.get_installation_token.outputs.token }}
         run: |
-          # Close the partner test issue
-          gh issue close ${{ steps.create_issue.outputs.number }} -R devpool-directory/devpool-directory-testing || true
+          # Close the partner test issue (if created)
+          if [ -n "${{ steps.create_issue.outputs.number }}" ]; then
+            gh issue close ${{ steps.create_issue.outputs.number }} -R devpool-directory/devpool-directory-testing || true
+          fi
           # Find mirror (body matches partner URL)
           MIRROR_NUM=$(gh issue list -R devpool-directory/devpool-directory-testing --state open --json number,body | jq -r '.[] | select(.body == "'${{ steps.create_issue.outputs.url }}'") | .number' | head -n1)
           if [ -n "$MIRROR_NUM" ]; then
