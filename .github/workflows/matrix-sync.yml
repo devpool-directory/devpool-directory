@@ -98,8 +98,46 @@ jobs:
           path: out/shard-${{ matrix.shard_id }}-*.json
           if-no-files-found: ignore
 
+  # Fallback sequential execution to ensure runs pass even if matrix fan-out is flaky
+  sync-shards-seq:
+    needs: plan
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci --include=dev || npm install
+      - run: npm run build --silent --if-present
+      - uses: actions/download-artifact@v4
+        with: { name: plan }
+      - uses: actions/download-artifact@v4
+        with: { name: plan-extra }
+      - name: Run all shards sequentially
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          TWEET_ON_CREATE: "true"
+          DELETE_TWEET_ON_COMPLETE: "true"
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_KEY_SECRET: ${{ secrets.TWITTER_API_KEY_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+        run: |
+          set -euo pipefail
+          shards=$(jq -r '.matrix.include | map(.shard_id) | join(" ")' plan.json)
+          echo "Running shards: $shards"
+          for s in $shards; do
+            echo "--- Running shard $s ---"
+            npm run sync:shard -- --shard "$s"
+          done
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shards
+          path: out/
+          if-no-files-found: ignore
+
   aggregate:
-    needs: [plan, sync-shard]
+    needs: [plan, sync-shards-seq]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
