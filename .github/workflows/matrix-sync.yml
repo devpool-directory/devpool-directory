@@ -67,8 +67,8 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        shard_id: ${{ fromJson(needs.plan.outputs.shards_list) }}
-      # Drive parallelism from plan (caps at OSS default 20)
+        include: ${{ fromJson(needs.plan.outputs.matrix_include) }}
+      # Drive parallelism from plan (caps at OSS default 256)
       max-parallel: ${{ needs.plan.outputs.max_parallel }}
       fail-fast: false
     steps:
@@ -149,3 +149,4 @@ jobs:
           echo "matrix_include: ${{ needs.plan.outputs.matrix_include }}"
           echo "matrix_json:   ${{ needs.plan.outputs.matrix_json }}"
           echo "max_parallel:  ${{ needs.plan.outputs.max_parallel }}"
+          echo "shards_list:   ${{ needs.plan.outputs.shards_list }}"

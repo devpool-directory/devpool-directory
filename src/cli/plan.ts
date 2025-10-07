@@ -27,8 +27,8 @@ async function main() {
     shards[idx].repos.push(r);
   }
 
-  const estPerShard = Math.max(10, Math.ceil((repos.length || 1) / K) * 12);
-  const maxParallel = Math.max(1, Math.min(K, Math.floor((remaining * 0.6) / estPerShard)));
+  // Max out to GitHub OSS default concurrency ceiling (256) but never exceed shard count
+  const maxParallel = Math.min(256, K);
 
   const plan = { matrix: { include: shards }, maxParallel };
   process.stdout.write(JSON.stringify(plan, null, 2));
