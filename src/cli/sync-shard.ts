@@ -5,8 +5,16 @@ import { writeJson } from "../artifacts/write.js";
 import fs from "fs";
 
 async function main() {
-  const shardArg = process.argv.find((a) => a === "--shard");
-  const shardId = shardArg ? Number(process.argv[process.argv.indexOf(shardArg) + 1]) : 0;
+  const shardArgIndex = process.argv.indexOf("--shard");
+  let shardId = 0;
+  if (shardArgIndex !== -1) {
+    const shardValue = process.argv[shardArgIndex + 1];
+    if (shardValue === undefined || shardValue.startsWith("--") || isNaN(Number(shardValue))) {
+      console.error("Error: --shard must be followed by a valid number.");
+      process.exit(1);
+    }
+    shardId = Number(shardValue);
+  }
   const outDir = `out`;
 
   const directoryOwner = process.env.DIRECTORY_OWNER ?? "";
