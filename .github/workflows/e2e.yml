@@ -14,6 +14,12 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
+      - name: Get GitHub App token
+        id: get_installation_token
+        uses: tibdex/github-app-token@v1.7.0
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_PRIVATE_KEY }}
       - name: Install
         run: npm ci || npm install
 
@@ -38,17 +44,26 @@ jobs:
       - name: Plan (K=1)
         run: npm run plan > plan.json
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           CONFIG_PATH: ./config/e2e.config.json
 
-      - name: Run shard 0 (DRY_RUN)
+      - name: Create partner test issue
+        id: create_issue
+        env:
+          GH_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+        run: |
+          TITLE="[E2E] Sample task $(date +%s)"
+          BODY=$'Implement a small change for E2E validation.\n\nAcceptance criteria:\n- trivial content\n- safe to mirror\n'
+          RESP=$(gh api repos/devpool-directory/devpool-directory-testing/issues -f title="$TITLE" -f body="$BODY")
+          echo "$RESP" | jq -r '.html_url,.number' | paste -sd' ' - | awk '{print "url=" $1 "\nnumber=" $2}' >> $GITHUB_OUTPUT
+
+      - name: Run shard 0
         run: npm run sync:shard -- --shard 0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           DIRECTORY_OWNER: devpool-directory
           DIRECTORY_REPO: devpool-directory-testing
           CONFIG_PATH: ./config/e2e.config.json
-          DRY_RUN: "true"
 
       - name: Upload shard outputs
         uses: actions/upload-artifact@v4
@@ -57,14 +72,13 @@ jobs:
           path: out/shard-0-*.json
           if-no-files-found: warn
 
-      - name: Aggregate (DRY_RUN)
+      - name: Aggregate
         run: npm run aggregate
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
           DIRECTORY_OWNER: devpool-directory
           DIRECTORY_REPO: devpool-directory-testing
           DATA_BRANCH: __STORAGE__
-          DRY_RUN: "true"
 
       - name: Upload aggregated outputs
         uses: actions/upload-artifact@v4
@@ -72,3 +86,16 @@ jobs:
           name: out-agg
           path: out-agg/*.json
           if-no-files-found: warn
+
+      - name: Find and close mirrored directory issue (cleanup)
+        if: always()
+        env:
+          GH_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+        run: |
+          # Close the partner test issue
+          gh issue close ${{ steps.create_issue.outputs.number }} -R devpool-directory/devpool-directory-testing || true
+          # Find mirror (body matches partner URL)
+          MIRROR_NUM=$(gh issue list -R devpool-directory/devpool-directory-testing --state open --json number,body | jq -r '.[] | select(.body == "'${{ steps.create_issue.outputs.url }}'") | .number' | head -n1)
+          if [ -n "$MIRROR_NUM" ]; then
+            gh issue close "$MIRROR_NUM" -R devpool-directory/devpool-directory-testing || true
+          fi

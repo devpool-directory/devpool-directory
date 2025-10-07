@@ -82,6 +82,8 @@ jobs:
         run: npm run aggregate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIRECTORY_OWNER: ${{ github.repository_owner }}
+          DIRECTORY_REPO: ${{ github.event.repository.name }}
           DATA_BRANCH: __STORAGE__
 
   summary:
