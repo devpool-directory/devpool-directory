@@ -1,6 +1,12 @@
 import { GitHubPullRequest, octokit } from "./directory";
 
-export async function getRepositoryPullRequests(ownerName: string, repoName: string) {
+const prMemo = new Map<string, GitHubPullRequest[]>();
+
+export async function getRepositoryPullRequests(ownerName: string, repoName: string, forceRefresh = false) {
+  const cacheKey = `${ownerName}/${repoName}`;
+  if (!forceRefresh && prMemo.has(cacheKey)) {
+    return prMemo.get(cacheKey)!;
+  }
   // Check if the repository is archived
   const { data: repo } = await octokit.rest.repos.get({
     owner: ownerName,
@@ -18,5 +24,6 @@ export async function getRepositoryPullRequests(ownerName: string, repoName: str
     url: `/repos/${ownerName}/${repoName}/pulls`,
   });
 
+  prMemo.set(cacheKey, pullRequests);
   return pullRequests;
 }

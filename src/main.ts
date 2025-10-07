@@ -24,9 +24,6 @@ export async function main() {
     const result: GitHubIssue[] = await syncPartnerRepoIssues({ partnerRepoUrl, directoryIssues, twitterMap });
     taskList.push(...result);
 
-    // Refresh directory issues after each partner repo sync to catch newly created issues
-    directoryIssues = await getRepositoryIssues(DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME);
-
     // get all pull requests (opened and closed)
     const [ownerName, repoName] = getRepoCredentials(partnerRepoUrl);
     const pullRequests: GitHubPullRequest[] = await getRepositoryPullRequests(ownerName, repoName);
@@ -46,7 +43,7 @@ export async function main() {
   await commitPartnerAvatars(partnerAvatarList);
 
   // Calculate total rewards from devpool issues
-  const { rewards, tasks } = await calculateStatistics(await getRepositoryIssues(DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME));
+  const { rewards, tasks } = await calculateStatistics(directoryIssues);
   const statistics: Statistics = { rewards, tasks };
 
   await commitStatistics(statistics);

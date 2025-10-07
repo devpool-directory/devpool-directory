@@ -17,7 +17,7 @@ interface GitHubError extends Error {
   };
 }
 
-export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: string, twitterMap: TwitterMap) {
+export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: string, twitterMap: TwitterMap): Promise<GitHubIssue | null> {
   if (partnerIssue.state === "closed") return; // if issue is "closed" then skip it, no need to copy/paste already "closed" issues
 
   const hasPriceLabel = (partnerIssue.labels as GitHubLabel[]).some((label) => label.name.includes(Labels.PRICE)); // check if the issue is the same type as it should be
@@ -65,7 +65,7 @@ export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: s
       if (existingIssues.length > 0) {
         console.log(`Issue with label 'id: ${partnerIssue.node_id}' already exists: ${existingIssues[0].html_url}`);
         console.log(`Skipping duplicate creation for partner issue: ${partnerIssue.html_url}`);
-        return;
+        return null;
       }
     } catch (err) {
       console.error("Failed to check for existing issues:", err);
@@ -95,7 +95,7 @@ export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: s
 
     if (!createdIssue) {
       console.log("No new issue to tweet about");
-      return;
+      return null;
     }
 
     // post to social media (only if it's not a proposal)
@@ -112,6 +112,7 @@ export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: s
         console.error("Failed to post tweet: ", err);
       }
     }
+    return createdIssue.data as unknown as GitHubIssue;
   } catch (err) {
     // Check if the error is because the issue already exists (based on title or other constraints)
     const error = err as GitHubError;
@@ -130,6 +131,6 @@ export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: s
         error: err,
       });
     }
-    return;
+    return null;
   }
 }

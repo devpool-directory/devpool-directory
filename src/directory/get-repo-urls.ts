@@ -1,5 +1,7 @@
 import { octokit } from "./directory";
 
+const repoUrlsCache = new Map<string, string[]>();
+
 /**
  * Returns all org repositories urls or owner/repo url
  * @param orgOrRepo org or repository name
@@ -7,6 +9,7 @@ import { octokit } from "./directory";
  */
 
 export async function getRepoUrls(orgOrRepo: string) {
+  if (repoUrlsCache.has(orgOrRepo)) return repoUrlsCache.get(orgOrRepo)!;
   if (!orgOrRepo) {
     console.warn("No org or repo provided: ", orgOrRepo);
     return [];
@@ -56,5 +59,6 @@ export async function getRepoUrls(orgOrRepo: string) {
     console.error(err);
   }
 
+  repoUrlsCache.set(orgOrRepo, repos);
   return repos;
 }

@@ -1,6 +1,12 @@
 import { GitHubIssue, octokit } from "./directory";
 
-export async function getRepositoryIssues(ownerName: string, repoName: string) {
+const issuesMemo = new Map<string, GitHubIssue[]>();
+
+export async function getRepositoryIssues(ownerName: string, repoName: string, forceRefresh = false) {
+  const cacheKey = `${ownerName}/${repoName}|state=all`;
+  if (!forceRefresh && issuesMemo.has(cacheKey)) {
+    return issuesMemo.get(cacheKey)!;
+  }
   // Check if the repository is archived
   const { data: repo } = await octokit.rest.repos.get({
     owner: ownerName,
@@ -20,5 +26,6 @@ export async function getRepositoryIssues(ownerName: string, repoName: string) {
   // remove PRs from the project issues
   issues = issues.filter((issue) => !issue.pull_request);
 
+  issuesMemo.set(cacheKey, issues);
   return issues;
 }

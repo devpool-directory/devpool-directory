@@ -61,8 +61,11 @@ export async function syncPartnerRepoIssues({
           directoryIssue: existingIssue,
         });
       } else {
-        // if it doesn't exist in the Directory, then create it
-        await newDirectoryIssue(partnerIssue, partnerRepoUrl, twitterMap);
+        // if it doesn't exist in the Directory, then create it and update local cache
+        const created = await newDirectoryIssue(partnerIssue, partnerRepoUrl, twitterMap);
+        if (created) {
+          directoryIssues.push(created);
+        }
       }
     }
 
