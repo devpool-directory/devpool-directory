@@ -21,6 +21,7 @@ jobs:
     outputs:
       matrix_include: ${{ steps.out.outputs.matrix_include }}
       matrix_json: ${{ steps.out.outputs.matrix_json }}
+      shards_list: ${{ steps.out.outputs.shards_list }}
       max_parallel: ${{ steps.out.outputs.max_parallel }}
     steps:
       - uses: actions/checkout@v4
@@ -46,6 +47,7 @@ jobs:
       - id: out
         run: |
           echo "matrix_include=$(jq -c .matrix.include plan.json)" >> $GITHUB_OUTPUT
+          echo "shards_list=$(jq -c '.matrix.include | map(.shard_id)' plan.json)" >> $GITHUB_OUTPUT
           echo "matrix_json=$(jq -c .matrix plan.json)" >> $GITHUB_OUTPUT
           echo "max_parallel=$(jq -r .maxParallel plan.json)" >> $GITHUB_OUTPUT
       - uses: actions/upload-artifact@v4
@@ -64,7 +66,8 @@ jobs:
     needs: plan
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ fromJson(needs.plan.outputs.matrix_json) }}
+      matrix:
+        shard_id: ${{ fromJson(needs.plan.outputs.shards_list) }}
       # Drive parallelism from plan (caps at OSS default 20)
       max-parallel: ${{ needs.plan.outputs.max_parallel }}
       fail-fast: false
