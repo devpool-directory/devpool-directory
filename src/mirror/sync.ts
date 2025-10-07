@@ -31,7 +31,13 @@ export async function syncShard(
     const [owner] = full.split("/");
     ownersSet.add(owner);
 
-    const iss = await fetchIssuesForRepo(octokit, full);
+    let iss: PartnerIssue[] = [];
+    try {
+      iss = await fetchIssuesForRepo(octokit, full);
+    } catch (e: any) {
+      console.warn(`[sync] fetchIssues failed for ${full}: ${e?.status ?? e?.message ?? e}`);
+      iss = [];
+    }
     issues.push(...iss);
 
     for (const it of iss) {
@@ -58,8 +64,12 @@ export async function syncShard(
       mirrorState[it.node_id] = computeMirrorStateEntry(it, dir, undefined);
     }
 
-    const rawPrs = await fetchPRsForRepo(octokit, full);
-    prs.push(...rawPrs);
+    try {
+      const rawPrs = await fetchPRsForRepo(octokit, full);
+      prs.push(...rawPrs);
+    } catch (e: any) {
+      console.warn(`[sync] fetchPRs failed for ${full}: ${e?.status ?? e?.message ?? e}`);
+    }
 
     syncMeta[full] = { lastSyncISO: new Date().toISOString() };
   }

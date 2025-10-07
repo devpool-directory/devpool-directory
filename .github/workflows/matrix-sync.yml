@@ -10,9 +10,10 @@ permissions:
   issues: write
   actions: read
 
+# Avoid auto-cancelling manual runs; allow overlapping while we test
 concurrency:
-  group: directory-sync
-  cancel-in-progress: true
+  group: directory-sync-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   plan:
