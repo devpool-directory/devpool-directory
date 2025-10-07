@@ -34,6 +34,14 @@ jobs:
         env:
           # Use default Actions token for read-only planning (avoids PAT scope mismatches)
           GITHUB_TOKEN: ${{ github.token }}
+      - name: Fetch prior artifacts from data branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          gh api repos/${{ github.repository }}/contents/index.json?ref=__STORAGE__ --jq '.content' | base64 -d > index.json || true
+          gh api repos/${{ github.repository }}/contents/twitter-map.json?ref=__STORAGE__ --jq '.content' | base64 -d > twitter-map.json || true
+          gh api repos/${{ github.repository }}/contents/sync-metadata.json?ref=__STORAGE__ --jq '.content' | base64 -d > sync-metadata.json || true
       - id: out
         run: |
           echo "matrix_include=$(jq -c .matrix.include plan.json)" >> $GITHUB_OUTPUT
@@ -43,6 +51,13 @@ jobs:
         with:
           name: plan
           path: plan.json
+      - uses: actions/upload-artifact@v4
+        with:
+          name: plan-extra
+          path: |
+            index.json
+            twitter-map.json
+            sync-metadata.json
 
   sync-shard:
     needs: plan
@@ -50,7 +65,7 @@ jobs:
     strategy:
       matrix:
         shard_id: ${{ fromJson(needs.plan.outputs.shards_list) }}
-      max-parallel: 6
+      max-parallel: 16
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
@@ -60,6 +75,8 @@ jobs:
       - run: npm run build --silent --if-present
       - uses: actions/download-artifact@v4
         with: { name: plan }
+      - uses: actions/download-artifact@v4
+        with: { name: plan-extra }
       - name: Run shard
         run: npm run sync:shard -- --shard ${{ matrix.shard_id }}
         env:
@@ -108,7 +125,13 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
+      - run: npm ci --include=dev || npm install
       - run: npm run summary >> $GITHUB_STEP_SUMMARY
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DIRECTORY_OWNER: ${{ github.repository_owner }}
+          DIRECTORY_REPO: ${{ github.event.repository.name }}
+          DATA_BRANCH: __STORAGE__
 
   debug-matrix:
     needs: plan

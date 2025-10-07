@@ -3,6 +3,8 @@ import { getOctokit } from "../github/client.js";
 import { syncShard } from "../mirror/sync.js";
 import { writeJson } from "../artifacts/write.js";
 import fs from "fs";
+import { getTwitterClient } from "../twitter/client.js";
+import { postTweet, deleteTweet } from "../twitter/lifecycle.js";
 
 async function main() {
   const shardArgIndex = process.argv.indexOf("--shard");
@@ -29,13 +31,53 @@ async function main() {
   } catch {}
 
   const octokit = getOctokit();
+  // Optional inputs provided by plan job
+  const indexPath = "index.json";
+  const twitterMapPath = "twitter-map.json";
+  const index: Record<string, { number: number; url: string }> = fs.existsSync(indexPath)
+    ? JSON.parse(fs.readFileSync(indexPath, "utf8"))
+    : {};
+  const twitterMap: Record<string, string> = fs.existsSync(twitterMapPath)
+    ? JSON.parse(fs.readFileSync(twitterMapPath, "utf8"))
+    : {};
+
   const res = await syncShard(octokit, { repos, directoryOwner, directoryRepo });
+
+  // Twitter lifecycle: compute deltas using current state vs twitterMap
+  const tweetOnCreate = process.env.TWEET_ON_CREATE !== "false";
+  const deleteOnComplete = process.env.DELETE_TWEET_ON_COMPLETE !== "false";
+  const dryRun = process.env.DRY_RUN === "true";
+  const client = getTwitterClient();
+  const creates: Record<string, string> = {};
+  const deletes: string[] = [];
+
+  for (const issue of res.issues) {
+    const nodeId = issue.node_id;
+    const priceLabel = issue.labels.find((l) => l.startsWith("Price:"));
+    const timeLabel = issue.labels.find((l) => l.startsWith("Time:"));
+    const text = priceLabel ? `${priceLabel.replace(/^Price:\s*/, "")} for ${timeLabel?.replace(/^Time:\s*/, "") ?? "this task"}\n\n${issue.url}` : null;
+
+    if (issue.state === "open" && tweetOnCreate && text && !twitterMap[nodeId]) {
+      if (!dryRun) {
+        const id = await postTweet(client, text);
+        if (id) creates[nodeId] = id;
+      }
+    }
+    if (issue.state === "closed" && deleteOnComplete && twitterMap[nodeId]) {
+      if (!dryRun) {
+        const ok = await deleteTweet(client, twitterMap[nodeId]);
+        if (ok) deletes.push(nodeId);
+      }
+    }
+  }
 
   writeJson(outDir, `shard-${shardId}-issues.json`, res.issues);
   writeJson(outDir, `shard-${shardId}-prs.json`, res.prs);
   writeJson(outDir, `shard-${shardId}-mirror-state.json`, res.mirrorState);
   writeJson(outDir, `shard-${shardId}-owners.json`, res.owners);
-  writeJson(outDir, `shard-${shardId}-twitter-delta.json`, res.twitterDelta);
+  // Prefer structured delta with creates/deletes
+  const twitterDelta = Object.keys(creates).length || deletes.length ? { creates, deletes } : {};
+  writeJson(outDir, `shard-${shardId}-twitter-delta.json`, twitterDelta);
   writeJson(outDir, `shard-${shardId}-sync-meta.json`, res.syncMeta);
 }
 

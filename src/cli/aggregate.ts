@@ -16,6 +16,8 @@ async function main() {
   const ownerChunks: any[] = [];
   const syncChunks: any[] = [];
   const twitterDeltas: any[] = [];
+  let tweetsCreated = 0;
+  let tweetsDeleted = 0;
 
   for (const d of shardDirs) {
     const dir = path.join(shardsDir, d);
@@ -54,8 +56,12 @@ async function main() {
   for (const d of twitterDeltas) {
     if (d && typeof d === "object") {
       if (d.creates || d.deletes) {
-        Object.assign(twitterMap, d.creates ?? {});
-        for (const id of d.deletes ?? []) delete twitterMap[id];
+        const creates = d.creates ?? {};
+        const deletes = d.deletes ?? [];
+        Object.assign(twitterMap, creates);
+        for (const id of deletes) delete twitterMap[id];
+        tweetsCreated += Object.keys(creates).length;
+        tweetsDeleted += deletes.length;
       } else {
         Object.assign(twitterMap, d);
       }
@@ -73,9 +79,35 @@ async function main() {
   writeJson(outDir, "twitter-map.json", twitterMap);
   writeJson(outDir, "index.json", index);
 
-  if (process.env.DRY_RUN === "true") {
-    return;
-  }
+  // Build human-friendly summary
+  const reposProcessed = Object.keys(syncMeta.perRepo || {}).length;
+  const issuesOpen = issues.filter((i) => i.state === "open").length;
+  const issuesClosed = issues.filter((i) => i.state === "closed").length;
+  const summary = {
+    reposProcessed,
+    shards: shardDirs.length,
+    issuesOpen,
+    issuesClosed,
+    prs: prs.length,
+    mirrors: Object.keys(mirror).length,
+    owners: owners.length,
+    tweetsCreated,
+    tweetsDeleted,
+    committedFiles: [
+      "partner-open-issues.json",
+      "partner-pull-requests.json",
+      "owners-avatars.json",
+      "mirror-state.json",
+      "statistics.json",
+      "sync-metadata.json",
+      "twitter-map.json",
+      "index.json",
+      "summary.json"
+    ]
+  };
+  writeJson(outDir, "summary.json", summary);
+
+  if (process.env.DRY_RUN === "true") return;
 
   // Commit to data branch
   const octokit = getOctokit();
@@ -92,7 +124,8 @@ async function main() {
     { path: "statistics.json", content: JSON.stringify(stats) },
     { path: "sync-metadata.json", content: JSON.stringify(syncMeta) },
     { path: "twitter-map.json", content: JSON.stringify(twitterMap) },
-    { path: "index.json", content: JSON.stringify(index) }
+    { path: "index.json", content: JSON.stringify(index) },
+    { path: "summary.json", content: JSON.stringify(summary) }
   ]);
 }
 
