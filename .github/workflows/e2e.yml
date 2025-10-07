@@ -47,7 +47,8 @@ jobs:
           ls -la dist || true
           npm run plan > plan.json
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          # Use the default Actions token for planning to avoid PAT hiccups
+          GITHUB_TOKEN: ${{ github.token }}
           CONFIG_PATH: ./config/e2e.config.json
 
       - name: Create partner test issue
@@ -69,7 +70,8 @@ jobs:
           npm run build --silent --if-present
           npm run sync:shard -- --shard 0
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          # Use the default Actions token for read operations in shard
+          GITHUB_TOKEN: ${{ github.token }}
           DIRECTORY_OWNER: devpool-directory
           DIRECTORY_REPO: devpool-directory-testing
           CONFIG_PATH: ./config/e2e.config.json
