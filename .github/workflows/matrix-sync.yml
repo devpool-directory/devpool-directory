@@ -50,7 +50,7 @@ jobs:
     strategy:
       matrix:
         shard_id: ${{ fromJson(needs.plan.outputs.shards_list) }}
-      max-parallel: ${{ needs.plan.outputs.max_parallel }}
+      max-parallel: 6
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
