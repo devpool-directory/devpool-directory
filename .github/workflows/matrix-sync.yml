@@ -29,7 +29,8 @@ jobs:
       - name: Generate plan
         run: npm run plan > plan.json
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          # Use default Actions token for read-only planning (avoids PAT scope mismatches)
+          GITHUB_TOKEN: ${{ github.token }}
       - id: out
         run: |
           echo "matrix=$(jq -c .matrix plan.json)" >> $GITHUB_OUTPUT
@@ -57,7 +58,8 @@ jobs:
       - name: Run shard
         run: npm run sync:shard -- --shard ${{ matrix.shard_id }}
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          # Default token is fine for reads/labels; aggregator uses PAT for writes
+          GITHUB_TOKEN: ${{ github.token }}
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           TWEET_ON_CREATE: "true"
           DELETE_TWEET_ON_COMPLETE: "true"
