@@ -21,7 +21,7 @@ jobs:
           app_id: ${{ secrets.APP_ID }}
           private_key: ${{ secrets.APP_PRIVATE_KEY }}
       - name: Install
-        run: npm ci || npm install
+        run: npm ci --include=dev || npm install
 
       - name: Build (typecheck)
         run: npm run build --silent --if-present

@@ -24,7 +24,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - run: npm ci || npm install
+      - run: npm ci --include=dev || npm install
       - run: npm run build --silent --if-present
       - name: Generate plan
         run: npm run plan > plan.json
@@ -50,7 +50,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - run: npm ci || npm install
+      - run: npm ci --include=dev || npm install
       - run: npm run build --silent --if-present
       - uses: actions/download-artifact@v4
         with: { name: plan }
@@ -74,7 +74,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - run: npm ci || npm install
+      - run: npm ci --include=dev || npm install
       - run: npm run build --silent --if-present
       - uses: actions/download-artifact@v4
         with: { path: ./shards }
