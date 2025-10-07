@@ -65,8 +65,8 @@ jobs:
     strategy:
       matrix:
         shard_id: ${{ fromJson(needs.plan.outputs.shards_list) }}
-      # Bump to the max default for public OSS repos (Linux): 20
-      max-parallel: 20
+      # Drive parallelism from plan (caps at OSS default 20)
+      max-parallel: ${{ needs.plan.outputs.max_parallel }}
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
