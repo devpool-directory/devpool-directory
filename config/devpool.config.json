@@ -1,0 +1,10 @@
+{
+  "include": [],
+  "exclude": [],
+  "explicit_urls": [],
+  "categories": {},
+  "official_owners": [],
+  "data_branch": "__STORAGE__",
+  "max_shards": 8
+}
+

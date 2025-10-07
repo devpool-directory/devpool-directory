@@ -22,14 +22,16 @@ jobs:
     steps:
       - uses: actions/setup-node@v4
         with:
-          node-version: "20.10.0"
+          node-version: "20"
 
       - uses: actions/checkout@master
         with:
           fetch-depth: 0
 
+      - name: Install
+        run: npm ci || npm install
       - name: Jest With Coverage
-        run: yarn install --immutable --immutable-cache --check-cache && yarn test
+        run: npm test --silent --if-present
 
       - name: Add Jest Report to Summary
         if: always()
