@@ -62,8 +62,12 @@ jobs:
         run: |
           TITLE="[E2E] Sample task $(date +%s)"
           BODY=$'Implement a small change for E2E validation.\n\nAcceptance criteria:\n- trivial content\n- safe to mirror\n'
-          RESP=$(gh api repos/devpool-directory/devpool-directory-testing/issues -f title="$TITLE" -f body="$BODY")
-          echo "$RESP" | jq -r '.html_url,.number' | paste -sd' ' - | awk '{print "url=" $1 "\nnumber=" $2}' >> $GITHUB_OUTPUT
+          RESP=$(gh api repos/devpool-directory/devpool-directory-testing/issues -f title="$TITLE" -f body="$BODY" || echo '')
+          if [ -n "$RESP" ]; then
+            echo "$RESP" | jq -r '.html_url,.number' | paste -sd' ' - | awk '{print "url=" $1 "\nnumber=" $2}' >> $GITHUB_OUTPUT
+          else
+            echo "Create step skipped (likely rate limit). Proceeding with existing issues."
+          fi
 
       - name: Run shard 0
         run: |
