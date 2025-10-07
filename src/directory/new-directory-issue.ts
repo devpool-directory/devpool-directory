@@ -4,6 +4,7 @@ import twitter from "../twitter/twitter";
 import { checkIfForked } from "./check-if-forked";
 import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME, GitHubIssue, GitHubLabel, Labels, octokit } from "./directory";
 import { getDirectoryIssueLabelsFromPartnerIssue } from "./get-directory-issue-labels";
+import { ensureLabelsExist } from "./label-utils";
 import { getSocialMediaText } from "./get-social-media-text";
 
 interface GitHubError extends Error {
@@ -74,12 +75,21 @@ export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: s
 
   // create a new issue
   try {
+    // Ensure all labels exist before attempting to use them
+    const labelsToApply = getDirectoryIssueLabelsFromPartnerIssue(partnerIssue);
+    try {
+      await ensureLabelsExist(labelsToApply);
+    } catch (err) {
+      console.error("Failed to ensure labels before issue creation:", err);
+      // Continue; GitHub may still allow creation if labels happen to exist now
+    }
+
     const createdIssue = await octokit.rest.issues.create({
       owner: DEVPOOL_OWNER_NAME,
       repo: DEVPOOL_REPO_NAME,
       title: partnerIssue.title,
       body,
-      labels: getDirectoryIssueLabelsFromPartnerIssue(partnerIssue),
+      labels: labelsToApply,
     });
     console.log(`Created: ${createdIssue.data.html_url} (${partnerIssue.html_url})`);
 

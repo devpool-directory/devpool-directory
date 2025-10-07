@@ -1,5 +1,6 @@
 import { checkIfForked } from "./check-if-forked";
 import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME, octokit } from "./directory";
+import { ensureLabelsExist } from "./label-utils";
 import { MetadataInterface } from "./update-issue";
 
 export async function setMetaChanges({ issueDelta: metaChanges, partnerIssue, directoryIssue, labelRemoved, originalLabels }: MetadataInterface) {
@@ -13,13 +14,21 @@ export async function setMetaChanges({ issueDelta: metaChanges, partnerIssue, di
     }
 
     try {
+      // Ensure any labels we plan to set actually exist
+      const labelsToApply = metaChanges.labels ? labelRemoved : originalLabels;
+      try {
+        await ensureLabelsExist(labelsToApply);
+      } catch (err) {
+        console.error("Failed to ensure labels before issue update:", err);
+      }
+
       await octokit.rest.issues.update({
         owner: DEVPOOL_OWNER_NAME,
         repo: DEVPOOL_REPO_NAME,
         issue_number: directoryIssue.number,
         title: metaChanges.title ? partnerIssue.title : directoryIssue.title,
         body: directoryIssueBody,
-        labels: metaChanges.labels ? labelRemoved : originalLabels,
+        labels: labelsToApply,
         state: partnerIssue.state === "closed" ? "closed" : "open",
       });
     } catch (err) {

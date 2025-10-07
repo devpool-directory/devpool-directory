@@ -1,4 +1,5 @@
 import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME, GitHubLabel, Labels, octokit } from "./directory";
+import { ensureLabelsExist } from "./label-utils";
 import { MetadataInterface } from "./update-issue";
 
 export async function setUnavailableLabelToIssue({ directoryIssue, partnerIssue, issueDelta, labelRemoved, originalLabels }: MetadataInterface) {
@@ -16,11 +17,17 @@ export async function setUnavailableLabelToIssue({ directoryIssue, partnerIssue,
   // Apply the "Unavailable" label to the devpool issue if the project issue is open and assigned
   if (isProjectOpen && isProjectAssigned && !hasUnavailableLabel) {
     try {
+      const labelsToApply = issueDelta.labels ? labelRemoved.concat(Labels.UNAVAILABLE) : originalLabels.concat(Labels.UNAVAILABLE);
+      try {
+        await ensureLabelsExist(labelsToApply);
+      } catch (err) {
+        console.error("Failed to ensure labels before adding Unavailable:", err);
+      }
       await octokit.rest.issues.addLabels({
         owner: DEVPOOL_OWNER_NAME,
         repo: DEVPOOL_REPO_NAME,
         issue_number: directoryIssue.number,
-        labels: issueDelta.labels ? labelRemoved.concat(Labels.UNAVAILABLE) : originalLabels.concat(Labels.UNAVAILABLE),
+        labels: labelsToApply,
       });
       console.log(`Added label "${Labels.UNAVAILABLE}" to Issue #${directoryIssue.number}`);
     } catch (err) {
