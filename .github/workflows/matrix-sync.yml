@@ -66,8 +66,7 @@ jobs:
     needs: plan
     runs-on: ubuntu-latest
     strategy:
-      matrix:
-        include: ${{ fromJson(needs.plan.outputs.matrix_include) }}
+      matrix: ${{ fromJson(needs.plan.outputs.matrix_json) }}
       # Drive parallelism from plan (caps at OSS default 256)
       max-parallel: ${{ needs.plan.outputs.max_parallel }}
       fail-fast: false
