@@ -1,17 +1,8 @@
 name: Sync Issues
 
 on:
+  # Temporarily disable automatic triggers; manual only
   workflow_dispatch:
-  push:
-    branches:
-      - development
-
-    paths-ignore:
-      - "*.json"
-      - "**.json"
-      - "**/*.json"
-  schedule:
-    - cron: "*/15 * * * *" # every 15 minutes
 
 jobs:
   sync-issues:
