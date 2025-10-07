@@ -39,10 +39,6 @@ export async function syncShard(
       if (it.body && /^https?:\/\/(www\.)?github\.com\/[^\s]+\/issues\/\d+$/.test(it.body.trim())) {
         continue;
       }
-      // Also skip if partner repo equals directory repo (self-mirroring not desired)
-      if (`${it.owner}/${it.repo}` === `${opts.directoryOwner}/${opts.directoryRepo}`) {
-        continue;
-      }
       // Mirror creation/update (dry-run by default if DRY_RUN)
       let dir: { number?: number; url?: string } | null = null;
       try {
