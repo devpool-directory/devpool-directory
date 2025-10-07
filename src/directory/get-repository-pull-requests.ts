@@ -22,6 +22,7 @@ export async function getRepositoryPullRequests(ownerName: string, repoName: str
   const pullRequests: GitHubPullRequest[] = await octokit.paginate({
     method: "GET",
     url: `/repos/${ownerName}/${repoName}/pulls`,
+    per_page: 100,
   });
 
   prMemo.set(cacheKey, pullRequests);

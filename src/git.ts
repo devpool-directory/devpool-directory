@@ -144,3 +144,11 @@ export async function commitTwitterMap(twitterMap: TwitterMap) {
     console.error(`Error preparing twitter map for github file: ${error}`);
   }
 }
+
+export async function commitLastRun(lastRun: Record<string, string>) {
+  try {
+    await gitCommit(lastRun, "last-run.json");
+  } catch (error) {
+    console.error(`Error preparing last-run map for github file: ${error}`);
+  }
+}

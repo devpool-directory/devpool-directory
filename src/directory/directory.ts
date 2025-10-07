@@ -1,5 +1,7 @@
 import { RestEndpointMethodTypes } from "@octokit/plugin-rest-endpoint-methods";
-import { Octokit } from "@octokit/rest";
+import { Octokit } from "octokit";
+import { throttling } from "@octokit/plugin-throttling";
+import { retry } from "@octokit/plugin-retry";
 import dotenv from "dotenv";
 import _projects from "../../projects.json";
 import { installOctokitCache } from "../utils/request-cache";
@@ -17,8 +19,8 @@ async function chooseBestToken(): Promise<string | undefined> {
 
   // If both exist, compare remaining rate limit and pick the larger budget
   try {
-    const ghOcto = createClient(ACTIONS_GITHUB_TOKEN);
-    const appOcto = createClient(APP_INSTALLATION_TOKEN);
+    const ghOcto = new Octokit({ auth: ACTIONS_GITHUB_TOKEN });
+    const appOcto = new Octokit({ auth: APP_INSTALLATION_TOKEN });
 
     const [ghRate, appRate] = await Promise.all([
       ghOcto.rest.rateLimit.get().then((r) => r.data.rate.remaining).catch(() => -1),
@@ -39,10 +41,27 @@ async function chooseBestToken(): Promise<string | undefined> {
   }
 }
 
+// Compose Octokit with plugins
+const BaseOctokit = Octokit.plugin(throttling, retry);
+
 function createClient(token?: string) {
-  const client = new Octokit({
+  const client = new BaseOctokit({
     auth: token,
     userAgent: "devpool-directory/1.0",
+    throttle: {
+      onRateLimit: (retryAfter: number, options: any) => {
+        console.warn(`Rate limit for ${options.method} ${options.url}. Retry after ${retryAfter}s.`);
+        return true; // retry once
+      },
+      onSecondaryRateLimit: (retryAfter: number, options: any) => {
+        console.warn(`Secondary rate limit for ${options.method} ${options.url}. Backoff ${retryAfter}s.`);
+        return true; // retry once
+      },
+    },
+    retry: {
+      doNotRetry: [400, 401, 404, 422],
+      maxRetries: 2,
+    },
   } as any);
 
   installOctokitCache(client as any, {
@@ -55,19 +74,48 @@ function createClient(token?: string) {
   return client as unknown as Octokit;
 }
 
-// Initialize Octokit synchronously with best guess, then replace once we know better
-let initialToken = ACTIONS_GITHUB_TOKEN || APP_INSTALLATION_TOKEN;
-let _octokit = createClient(initialToken);
+function installRateLimitFallback(client: Octokit, getAlt: () => Octokit | undefined) {
+  client.hook.wrap("request", async (request, options) => {
+    try {
+      return await request(options);
+    } catch (err: any) {
+      const status = err?.status;
+      const msg: string = err?.response?.data?.message || err?.message || "";
+      const remaining = Number(err?.response?.headers?.["x-ratelimit-remaining"]) || 0;
+      const exhausted = status === 403 && (remaining === 0 || /API rate limit exceeded/i.test(msg));
+      if (!exhausted) throw err;
+
+      const alt = getAlt();
+      if (!alt) throw err;
+
+      console.warn(`Primary token exhausted. Switching to alternate token and retrying once.`);
+      const res = await (alt as any).request(options as any);
+      (module.exports as any).octokit = alt;
+      return res;
+    }
+  });
+}
+
+// Build both clients (if tokens exist)
+let ghClient: Octokit | undefined = ACTIONS_GITHUB_TOKEN ? createClient(ACTIONS_GITHUB_TOKEN) : undefined;
+let appClient: Octokit | undefined = APP_INSTALLATION_TOKEN ? createClient(APP_INSTALLATION_TOKEN) : undefined;
+if (ghClient) installRateLimitFallback(ghClient, () => appClient);
+if (appClient) installRateLimitFallback(appClient, () => ghClient);
+
+// Initialize with best guess
+let _octokit: Octokit = ghClient || appClient || createClient();
 export const octokit = _octokit;
 
-// Kick off async selection and update the client once decided
+// Async choose based on remaining budget
 chooseBestToken()
   .then((best) => {
-    if (best && best !== initialToken) {
-      _octokit = createClient(best);
-      // Re-export replacement by mutating the exported binding
-      (module.exports as any).octokit = _octokit;
+    if (!best) return;
+    if (ACTIONS_GITHUB_TOKEN && best === ACTIONS_GITHUB_TOKEN && ghClient) {
+      _octokit = ghClient;
+    } else if (APP_INSTALLATION_TOKEN && best === APP_INSTALLATION_TOKEN && appClient) {
+      _octokit = appClient;
     }
+    (module.exports as any).octokit = _octokit;
   })
   .catch(() => void 0);
 

@@ -28,11 +28,13 @@
   ],
   "dependencies": {
     "@mswjs/data": "0.16.1",
+    "@octokit/plugin-retry": "^6.1.0",
+    "@octokit/plugin-throttling": "^8.2.0",
     "@octokit/rest": "^20.0.2",
     "dotenv": "^16.3.1",
     "jest": "29.7.0",
     "jest-md-dashboard": "^0.8.0",
-    "octokit": "^2.0.14",
+    "octokit": "^3.1.2",
     "twitter-api-v2": "^1.16.0"
   },
   "devDependencies": {
