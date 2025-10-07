@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       matrix_include: ${{ steps.out.outputs.matrix_include }}
-      shards_json: ${{ steps.out.outputs.shards_json }}
+      shards_list: ${{ steps.out.outputs.shards_list }}
       max_parallel: ${{ steps.out.outputs.max_parallel }}
     steps:
       - uses: actions/checkout@v4
@@ -37,7 +37,7 @@ jobs:
       - id: out
         run: |
           echo "matrix_include=$(jq -c .matrix.include plan.json)" >> $GITHUB_OUTPUT
-          echo "shards_json=$(jq -c '.matrix.include | map({shard_id: .shard_id})' plan.json)" >> $GITHUB_OUTPUT
+          echo "shards_list=$(jq -c '.matrix.include | map(.shard_id)' plan.json)" >> $GITHUB_OUTPUT
           echo "max_parallel=$(jq -r .maxParallel plan.json)" >> $GITHUB_OUTPUT
       - uses: actions/upload-artifact@v4
         with:
@@ -49,7 +49,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        include: ${{ fromJson(needs.plan.outputs.shards_json) }}
+        shard_id: ${{ fromJson(needs.plan.outputs.shards_list) }}
       max-parallel: ${{ needs.plan.outputs.max_parallel }}
       fail-fast: false
     steps:
