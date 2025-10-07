@@ -9,8 +9,23 @@ export async function ensureBranch(octokit: Octokit, owner: string, repo: string
   } catch {
     const { data: main } = await octokit.repos.get({ owner, repo });
     const defaultBranch = main.default_branch;
-    const { data: baseRef } = await octokit.git.getRef({ owner, repo, ref: `heads/${defaultBranch}` });
-    await octokit.git.createRef({ owner, repo, ref: `refs/heads/${branch}`, sha: baseRef.object.sha });
+    let baseSha: string;
+    try {
+      const { data: baseRef } = await octokit.git.getRef({ owner, repo, ref: `heads/${defaultBranch}` });
+      baseSha = baseRef.object.sha;
+    } catch (e: any) {
+      // Handle empty repository (no default branch yet)
+      if (e?.status === 404 || e?.status === 409) {
+        const { data: emptyTree } = await octokit.git.createTree({ owner, repo, tree: [] });
+        const { data: initialCommit } = await octokit.git.createCommit({ owner, repo, message: "init", tree: emptyTree.sha, parents: [] });
+        await octokit.git.createRef({ owner, repo, ref: `refs/heads/${defaultBranch}`, sha: initialCommit.sha });
+        baseSha = initialCommit.sha;
+        info(`Initialized empty repo with default branch ${defaultBranch}`);
+      } else {
+        throw e;
+      }
+    }
+    await octokit.git.createRef({ owner, repo, ref: `refs/heads/${branch}`, sha: baseSha });
     info(`Created data branch ${branch} from ${defaultBranch}`);
   }
 }
@@ -39,4 +54,3 @@ export async function commitChanges(
   const { data: commit } = await octokit.git.createCommit({ owner, repo, message, tree: tree.sha, parents: [baseSha] });
   await octokit.git.updateRef({ owner, repo, ref: `heads/${branch}`, sha: commit.sha });
 }
-
