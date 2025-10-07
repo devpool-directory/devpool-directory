@@ -62,11 +62,11 @@ jobs:
         run: |
           TITLE="[E2E] Sample task $(date +%s)"
           BODY=$'Implement a small change for E2E validation.\n\nAcceptance criteria:\n- trivial content\n- safe to mirror\n'
-          RESP=$(gh api repos/devpool-directory/devpool-directory-testing/issues -f title="$TITLE" -f body="$BODY" || echo '')
-          if [ -n "$RESP" ]; then
+          RESP=$(gh api repos/devpool-directory/devpool-directory-testing/issues -f title="$TITLE" -f body="$BODY" 2>/dev/null || echo '')
+          if echo "$RESP" | jq -e '.html_url and .number' >/dev/null 2>&1; then
             echo "$RESP" | jq -r '.html_url,.number' | paste -sd' ' - | awk '{print "url=" $1 "\nnumber=" $2}' >> $GITHUB_OUTPUT
           else
-            echo "Create step skipped (likely rate limit). Proceeding with existing issues."
+            echo "Create step skipped (rate limited or unauthorized). Proceeding with existing issues."
           fi
 
       - name: Run shard 0
@@ -91,9 +91,9 @@ jobs:
           npm run build --silent --if-present
           npm run aggregate
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
-          DIRECTORY_OWNER: devpool-directory
-          DIRECTORY_REPO: devpool-directory-testing
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DIRECTORY_OWNER: ${{ github.repository_owner }}
+          DIRECTORY_REPO: ${{ github.event.repository.name }}
           DATA_BRANCH: __STORAGE__
 
       - name: Upload aggregated outputs
@@ -109,11 +109,13 @@ jobs:
           GH_TOKEN: ${{ steps.get_installation_token.outputs.token }}
         run: |
           # Close the partner test issue (if created)
-          if [ -n "${{ steps.create_issue.outputs.number }}" ]; then
+          if [ -n "${{ steps.create_issue.outputs.number }}" ] && [ "${{ steps.create_issue.outputs.number }}" != "null" ]; then
             gh issue close ${{ steps.create_issue.outputs.number }} -R devpool-directory/devpool-directory-testing || true
           fi
           # Find mirror (body matches partner URL)
-          MIRROR_NUM=$(gh issue list -R devpool-directory/devpool-directory-testing --state open --json number,body | jq -r '.[] | select(.body == "'${{ steps.create_issue.outputs.url }}'") | .number' | head -n1)
-          if [ -n "$MIRROR_NUM" ]; then
-            gh issue close "$MIRROR_NUM" -R devpool-directory/devpool-directory-testing || true
+          if [ -n "${{ steps.create_issue.outputs.url }}" ] && [ "${{ steps.create_issue.outputs.url }}" != "null" ]; then
+            MIRROR_NUM=$(gh issue list -R devpool-directory/devpool-directory-testing --state open --json number,body | jq -r '.[] | select(.body == "'${{ steps.create_issue.outputs.url }}'") | .number' | head -n1)
+            if [ -n "$MIRROR_NUM" ]; then
+              gh issue close "$MIRROR_NUM" -R devpool-directory/devpool-directory-testing || true
+            fi
           fi
