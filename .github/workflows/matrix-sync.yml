@@ -85,10 +85,18 @@ jobs:
       - run: npm run build --silent --if-present
       - uses: actions/download-artifact@v4
         with: { path: ./shards }
+      - name: Create GitHub App token (repo)
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
       - name: Aggregate & write artifacts
         run: npm run aggregate
         env:
-          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
+          GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
           DIRECTORY_OWNER: ${{ github.repository_owner }}
           DIRECTORY_REPO: ${{ github.event.repository.name }}
           DATA_BRANCH: __STORAGE__
