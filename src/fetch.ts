@@ -27,6 +27,7 @@ export async function fetchIssuesForRepo(octokit: Octokit, full: string): Promis
       node_id: i.node_id,
       title: i.title ?? "",
       url: i.html_url ?? "",
+      body: i.body ?? "",
       labels: (i.labels ?? []).map((l: any) => (typeof l === "string" ? l : l.name)).filter(Boolean),
       assignees: (i.assignees ?? []).map((a: any) => a.login).filter(Boolean),
       state: i.state === "open" ? "open" : "closed",

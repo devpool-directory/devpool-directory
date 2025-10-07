@@ -8,6 +8,7 @@ export type PartnerIssueKey = {
 export type PartnerIssue = PartnerIssueKey & {
   title: string;
   url: string;
+  body?: string;
   labels: string[];
   assignees: string[];
   state: "open" | "closed";
@@ -42,4 +43,3 @@ export type Statistics = {
   rewards: { notAssigned: number; assigned: number; completed: number; total: number };
   tasks: { notAssigned: number; assigned: number; completed: number; total: number };
 };
-

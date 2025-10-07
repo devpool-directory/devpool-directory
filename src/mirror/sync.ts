@@ -35,6 +35,14 @@ export async function syncShard(
     issues.push(...iss);
 
     for (const it of iss) {
+      // Skip potential mirror issues to avoid recursion: body exactly a GitHub issue URL
+      if (it.body && /^https?:\/\/(www\.)?github\.com\/[^\s]+\/issues\/\d+$/.test(it.body.trim())) {
+        continue;
+      }
+      // Also skip if partner repo equals directory repo (self-mirroring not desired)
+      if (`${it.owner}/${it.repo}` === `${opts.directoryOwner}/${opts.directoryRepo}`) {
+        continue;
+      }
       // Mirror creation/update (dry-run by default if DRY_RUN)
       let dir: { number?: number; url?: string } | null = null;
       try {
