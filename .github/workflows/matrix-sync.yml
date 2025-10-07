@@ -18,7 +18,7 @@ jobs:
   plan:
     runs-on: ubuntu-latest
     outputs:
-      matrix: ${{ steps.out.outputs.matrix }}
+      matrix_include: ${{ steps.out.outputs.matrix_include }}
       max_parallel: ${{ steps.out.outputs.max_parallel }}
     steps:
       - uses: actions/checkout@v4
@@ -33,7 +33,7 @@ jobs:
           GITHUB_TOKEN: ${{ github.token }}
       - id: out
         run: |
-          echo "matrix=$(jq -c .matrix plan.json)" >> $GITHUB_OUTPUT
+          echo "matrix_include=$(jq -c .matrix.include plan.json)" >> $GITHUB_OUTPUT
           echo "max_parallel=$(jq -r .maxParallel plan.json)" >> $GITHUB_OUTPUT
       - uses: actions/upload-artifact@v4
         with:
@@ -44,7 +44,8 @@ jobs:
     needs: plan
     runs-on: ubuntu-latest
     strategy:
-      matrix: ${{ fromJson(needs.plan.outputs.matrix) }}
+      matrix:
+        include: ${{ fromJson(needs.plan.outputs.matrix_include) }}
       max-parallel: ${{ needs.plan.outputs.max_parallel }}
       fail-fast: false
     steps:
