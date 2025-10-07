@@ -8,11 +8,11 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "plan": "npm run build && node dist/src/cli/plan.js",
-    "sync:shard": "npm run build && node dist/src/cli/sync-shard.js",
-    "aggregate": "npm run build && node dist/src/cli/aggregate.js",
-    "summary": "npm run build && node dist/src/cli/summary.js",
-    "deduplicate": "npm run build && node dist/src/cli/dedup.js"
+    "plan": "npm run build && node dist/cli/plan.js",
+    "sync:shard": "npm run build && node dist/cli/sync-shard.js",
+    "aggregate": "npm run build && node dist/cli/aggregate.js",
+    "summary": "npm run build && node dist/cli/summary.js",
+    "deduplicate": "npm run build && node dist/cli/dedup.js"
   },
   "dependencies": {
     "@octokit/graphql": "^7.1.1",
