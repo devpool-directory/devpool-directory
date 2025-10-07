@@ -91,7 +91,7 @@ jobs:
           npm run build --silent --if-present
           npm run aggregate
         env:
-          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+          GITHUB_TOKEN: ${{ secrets.GH_TOKEN }}
           DIRECTORY_OWNER: devpool-directory
           DIRECTORY_REPO: devpool-directory-testing
           DATA_BRANCH: __STORAGE__
