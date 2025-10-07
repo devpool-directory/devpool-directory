@@ -24,7 +24,12 @@ jobs:
         run: npm ci --include=dev || npm install
 
       - name: Build (typecheck)
-        run: npm run build --silent --if-present
+        run: |
+          npx tsc -v || true
+          npm run build --silent --if-present
+          ls -la || true
+          ls -la src || true
+          ls -la dist || true
 
       - name: Prepare E2E config
         run: |
@@ -44,6 +49,7 @@ jobs:
       - name: Plan (K=1)
         run: |
           npm run build --silent --if-present
+          ls -la dist || true
           npm run plan > plan.json
         env:
           GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
