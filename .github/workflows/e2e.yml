@@ -23,11 +23,11 @@ jobs:
       - run: npm ci --include=dev || npm install
       - run: npm run build --silent --if-present
 
-      - name: Write E2E config
+      - name: Write E2E config (focused)
         run: |
           mkdir -p config
           cat > config/e2e.config.json <<'JSON'
-          {"include":["ubiquity-os","ubiquity","devpool-directory/devpool-directory-tasks"],"exclude":[],"explicit_urls":[],"categories":{},"official_owners":["devpool-directory","ubiquity","ubiquity-os"],"data_branch":"__STORAGE__","max_shards":1}
+          {"include":["devpool-directory/devpool-directory-tasks"],"exclude":[],"explicit_urls":[],"categories":{},"official_owners":["devpool-directory"],"data_branch":"__STORAGE__","max_shards":1}
           JSON
         env:
           CONFIG_PATH: config/e2e.config.json
@@ -81,4 +81,3 @@ jobs:
           DIRECTORY_OWNER: ${{ github.repository_owner }}
           DIRECTORY_REPO: ${{ github.event.inputs.directory_repo }}
           DATA_BRANCH: __STORAGE__
-
