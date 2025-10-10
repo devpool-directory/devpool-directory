@@ -1,0 +1,671 @@
+{
+  "repos": 132,
+  "shards": 132,
+  "maxParallel": 132,
+  "totalWeight": 132,
+  "minShardWeight": 1,
+  "maxShardWeight": 1,
+  "avgShardWeight": 1,
+  "perShard": [
+    {
+      "shard_id": 0,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 1,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 2,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 3,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 4,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 5,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 6,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 7,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 8,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 9,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 10,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 11,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 12,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 13,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 14,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 15,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 16,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 17,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 18,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 19,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 20,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 21,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 22,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 23,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 24,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 25,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 26,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 27,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 28,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 29,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 30,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 31,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 32,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 33,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 34,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 35,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 36,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 37,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 38,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 39,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 40,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 41,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 42,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 43,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 44,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 45,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 46,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 47,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 48,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 49,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 50,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 51,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 52,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 53,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 54,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 55,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 56,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 57,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 58,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 59,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 60,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 61,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 62,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 63,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 64,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 65,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 66,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 67,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 68,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 69,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 70,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 71,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 72,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 73,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 74,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 75,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 76,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 77,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 78,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 79,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 80,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 81,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 82,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 83,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 84,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 85,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 86,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 87,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 88,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 89,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 90,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 91,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 92,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 93,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 94,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 95,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 96,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 97,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 98,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 99,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 100,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 101,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 102,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 103,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 104,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 105,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 106,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 107,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 108,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 109,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 110,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 111,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 112,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 113,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 114,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 115,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 116,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 117,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 118,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 119,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 120,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 121,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 122,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 123,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 124,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 125,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 126,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 127,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 128,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 129,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 130,
+      "repoCount": 1,
+      "weightSum": 1
+    },
+    {
+      "shard_id": 131,
+      "repoCount": 1,
+      "weightSum": 1
+    }
+  ]
+}

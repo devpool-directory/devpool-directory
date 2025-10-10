@@ -2,6 +2,8 @@
 import { getOctokit, getRateRemaining } from "../github/client.js";
 import { loadConfig } from "../config/load.js";
 import { discoverRepos } from "../discovery.js";
+import fs from "fs";
+import path from "path";
 
 type Repo = string; // "owner/repo"
 
@@ -75,6 +77,35 @@ async function main() {
   const maxParallel = Math.min(256, K);
 
   const plan = { matrix: { include: shards }, maxParallel };
+
+  // Build auditable summary and write alongside plan; log a concise line to stderr
+  const shardSums = shards.map((s) => ({
+    shard_id: s.shard_id,
+    repoCount: s.repos.length,
+    weightSum: s.repos.reduce((acc, r) => acc + (weights.get(r) ?? 1), 0)
+  }));
+  const totalWeight = shardSums.reduce((a, b) => a + b.weightSum, 0);
+  const minSum = shardSums.length ? Math.min(...shardSums.map((x) => x.weightSum)) : 0;
+  const maxSum = shardSums.length ? Math.max(...shardSums.map((x) => x.weightSum)) : 0;
+  const avgSum = shardSums.length ? totalWeight / shardSums.length : 0;
+  const summary = {
+    repos: repos.length,
+    shards: K,
+    maxParallel,
+    totalWeight,
+    minShardWeight: minSum,
+    maxShardWeight: maxSum,
+    avgShardWeight: Number(avgSum.toFixed(2)),
+    perShard: shardSums
+  };
+  try {
+    fs.writeFileSync(path.join(process.cwd(), "plan-summary.json"), JSON.stringify(summary, null, 2));
+  } catch {}
+  console.error(
+    `Plan: repos=${summary.repos} shards=${summary.shards} maxParallel=${summary.maxParallel} ` +
+      `weight[min=${summary.minShardWeight}, max=${summary.maxShardWeight}, avg=${summary.avgShardWeight}]`
+  );
+
   process.stdout.write(JSON.stringify(plan, null, 2));
 }
 

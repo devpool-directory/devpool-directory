@@ -27,5 +27,5 @@
     "ondecentral"
   ],
   "data_branch": "__STORAGE__",
-  "max_shards": 12
+  "max_shards": 256
 }

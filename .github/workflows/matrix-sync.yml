@@ -53,7 +53,9 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: plan
-          path: plan.json
+          path: |
+            plan.json
+            plan-summary.json
       - uses: actions/upload-artifact@v4
         with:
           name: plan-extra
