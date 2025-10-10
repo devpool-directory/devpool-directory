@@ -41,7 +41,7 @@ async function main() {
     ? JSON.parse(fs.readFileSync(twitterMapPath, "utf8"))
     : {};
 
-  const res = await syncShard(octokit, { repos, directoryOwner, directoryRepo });
+  const res = await syncShard(octokit, { repos, directoryOwner, directoryRepo, index });
 
   // Twitter lifecycle: compute deltas using current state vs twitterMap
   const tweetOnCreate = process.env.TWEET_ON_CREATE !== "false";

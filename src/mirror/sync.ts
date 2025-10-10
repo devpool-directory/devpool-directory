@@ -15,7 +15,7 @@ export type SyncResult = {
 
 export async function syncShard(
   octokit: Octokit,
-  opts: { repos: string[]; directoryOwner: string; directoryRepo: string }
+  opts: { repos: string[]; directoryOwner: string; directoryRepo: string; index?: IndexMap }
 ): Promise<SyncResult> {
   const issues: PartnerIssue[] = [];
   const mirrorState: MirrorState = {};
@@ -24,7 +24,7 @@ export async function syncShard(
   const twitterDelta: Record<string, string> = {};
   const syncMeta: Record<string, any> = {};
 
-  const index: IndexMap = {}; // Optional: could be passed in via artifact; start empty for now
+  const index: IndexMap = opts.index ?? {};
   const dryRun = process.env.DRY_RUN === "true";
 
   for (const full of opts.repos) {
