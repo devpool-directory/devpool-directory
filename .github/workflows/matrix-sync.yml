@@ -25,14 +25,10 @@ jobs:
       max_parallel: ${{ steps.out.outputs.max_parallel }}
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm ci --include=dev || npm install
-      - run: npm run build --silent --if-present
+      # Node is preinstalled on ubuntu-latest; run bundled scripts directly
       - name: Generate plan
         run: |
-          npm run build --silent --if-present
-          node dist/cli/plan.js > plan.json
+          node dist/bin/plan.js > plan.json
         env:
           # Use default Actions token for read-only planning (avoids PAT scope mismatches)
           GITHUB_TOKEN: ${{ github.token }}
@@ -74,10 +70,7 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm ci --include=dev || npm install
-      - run: npm run build --silent --if-present
+      # No dependency install required for bundled scripts
       - name: Create GitHub App token (repo)
         id: app_token
         uses: actions/create-github-app-token@v1
@@ -91,7 +84,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with: { name: plan-extra }
       - name: Run shard
-        run: npm run sync:shard -- --shard ${{ matrix.shard_id }}
+        run: node dist/bin/sync-shard.js --shard ${{ matrix.shard_id }}
         env:
           # Use GitHub App token so mirrors are authored by the App
           GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
@@ -116,10 +109,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm ci --include=dev || npm install
-      - run: npm run build --silent --if-present
+      # No dependency install required for bundled scripts
       - uses: actions/download-artifact@v4
         with: { path: ./shards }
       - name: Create GitHub App token (repo)
@@ -131,7 +121,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
       - name: Aggregate & write artifacts
-        run: npm run aggregate
+        run: node dist/bin/aggregate.js
         env:
           GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
           DIRECTORY_OWNER: ${{ github.repository_owner }}
@@ -143,10 +133,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 20 }
-      - run: npm ci --include=dev || npm install
-      - run: npm run summary >> $GITHUB_STEP_SUMMARY
+      # No dependency install required for bundled scripts
+      - run: node dist/bin/summary.js >> $GITHUB_STEP_SUMMARY
         env:
           GITHUB_TOKEN: ${{ github.token }}
           DIRECTORY_OWNER: ${{ github.repository_owner }}
