@@ -8377,6 +8377,19 @@ async function syncShard(octokitWrite, opts) {
   const poolSize = Math.max(1, Number(process.env.SHARD_CONCURRENCY ?? "4"));
   const pool = pLimit(poolSize);
   const okRead = opts.octokitRead ?? octokitWrite;
+  async function withTimeout(p, ms, label) {
+    let to;
+    try {
+      return await Promise.race([
+        p,
+        new Promise((_, rej) => {
+          to = setTimeout(() => rej(new Error(`timeout: ${label} after ${ms}ms`)), ms);
+        })
+      ]);
+    } finally {
+      if (to) clearTimeout(to);
+    }
+  }
   const tasks = opts.repos.map(
     (full) => pool(async () => {
       const [owner] = full.split("/");
@@ -8400,15 +8413,16 @@ async function syncShard(octokitWrite, opts) {
           }
         }
         const useGql = process.env.USE_GRAPHQL === "true";
+        const repoTimeoutMs = Math.max(3e4, Number(process.env.REPO_TIMEOUT_MS ?? "180000"));
         if (useGql) {
           try {
-            iss = await fetchIssuesForRepoGQL(okRead, full, since);
+            iss = await withTimeout(fetchIssuesForRepoGQL(okRead, full, since), repoTimeoutMs, `issues GQL ${full}`);
           } catch (gqlErr) {
             console.warn(`[sync] GQL issues fallback to REST for ${full}: ${gqlErr instanceof Error ? gqlErr.message : gqlErr}`);
-            iss = await fetchIssuesForRepo(okRead, full, since);
+            iss = await withTimeout(fetchIssuesForRepo(okRead, full, since), repoTimeoutMs, `issues REST ${full}`);
           }
         } else {
-          iss = await fetchIssuesForRepo(okRead, full, since);
+          iss = await withTimeout(fetchIssuesForRepo(okRead, full, since), repoTimeoutMs, `issues REST ${full}`);
         }
       } catch (e) {
         console.warn(`[sync] fetchIssues failed for ${full}: ${e?.status ?? e?.message ?? e}`);
@@ -8454,13 +8468,14 @@ async function syncShard(octokitWrite, opts) {
       }
       try {
         const useGql = process.env.USE_GRAPHQL === "true";
+        const repoTimeoutMs = Math.max(3e4, Number(process.env.REPO_TIMEOUT_MS ?? "180000"));
         const rawPrs = useGql ? await (async () => {
           try {
-            return await fetchPRsForRepoGQL(okRead, full, void 0);
+            return await withTimeout(fetchPRsForRepoGQL(okRead, full, void 0), repoTimeoutMs, `prs GQL ${full}`);
           } catch {
-            return await fetchPRsForRepo(okRead, full);
+            return await withTimeout(fetchPRsForRepo(okRead, full), repoTimeoutMs, `prs REST ${full}`);
           }
-        })() : await fetchPRsForRepo(okRead, full);
+        })() : await withTimeout(fetchPRsForRepo(okRead, full), repoTimeoutMs, `prs REST ${full}`);
         prs.push(...rawPrs);
       } catch (e) {
         console.warn(`[sync] fetchPRs failed for ${full}: ${e?.status ?? e?.message ?? e}`);
