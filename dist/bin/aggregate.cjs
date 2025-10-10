@@ -8115,6 +8115,30 @@ async function main() {
       }
     }
   }
+  let lifetimeMap = {};
+  try {
+    const { data } = await octokit.repos.getContent({ owner, repo, path: "lifetime-map.json", ref: branch });
+    const content = Buffer.from(data.content, "base64").toString("utf8");
+    lifetimeMap = JSON.parse(content || "{}");
+  } catch {
+    lifetimeMap = {};
+  }
+  const parsePrice = (labels) => {
+    const raw = (labels || []).find((l) => /^Price:\s*/.test(String(l)));
+    if (!raw) return 0;
+    const n = parseInt(String(raw).replace(/[^0-9]/g, ""), 10);
+    return Number.isFinite(n) ? n : 0;
+  };
+  for (const it of issues) {
+    if (it.state === "closed") {
+      lifetimeMap[it.node_id] = parsePrice(it.labels);
+    } else {
+      lifetimeMap[it.node_id] = 0;
+    }
+  }
+  const rewardsCompletedUSD = Object.values(lifetimeMap).reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+  const tasksCompletedPriced = Object.values(lifetimeMap).filter((v) => (Number.isFinite(v) ? v : 0) > 0).length;
+  stats.lifetime = { rewardsCompletedUSD, tasksCompletedPriced };
   const outDir = path2__default.default.join(process.cwd(), "out-agg");
   writeJson(outDir, "partner-open-issues.json", issuesOpenPriced);
   writeJson(outDir, "partner-pull-requests.json", prs);
@@ -8124,6 +8148,7 @@ async function main() {
   writeJson(outDir, "sync-metadata.json", syncMeta);
   writeJson(outDir, "twitter-map.json", twitterMap);
   writeJson(outDir, "index.json", index);
+  writeJson(outDir, "lifetime-map.json", lifetimeMap);
   const reposProcessed = Object.keys(syncMeta.perRepo || {}).length;
   const issuesOpen = issues.filter((i) => i.state === "open").length;
   const issuesClosed = issues.filter((i) => i.state === "closed").length;
@@ -8163,7 +8188,8 @@ async function main() {
     { path: "sync-metadata.json", content: JSON.stringify(syncMeta) },
     { path: "twitter-map.json", content: JSON.stringify(twitterMap) },
     { path: "index.json", content: JSON.stringify(index) },
-    { path: "summary.json", content: JSON.stringify(summary) }
+    { path: "summary.json", content: JSON.stringify(summary) },
+    { path: "lifetime-map.json", content: JSON.stringify(lifetimeMap) }
   ]);
 }
 main().catch((err) => {

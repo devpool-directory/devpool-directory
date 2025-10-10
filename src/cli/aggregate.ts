@@ -96,6 +96,34 @@ async function main() {
     }
   }
 
+  // Lifetime completed rollup (closed+priced) via persistent map
+  // Load prior lifetime map (node_id -> amountUSD), update only changed issues, then sum
+  let lifetimeMap: Record<string, number> = {};
+  try {
+    const { data } = await (octokit as any).repos.getContent({ owner, repo, path: "lifetime-map.json", ref: branch });
+    const content = Buffer.from((data as any).content, "base64").toString("utf8");
+    lifetimeMap = JSON.parse(content || "{}");
+  } catch {
+    lifetimeMap = {};
+  }
+  const parsePrice = (labels: string[]): number => {
+    const raw = (labels || []).find((l: string) => /^Price:\s*/.test(String(l)));
+    if (!raw) return 0;
+    const n = parseInt(String(raw).replace(/[^0-9]/g, ""), 10);
+    return Number.isFinite(n) ? n : 0;
+  };
+  for (const it of issues) {
+    if (it.state === "closed") {
+      lifetimeMap[it.node_id] = parsePrice(it.labels);
+    } else {
+      // If reopened or price removed, clear
+      lifetimeMap[it.node_id] = 0;
+    }
+  }
+  const rewardsCompletedUSD = Object.values(lifetimeMap).reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
+  const tasksCompletedPriced = Object.values(lifetimeMap).filter((v) => (Number.isFinite(v) ? v : 0) > 0).length;
+  (stats as any).lifetime = { rewardsCompletedUSD, tasksCompletedPriced };
+
   // Write local build outputs for debugging
   const outDir = path.join(process.cwd(), "out-agg");
   writeJson(outDir, "partner-open-issues.json", issuesOpenPriced);
@@ -106,6 +134,7 @@ async function main() {
   writeJson(outDir, "sync-metadata.json", syncMeta);
   writeJson(outDir, "twitter-map.json", twitterMap);
   writeJson(outDir, "index.json", index);
+  writeJson(outDir, "lifetime-map.json", lifetimeMap);
 
   // Build human-friendly summary
   const reposProcessed = Object.keys(syncMeta.perRepo || {}).length;
@@ -149,7 +178,8 @@ async function main() {
     { path: "sync-metadata.json", content: JSON.stringify(syncMeta) },
     { path: "twitter-map.json", content: JSON.stringify(twitterMap) },
     { path: "index.json", content: JSON.stringify(index) },
-    { path: "summary.json", content: JSON.stringify(summary) }
+    { path: "summary.json", content: JSON.stringify(summary) },
+    { path: "lifetime-map.json", content: JSON.stringify(lifetimeMap) }
   ]);
 }
 
