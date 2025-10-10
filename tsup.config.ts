@@ -7,6 +7,7 @@ export default defineConfig({
     'bin/aggregate': 'src/cli/aggregate.ts',
     'bin/summary': 'src/cli/summary.ts',
     'bin/backfill': 'src/cli/backfill.ts',
+    'bin/cleanup': 'src/cli/cleanup.ts',
   },
   format: ['cjs'],
   platform: 'node',
