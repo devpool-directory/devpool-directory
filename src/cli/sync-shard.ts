@@ -36,6 +36,7 @@ async function main() {
   // Optional inputs provided by plan job
   const indexPath = "index.json";
   const twitterMapPath = "twitter-map.json";
+  const lastRunPath = "last-run.json";
   const index: Record<string, { number: number; url: string }> = fs.existsSync(indexPath)
     ? JSON.parse(fs.readFileSync(indexPath, "utf8"))
     : {};
@@ -45,6 +46,9 @@ async function main() {
     : { perRepo: {} };
   const twitterMap: Record<string, string> = fs.existsSync(twitterMapPath)
     ? JSON.parse(fs.readFileSync(twitterMapPath, "utf8"))
+    : {};
+  const lastRun: { lastRunISO?: string } = fs.existsSync(lastRunPath)
+    ? JSON.parse(fs.readFileSync(lastRunPath, "utf8"))
     : {};
 
   // Cold-start guard: if the persistent issues map is absent in the workspace,
@@ -58,7 +62,10 @@ async function main() {
     console.error("[sync-shard] Forcing FULL_RESYNC (missing issues-map.json or override enabled)");
   }
 
-  const res = await syncShard(octokitWrite, { repos, directoryOwner, directoryRepo, index, prevSyncMeta: syncMetaIn.perRepo, octokitRead });
+  const res = await syncShard(
+    octokitWrite,
+    { repos, directoryOwner, directoryRepo, index, prevSyncMeta: syncMetaIn.perRepo, octokitRead, ...(lastRun?.lastRunISO ? { globalSinceISO: lastRun.lastRunISO } : {}) }
+  );
 
   // Twitter lifecycle: compute deltas using current state vs twitterMap
   const tweetOnCreate = process.env.TWEET_ON_CREATE !== "false";

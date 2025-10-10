@@ -2,12 +2,12 @@
 'use strict';
 
 var fs = require('fs');
-var path = require('path');
+var path2 = require('path');
 
 function _interopDefault (e) { return e && e.__esModule ? e : { default: e }; }
 
 var fs__default = /*#__PURE__*/_interopDefault(fs);
-var path__default = /*#__PURE__*/_interopDefault(path);
+var path2__default = /*#__PURE__*/_interopDefault(path2);
 
 var __create = Object.create;
 var __defProp = Object.defineProperty;
@@ -7919,7 +7919,7 @@ var ConfigSchema = external_exports.object({
 // src/config/load.ts
 import_dotenv.default.config();
 function loadConfig() {
-  const configPath = process.env.CONFIG_PATH ?? path__default.default.join(process.cwd(), "config", "devpool.config.json");
+  const configPath = process.env.CONFIG_PATH ?? path2__default.default.join(process.cwd(), "config", "devpool.config.json");
   const raw = fs__default.default.existsSync(configPath) ? JSON.parse(fs__default.default.readFileSync(configPath, "utf8")) : {};
   const parsed = ConfigSchema.safeParse(raw);
   if (!parsed.success) throw new Error(`Invalid configuration: ${parsed.error.message}`);
@@ -8037,13 +8037,23 @@ async function main() {
     perShard: shardSums
   };
   try {
-    fs__default.default.writeFileSync(path__default.default.join(process.cwd(), "plan-summary.json"), JSON.stringify(summary, null, 2));
+    fs__default.default.writeFileSync(path2__default.default.join(process.cwd(), "plan-summary.json"), JSON.stringify(summary, null, 2));
   } catch {
   }
   console.error(
     `Plan: repos=${summary.repos} shards=${summary.shards} maxParallel=${summary.maxParallel} weight[min=${summary.minShardWeight}, max=${summary.maxShardWeight}, avg=${summary.avgShardWeight}]`
   );
   process.stdout.write(JSON.stringify(plan, null, 2));
+  if (ctx) {
+    const branch = cfg.data_branch || "__STORAGE__";
+    const lastRun = await tryLoadJsonFromStorage(octokit, ctx.owner, ctx.repo, "last-run.json", branch);
+    if (lastRun) {
+      try {
+        fs__default.default.writeFileSync(path2__default.default.join(process.cwd(), "last-run.json"), JSON.stringify(lastRun));
+      } catch {
+      }
+    }
+  }
 }
 main().catch((err) => {
   console.error(err);

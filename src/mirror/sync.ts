@@ -16,7 +16,15 @@ export type SyncResult = {
 
 export async function syncShard(
   octokitWrite: Octokit,
-  opts: { repos: string[]; directoryOwner: string; directoryRepo: string; index?: IndexMap; prevSyncMeta?: Record<string, { lastSyncISO?: string }>; octokitRead?: Octokit }
+  opts: {
+    repos: string[];
+    directoryOwner: string;
+    directoryRepo: string;
+    index?: IndexMap;
+    prevSyncMeta?: Record<string, { lastSyncISO?: string }>;
+    octokitRead?: Octokit;
+    globalSinceISO?: string; // fallback watermark from last-run.json
+  }
 ): Promise<SyncResult> {
   const issues: PartnerIssue[] = [];
   const mirrorState: MirrorState = {};
@@ -47,6 +55,11 @@ export async function syncShard(
           if (prev) {
             const fudgeMin = Math.max(0, Number(process.env.SYNC_SINCE_FUDGE_MINUTES ?? "5"));
             const t = new Date(prev).getTime();
+            const sinceMs = isFinite(t) ? Math.max(0, t - fudgeMin * 60 * 1000) : Date.now();
+            since = new Date(sinceMs).toISOString();
+          } else if (opts.globalSinceISO) {
+            const fudgeMin = Math.max(0, Number(process.env.SYNC_SINCE_FUDGE_MINUTES ?? "5"));
+            const t = new Date(opts.globalSinceISO).getTime();
             const sinceMs = isFinite(t) ? Math.max(0, t - fudgeMin * 60 * 1000) : Date.now();
             since = new Date(sinceMs).toISOString();
           }

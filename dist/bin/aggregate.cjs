@@ -3796,6 +3796,14 @@ async function main() {
     { path: "lifetime-map.json", content: JSON.stringify(lifetimeMap) },
     { path: "issues-map.json", content: JSON.stringify(issuesMap) }
   ]);
+  const lastRun = {
+    lastRunISO: (/* @__PURE__ */ new Date()).toISOString(),
+    runId: process.env.GITHUB_RUN_ID,
+    sha: process.env.GITHUB_SHA
+  };
+  await commitChanges(octokit, owner, repo, branch, "sync: record last run", [
+    { path: "last-run.json", content: JSON.stringify(lastRun) }
+  ]);
 }
 main().catch((err) => {
   console.error(err);

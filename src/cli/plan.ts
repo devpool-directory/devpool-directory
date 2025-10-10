@@ -107,6 +107,15 @@ async function main() {
   );
 
   process.stdout.write(JSON.stringify(plan, null, 2));
+
+  // Also fetch last-run.json from data branch for shards to use as a global watermark
+  if (ctx) {
+    const branch = cfg.data_branch || "__STORAGE__";
+    const lastRun = await tryLoadJsonFromStorage<any>(octokit, ctx.owner, ctx.repo, "last-run.json", branch);
+    if (lastRun) {
+      try { fs.writeFileSync(path.join(process.cwd(), "last-run.json"), JSON.stringify(lastRun)); } catch {}
+    }
+  }
 }
 
 main().catch((err) => {

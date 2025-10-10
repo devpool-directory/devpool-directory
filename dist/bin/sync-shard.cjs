@@ -8259,6 +8259,11 @@ async function syncShard(octokitWrite, opts) {
             const t = new Date(prev).getTime();
             const sinceMs = isFinite(t) ? Math.max(0, t - fudgeMin * 60 * 1e3) : Date.now();
             since = new Date(sinceMs).toISOString();
+          } else if (opts.globalSinceISO) {
+            const fudgeMin = Math.max(0, Number(process.env.SYNC_SINCE_FUDGE_MINUTES ?? "5"));
+            const t = new Date(opts.globalSinceISO).getTime();
+            const sinceMs = isFinite(t) ? Math.max(0, t - fudgeMin * 60 * 1e3) : Date.now();
+            since = new Date(sinceMs).toISOString();
           }
         }
         iss = await fetchIssuesForRepo(okRead, full, since);
@@ -14291,17 +14296,22 @@ async function main() {
   const octokitRead = process.env.GH_TOKEN ? new Octokit2({ auth: process.env.GH_TOKEN }) : new Octokit2();
   const indexPath = "index.json";
   const twitterMapPath = "twitter-map.json";
+  const lastRunPath = "last-run.json";
   const index = fs4__namespace.default.existsSync(indexPath) ? JSON.parse(fs4__namespace.default.readFileSync(indexPath, "utf8")) : {};
   const syncMetaInPath = "sync-metadata.json";
   const syncMetaIn = fs4__namespace.default.existsSync(syncMetaInPath) ? JSON.parse(fs4__namespace.default.readFileSync(syncMetaInPath, "utf8")) : { perRepo: {} };
   const twitterMap = fs4__namespace.default.existsSync(twitterMapPath) ? JSON.parse(fs4__namespace.default.readFileSync(twitterMapPath, "utf8")) : {};
+  const lastRun = fs4__namespace.default.existsSync(lastRunPath) ? JSON.parse(fs4__namespace.default.readFileSync(lastRunPath, "utf8")) : {};
   const issuesMapPath = "issues-map.json";
   const shouldForceFullResync = process.env.FORCE_FULL_RESYNC === "true" || !fs4__namespace.default.existsSync(issuesMapPath);
   if (shouldForceFullResync) {
     process.env.FULL_RESYNC = "true";
     console.error("[sync-shard] Forcing FULL_RESYNC (missing issues-map.json or override enabled)");
   }
-  const res = await syncShard(octokitWrite, { repos, directoryOwner, directoryRepo, index, prevSyncMeta: syncMetaIn.perRepo, octokitRead });
+  const res = await syncShard(
+    octokitWrite,
+    { repos, directoryOwner, directoryRepo, index, prevSyncMeta: syncMetaIn.perRepo, octokitRead, ...lastRun?.lastRunISO ? { globalSinceISO: lastRun.lastRunISO } : {} }
+  );
   const tweetOnCreate = process.env.TWEET_ON_CREATE !== "false";
   const deleteOnComplete = process.env.DELETE_TWEET_ON_COMPLETE !== "false";
   const dryRun = process.env.DRY_RUN === "true";

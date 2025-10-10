@@ -233,6 +233,16 @@ async function main() {
     { path: "lifetime-map.json", content: JSON.stringify(lifetimeMap) },
     { path: "issues-map.json", content: JSON.stringify(issuesMap) }
   ]);
+
+  // Record last-run watermark for next sync planning
+  const lastRun = {
+    lastRunISO: new Date().toISOString(),
+    runId: process.env.GITHUB_RUN_ID,
+    sha: process.env.GITHUB_SHA
+  };
+  await commitChanges(octokit, owner, repo, branch, "sync: record last run", [
+    { path: "last-run.json", content: JSON.stringify(lastRun) }
+  ]);
 }
 
 main().catch((err) => {
