@@ -52,6 +52,11 @@ async function main() {
     rewardsCompletedUSD: life.rewards.completed,
     tasksCompletedPriced: life.tasks.completed
   };
+  // Add counts that reflect all closed issues (priced or not) to better match
+  // historical totals displayed in the UI.
+  // Use the persistent issues map (allIssues) for a comprehensive count across runs.
+  // NOTE: This complements tasksCompletedPriced (priced subset) without changing
+  // existing fields used by current consumers.
   // Merge owners with prior artifact to retain avatars when a shard sees none
   // Use the GitHub App token for reads/writes to the data branch
   const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
@@ -80,6 +85,27 @@ async function main() {
   for (const it of issues) issuesMap[it.node_id] = it;
   const allIssues: any[] = Object.values(issuesMap);
   const issuesOpenPricedFromMap = allIssues.filter((i) => i.state === "open" && (i.labels || []).some((l: string) => /^(Price:|Pricing:)\s*/.test(String(l))));
+
+  // Compute additional aggregate helpers for UI rendering
+  const closedAllCount = allIssues.filter((i) => i.state === "closed").length;
+  const projectsOpenPriced = new Set(issuesOpenPricedFromMap.map((i) => `${i.owner}/${i.repo}`)).size;
+  const projectsAny = new Set(allIssues.map((i) => `${i.owner}/${i.repo}`)).size;
+  const projectsClosedAny = new Set(allIssues.filter((i) => i.state === "closed").map((i) => `${i.owner}/${i.repo}`)).size;
+  (stats as any).lifetime.tasksCompletedAll = closedAllCount;
+  (stats as any).projects = {
+    openPriced: projectsOpenPriced,
+    any: projectsAny,
+    closedAny: projectsClosedAny
+  };
+  // Convenience breakdown for open+priced
+  (stats as any).breakdown = {
+    openPricedUSD: (stats as any).rewards.total,
+    openPricedCount: issuesOpenPricedFromMap.length,
+    availableUSD: (stats as any).rewards.notAssigned,
+    availableCount: (stats as any).tasks.notAssigned,
+    ongoingUSD: (stats as any).rewards.assigned,
+    ongoingCount: (stats as any).tasks.assigned
+  };
 
   // Merge mirror-state with prior artifact to avoid dropping entries when a shard sees no changes
   let mirrorPrev: Record<string, any> = {};

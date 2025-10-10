@@ -3667,6 +3667,24 @@ async function main() {
   for (const it of issues) issuesMap[it.node_id] = it;
   const allIssues = Object.values(issuesMap);
   const issuesOpenPricedFromMap = allIssues.filter((i) => i.state === "open" && (i.labels || []).some((l) => /^(Price:|Pricing:)\s*/.test(String(l))));
+  const closedAllCount = allIssues.filter((i) => i.state === "closed").length;
+  const projectsOpenPriced = new Set(issuesOpenPricedFromMap.map((i) => `${i.owner}/${i.repo}`)).size;
+  const projectsAny = new Set(allIssues.map((i) => `${i.owner}/${i.repo}`)).size;
+  const projectsClosedAny = new Set(allIssues.filter((i) => i.state === "closed").map((i) => `${i.owner}/${i.repo}`)).size;
+  stats.lifetime.tasksCompletedAll = closedAllCount;
+  stats.projects = {
+    openPriced: projectsOpenPriced,
+    any: projectsAny,
+    closedAny: projectsClosedAny
+  };
+  stats.breakdown = {
+    openPricedUSD: stats.rewards.total,
+    openPricedCount: issuesOpenPricedFromMap.length,
+    availableUSD: stats.rewards.notAssigned,
+    availableCount: stats.tasks.notAssigned,
+    ongoingUSD: stats.rewards.assigned,
+    ongoingCount: stats.tasks.assigned
+  };
   let mirrorPrev = {};
   try {
     const { data } = await octokit.repos.getContent({ owner, repo, path: "mirror-state.json", ref: branch });
