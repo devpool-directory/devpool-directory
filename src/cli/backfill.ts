@@ -8,7 +8,13 @@ import { ensureBranch, commitChanges } from "../storage/git.js";
 
 async function main() {
   const cfg = loadConfig();
-  const repos = await discoverRepos(new Octokit({ auth: process.env.GH_TOKEN || process.env.GITHUB_TOKEN }), cfg);
+  let repos: string[] = [];
+  try {
+    repos = await discoverRepos(new Octokit({ auth: process.env.GH_TOKEN || process.env.GITHUB_TOKEN }), cfg);
+  } catch (_e) {
+    // Fallback to anonymous for public orgs if token is invalid/mis-scoped
+    repos = await discoverRepos(new Octokit(), cfg);
+  }
 
   const octokitRead = process.env.GH_TOKEN ? new Octokit({ auth: process.env.GH_TOKEN }) : new Octokit();
   const octokitWrite = new Octokit({ auth: process.env.GITHUB_TOKEN });
@@ -79,4 +85,3 @@ main().catch((err) => {
   console.error(err);
   process.exit(1);
 });
-

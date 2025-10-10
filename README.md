@@ -135,3 +135,51 @@ The system is designed to be stateless at runtime: artifacts in the data branch 
 - Price/time are mirrored as raw label strings for transparency; UIs may parse for display but should retain the original strings for accuracy.
 - Artifacts are committed together; partial reads during a run are unlikely but consumers can guard by rechecking `summary.json` ETag before rendering critical views.
 
+**Sharding Architecture (Concise Overview)**
+- Plan
+  - Discovers repos from `config/devpool.config.json` (`include`, `exclude`, `explicit_urls`).
+  - Builds simple weights (e.g., open+priced density) and greedily balances them into `K` shards.
+  - Caps `K` by `max_shards` (default 256). Emits `plan.json` with `matrix.include` and `maxParallel`.
+  - Downloads prior artifacts (`index.json`, `twitter-map.json`, `sync-metadata.json`, and persistent maps) for shard reuse.
+- Sync Shard
+  - Processes its repo list with a per‑shard concurrency pool (`SHARD_CONCURRENCY`, default 4).
+  - Incremental fetch: uses per‑repo `lastSyncISO` or a global watermark from `last-run.json`, minus a safety fudge (`SYNC_SINCE_FUDGE_MINUTES`, default 5) to avoid boundary misses.
+  - Fetcher: GraphQL (ordered by `UPDATED_AT`, early stop) with automatic REST fallback; both paths exclude PRs and `state_reason: not_planned`.
+  - Timeouts: each repo call is bounded by `REPO_TIMEOUT_MS` (default 180s). Shard steps are wrapped in an OS timeout (`SHARD_TIMEOUT_MINUTES`, default 12 in the workflow).
+  - Mirrors: create/update only for open+priced issues; close mirrors when partner closes. Recursion guard skips mirrors that are just directory URLs.
+  - Twitter deltas: post on create (priced) and delete on completion; deltas are merged centrally by the aggregator.
+- Aggregate
+  - Downloads all shard artifacts, merges them with prior data from the data branch (`DATA_BRANCH`, default `__STORAGE__`).
+  - Union semantics: never drops entries for repos whose shard failed; previously published data persists.
+  - Recomputes `partner-open-issues.json` (open+priced), `statistics.json` (open+priced; plus lifetime fields), merges `mirror-state.json`, rebuilds `index.json`, and commits in one shot.
+  - Publishes `last-run.json` (watermark for the next plan/sync) and a human‑readable `summary.json`.
+
+**Operational Knobs (Env)**
+- Reads & Writes
+  - `DIRECTORY_OWNER`, `DIRECTORY_REPO`: target repo for mirrors/artifacts.
+  - `DATA_BRANCH`: data branch name (default `__STORAGE__`).
+  - `GH_TOKEN`: Personal Access Token used for read calls (recommended for cross‑org reads).
+  - `GITHUB_TOKEN`: GitHub App token (from the workflow) used for writes and safe repo‑scoped reads.
+  - `WRITE_TARGET_REPO`: safety check to prevent writes to wrong repo (must equal `owner/repo`).
+- Sync behavior
+  - `USE_GRAPHQL` ("true"|"false"): enable GraphQL fetchers with REST fallback.
+  - `FULL_RESYNC` ("true"|"false"): ignore since watermarks and fetch full history this run.
+  - `FORCE_FULL_RESYNC` ("true"|"false"): force resync regardless of maps; useful for cold‑start/debug.
+  - `SHARD_CONCURRENCY`: per‑shard in‑process parallelism (default 4).
+  - `SYNC_SINCE_FUDGE_MINUTES`: backdate since watermark to avoid races (default 5).
+  - `REPO_TIMEOUT_MS`: per‑repo API timeout (default 180000 ms).
+  - `SHARD_TIMEOUT_MINUTES`: OS wrapper timeout for a shard step (default 12; set in workflow env).
+- Backfill & Utilities
+  - `BACKFILL_CONCURRENCY`: parallelism for historical backfill.
+  - `DRY_RUN`: if "true", shards/aggregate avoid writes/tweets and only produce local outputs.
+
+**Data Integrity & Partial Failures**
+- Aggregation uses union/merge semantics against prior artifacts, so missing shards do not delete data from `issues-map.json`, `lifetime-map.json`, `mirror-state.json`, `index.json`, or `twitter-map.json`.
+- `partner-open-issues.json` and `statistics.json` are derived from the persistent maps and merged mirror state; previously known items remain visible even if a shard fails.
+- The matrix workflow sets timeouts and `continue-on-error: true` for shard jobs; the aggregator still runs and merges successfully completed shards with prior artifacts.
+
+**Historical Backfill**
+- Workflow: `.github/workflows/backfill.yml` (manual dispatch).
+- Seeds `issues-map.json` and `lifetime-map.json` by fetching full issue history (`state=all`) for all included repos, then runs aggregate to publish consistent artifacts.
+- Recommended when first enabling a new owner set or after large scope changes; day‑to‑day runs rely on incremental since‑watermarks.
+
