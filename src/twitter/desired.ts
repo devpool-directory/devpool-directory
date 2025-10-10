@@ -1,4 +1,5 @@
-import { GitHubIssue, GitHubLabel } from "../directory/directory";
+type GitHubIssue = any;
+type GitHubLabel = { name: string };
 
 export type DesiredItem = {
   node_id: string;

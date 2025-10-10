@@ -4,7 +4,7 @@ import { readJsonFromStorage } from "../artifacts/storage";
 import { initializeTwitterMap } from "../twitter/initialize-twitter-map";
 import { buildDesiredSet } from "../twitter/desired";
 import { listUserTweets } from "../twitter/client";
-import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME, GitHubIssue } from "../directory/directory";
+type GitHubIssue = any;
 
 async function main() {
   const includeAssigned = process.env.INCLUDE_ASSIGNED === "true";
@@ -37,8 +37,8 @@ async function main() {
 
   const ok = missingForDesired.length === 0 && undesiredManaged.length === 0;
   const report = {
-    owner: DEVPOOL_OWNER_NAME,
-    repo: DEVPOOL_REPO_NAME,
+    owner: process.env.DEVPOOL_OWNER_NAME || process.env.DIRECTORY_OWNER,
+    repo: process.env.DEVPOOL_REPO_NAME || process.env.DIRECTORY_REPO,
     desiredCount: desired.size,
     currentCount: current.length,
     missingForDesired,
@@ -52,4 +52,3 @@ main().catch((e) => {
   console.error("twitter:audit failed:", e);
   process.exit(1);
 });
-

@@ -6,7 +6,8 @@ import { buildDesiredSet } from "../twitter/desired";
 import { listUserTweets } from "../twitter/client";
 import { plan as planDiff } from "../twitter/plan";
 import { gitPush } from "../git";
-import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME, GitHubIssue } from "../directory/directory";
+
+type GitHubIssue = any;
 
 async function main() {
   const includeAssigned = process.env.INCLUDE_ASSIGNED === "true";
@@ -34,7 +35,8 @@ async function main() {
     { path: "twitter-current.json", data: current },
   ]);
   try {
-    await gitPush();
+    const mod = await import("../git");
+    await mod.gitPush();
   } catch (e) {
     console.warn("Skipping git push for plan (likely missing token):", e instanceof Error ? e.message : e);
   }
@@ -45,8 +47,8 @@ async function main() {
   console.log(
     JSON.stringify(
       {
-        owner: DEVPOOL_OWNER_NAME,
-        repo: DEVPOOL_REPO_NAME,
+        owner: process.env.DEVPOOL_OWNER_NAME || process.env.DIRECTORY_OWNER,
+        repo: process.env.DEVPOOL_REPO_NAME || process.env.DIRECTORY_REPO,
         desiredCount,
         currentManaged,
         createsPlanned: Object.keys(pl.creates).length,

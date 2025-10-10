@@ -1,5 +1,5 @@
-import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME, GitHubIssue, GitHubPullRequest, octokit, OrgNameAndAvatarUrl } from "./directory/directory";
-import { Statistics } from "./directory/statistics";
+import type { Octokit as RestOctokit } from "@octokit/rest";
+import { Octokit } from "@octokit/rest";
 let gitChanges: Array<{ path: string; content: string }> = [];
 
 async function gitCommit(data: unknown, fileName: string) {
@@ -14,8 +14,7 @@ async function gitCommit(data: unknown, fileName: string) {
   }
 }
 
-import { Octokit } from "@octokit/rest";
-import { TwitterMap } from "./twitter/initialize-twitter-map";
+import type { TwitterMap } from "./twitter/initialize-twitter-map";
 
 const MAX_PAYLOAD_SIZE = 100000000; // 100MB per commit, adjust as needed
 
@@ -26,8 +25,11 @@ export async function gitPush() {
   }
 
   try {
-    const owner = DEVPOOL_OWNER_NAME;
-    const repo = DEVPOOL_REPO_NAME;
+    const owner = process.env.DEVPOOL_OWNER_NAME || process.env.DIRECTORY_OWNER || process.env.GITHUB_REPOSITORY?.split("/")[0];
+    const repo = process.env.DEVPOOL_REPO_NAME || process.env.DIRECTORY_REPO || process.env.GITHUB_REPOSITORY?.split("/")[1];
+    if (!owner || !repo) throw new Error("owner/repo not set");
+    const token = process.env.GITHUB_TOKEN || process.env.DEVPOOL_GITHUB_API_TOKEN;
+    const octokit = new Octokit({ auth: token });
     const branch = "__STORAGE__"; // Special branch for automated data updates
     const { data: refData } = await octokit.rest.git.getRef({
       owner,
@@ -63,7 +65,7 @@ export async function gitPush() {
 }
 
 async function commitChanges(
-  octokit: Octokit,
+  octokit: RestOctokit,
   owner: string,
   repo: string,
   branch: string,
@@ -113,7 +115,7 @@ export async function commitStatistics(statistics: Statistics) {
   }
 }
 
-export async function commitTasks(tasks: GitHubIssue[]) {
+export async function commitTasks(tasks: unknown[]) {
   try {
     await gitCommit(tasks, "devpool-issues.json");
   } catch (error) {
@@ -121,7 +123,7 @@ export async function commitTasks(tasks: GitHubIssue[]) {
   }
 }
 
-export async function commitPullRequests(tasks: GitHubPullRequest[]) {
+export async function commitPullRequests(tasks: unknown[]) {
   try {
     await gitCommit(tasks, "devpool-pull-requests.json");
   } catch (error) {
@@ -129,7 +131,7 @@ export async function commitPullRequests(tasks: GitHubPullRequest[]) {
   }
 }
 
-export async function commitPartnerAvatars(tasks: OrgNameAndAvatarUrl[]) {
+export async function commitPartnerAvatars(tasks: unknown[]) {
   try {
     await gitCommit(tasks, "devpool-partner-avatars.json");
   } catch (error) {

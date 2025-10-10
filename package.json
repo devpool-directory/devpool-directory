@@ -15,7 +15,10 @@
     "backfill": "npm run build && node dist/cli/backfill.js",
     "deduplicate": "npm run build && node dist/cli/dedup.js",
     "bundle": "tsup",
-    "bundle:all": "tsup --config tsup.config.ts"
+    "bundle:all": "tsup --config tsup.config.ts",
+    "twitter:plan": "tsx src/cli/twitter-plan.ts",
+    "twitter:apply": "tsx src/cli/twitter-apply.ts",
+    "twitter:audit": "tsx src/cli/twitter-audit.ts"
   },
   "dependencies": {
     "@octokit/graphql": "^7.1.1",
@@ -29,6 +32,7 @@
     "@types/node": "^20.11.30",
     "typescript": "^5.6.2",
     "tsup": "^8.1.0",
-    "esbuild": "^0.23.0"
+    "esbuild": "^0.23.0",
+    "tsx": "^3.12.3"
   }
 }

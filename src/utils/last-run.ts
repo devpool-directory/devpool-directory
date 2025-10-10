@@ -1,12 +1,14 @@
 import { commitLastRun } from "../git";
-import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME } from "../directory/directory";
 
 export type LastRunMap = Record<string, string>; // key: "owner/repo" => ISO timestamp
 
 export async function initializeLastRun(): Promise<LastRunMap> {
   let lastRun: LastRunMap = {};
   try {
-    const url = `https://raw.githubusercontent.com/${DEVPOOL_OWNER_NAME}/${DEVPOOL_REPO_NAME}/__STORAGE__/last-run.json`;
+    const owner = process.env.DEVPOOL_OWNER_NAME || process.env.DIRECTORY_OWNER || process.env.GITHUB_REPOSITORY?.split("/")[0];
+    const repo = process.env.DEVPOOL_REPO_NAME || process.env.DIRECTORY_REPO || process.env.GITHUB_REPOSITORY?.split("/")[1];
+    if (!owner || !repo) throw new Error("owner/repo not set");
+    const url = `https://raw.githubusercontent.com/${owner}/${repo}/__STORAGE__/last-run.json`;
     const response = await fetch(url);
     if (!response.ok) throw new Error(String(response.status));
     lastRun = (await response.json()) as LastRunMap;
