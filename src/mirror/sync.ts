@@ -45,20 +45,39 @@ export async function syncShard(
       if (it.body && /^https?:\/\/(www\.)?github\.com\/[^\s]+\/issues\/\d+$/.test(it.body.trim())) {
         continue;
       }
-      // Mirror creation/update (dry-run by default if DRY_RUN)
+      const hasPrice = it.labels.some((l) => /^Price:\s*/.test(l));
+      const isOpen = it.state === "open";
       let dir: { number?: number; url?: string } | null = null;
-      try {
-        const res = await reconcileMirror(
-          octokit,
-          { owner: opts.directoryOwner, repo: opts.directoryRepo },
-          { node_id: it.node_id, title: it.title, html_url: it.url, state: it.state, labels: it.labels },
-          index,
-          { dryRun }
-        );
-        dir = res;
-        index[it.node_id] = { number: res.number!, url: res.url! };
-      } catch {
-        // ignore mirror errors in shard to keep processing
+
+      // Create/Update mirrors only for open + priced issues
+      if (isOpen && hasPrice) {
+        try {
+          const res = await reconcileMirror(
+            octokit,
+            { owner: opts.directoryOwner, repo: opts.directoryRepo },
+            { node_id: it.node_id, title: it.title, html_url: it.url, state: it.state, labels: it.labels },
+            index,
+            { dryRun }
+          );
+          dir = res;
+          index[it.node_id] = { number: res.number!, url: res.url! };
+        } catch (e) {
+          console.warn(`[sync] mirror create/update failed for ${it.owner}/${it.repo}#${it.number}: ${e instanceof Error ? e.message : e}`);
+        }
+      } else if (!isOpen && index[it.node_id]) {
+        // Close existing mirror when partner issue is closed
+        try {
+          const res = await reconcileMirror(
+            octokit,
+            { owner: opts.directoryOwner, repo: opts.directoryRepo },
+            { node_id: it.node_id, title: it.title, html_url: it.url, state: it.state, labels: it.labels },
+            index,
+            { dryRun }
+          );
+          dir = res;
+        } catch (e) {
+          console.warn(`[sync] mirror close failed for ${it.owner}/${it.repo}#${it.number}: ${e instanceof Error ? e.message : e}`);
+        }
       }
 
       mirrorState[it.node_id] = computeMirrorStateEntry(it, dir, undefined);
