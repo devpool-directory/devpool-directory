@@ -14,10 +14,10 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: "20.10.0"
+          node-version: "20"
 
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: npm ci || npm install
 
       - name: Delete Unauthorized Issues
         run: npx tsx ./scripts/delete-unauthorized-issues.ts '${{ toJson(github.event.issue) }}'
