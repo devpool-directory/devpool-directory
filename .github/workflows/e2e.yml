@@ -1,0 +1,84 @@
+name: E2E (Testing Repo)
+
+on:
+  workflow_dispatch:
+    inputs:
+      directory_repo:
+        description: "Target directory repo for mirror writes"
+        default: "devpool-directory-testing"
+        required: true
+
+permissions:
+  contents: write
+  issues: write
+  actions: read
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci --include=dev || npm install
+      - run: npm run build --silent --if-present
+
+      - name: Write E2E config
+        run: |
+          mkdir -p config
+          cat > config/e2e.config.json <<'JSON'
+          {"include":["ubiquity-os","ubiquity","devpool-directory/devpool-directory-tasks"],"exclude":[],"explicit_urls":[],"categories":{},"official_owners":["devpool-directory","ubiquity","ubiquity-os"],"data_branch":"__STORAGE__","max_shards":1}
+          JSON
+        env:
+          CONFIG_PATH: config/e2e.config.json
+
+      - name: Generate plan (K=1)
+        run: node dist/cli/plan.js > plan.json
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          CONFIG_PATH: config/e2e.config.json
+
+      - name: Create GitHub App token (testing repo)
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.inputs.directory_repo }}
+
+      - name: Run shard 0 against testing repo
+        run: npm run sync:shard -- --shard 0
+        env:
+          GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
+          DIRECTORY_OWNER: ${{ github.repository_owner }}
+          DIRECTORY_REPO: ${{ github.event.inputs.directory_repo }}
+          TWEET_ON_CREATE: "true"
+          DELETE_TWEET_ON_COMPLETE: "true"
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_KEY_SECRET: ${{ secrets.TWITTER_API_KEY_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: e2e-shard
+          path: out/*.json
+          if-no-files-found: ignore
+
+      - name: Aggregate & write artifacts to testing repo
+        run: npm run aggregate
+        env:
+          GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
+          DIRECTORY_OWNER: ${{ github.repository_owner }}
+          DIRECTORY_REPO: ${{ github.event.inputs.directory_repo }}
+          DATA_BRANCH: __STORAGE__
+
+      - name: Summary
+        run: npm run summary >> $GITHUB_STEP_SUMMARY
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          DIRECTORY_OWNER: ${{ github.repository_owner }}
+          DIRECTORY_REPO: ${{ github.event.inputs.directory_repo }}
+          DATA_BRANCH: __STORAGE__
+
