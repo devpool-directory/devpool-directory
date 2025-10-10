@@ -8079,14 +8079,35 @@ async function main() {
     tasksCompletedPriced: life.tasks.completed
   };
   const ownersMap = {};
-  for (const chunk of ownerChunks) {
-    for (const o of chunk) ownersMap[o.owner] = o;
+  try {
+    const { data } = await octokit.repos.getContent({ owner, repo, path: "owners-avatars.json", ref: branch });
+    const prev = JSON.parse(Buffer.from(data.content, "base64").toString("utf8"));
+    for (const o of prev) ownersMap[o.owner] = o;
+  } catch {
   }
+  for (const chunk of ownerChunks) for (const o of chunk) ownersMap[o.owner] = o;
   const owners = Object.values(ownersMap).sort((a, b) => a.owner.localeCompare(b.owner));
   const syncMeta = { perRepo: {} };
   for (const ch of syncChunks) Object.assign(syncMeta.perRepo, ch?.perRepo ?? ch);
+  let issuesMap = {};
+  try {
+    const { data } = await octokit.repos.getContent({ owner, repo, path: "issues-map.json", ref: branch });
+    issuesMap = JSON.parse(Buffer.from(data.content, "base64").toString("utf8"));
+  } catch {
+    issuesMap = {};
+  }
+  for (const it of issues) issuesMap[it.node_id] = it;
+  const allIssues = Object.values(issuesMap);
+  const issuesOpenPricedFromMap = allIssues.filter((i) => i.state === "open" && (i.labels || []).some((l) => /^Price:\s*/.test(String(l))));
+  let mirrorPrev = {};
+  try {
+    const { data } = await octokit.repos.getContent({ owner, repo, path: "mirror-state.json", ref: branch });
+    mirrorPrev = JSON.parse(Buffer.from(data.content, "base64").toString("utf8"));
+  } catch {
+  }
+  const mirrorMerged = Object.assign({}, mirrorPrev, mirror);
   const index = {};
-  for (const [node, e] of Object.entries(mirror)) {
+  for (const [node, e] of Object.entries(mirrorMerged)) {
     if (e.directory_issue_number && e.directory_issue_url) index[node] = { number: e.directory_issue_number, url: e.directory_issue_url };
   }
   const octokit = getOctokit();
@@ -8140,14 +8161,15 @@ async function main() {
   const tasksCompletedPriced = Object.values(lifetimeMap).filter((v) => (Number.isFinite(v) ? v : 0) > 0).length;
   stats.lifetime = { rewardsCompletedUSD, tasksCompletedPriced };
   const outDir = path2__default.default.join(process.cwd(), "out-agg");
-  writeJson(outDir, "partner-open-issues.json", issuesOpenPriced);
+  writeJson(outDir, "partner-open-issues.json", issuesOpenPricedFromMap);
   writeJson(outDir, "partner-pull-requests.json", prs);
   writeJson(outDir, "owners-avatars.json", owners);
-  writeJson(outDir, "mirror-state.json", mirror);
+  writeJson(outDir, "mirror-state.json", mirrorMerged);
   writeJson(outDir, "statistics.json", stats);
   writeJson(outDir, "sync-metadata.json", syncMeta);
   writeJson(outDir, "twitter-map.json", twitterMap);
   writeJson(outDir, "index.json", index);
+  writeJson(outDir, "issues-map.json", issuesMap);
   writeJson(outDir, "lifetime-map.json", lifetimeMap);
   const reposProcessed = Object.keys(syncMeta.perRepo || {}).length;
   const issuesOpen = issues.filter((i) => i.state === "open").length;
@@ -8180,16 +8202,17 @@ async function main() {
   if (process.env.DRY_RUN === "true") return;
   await ensureBranch(octokit, owner, repo, branch);
   await commitChanges(octokit, owner, repo, branch, "sync: update artifacts", [
-    { path: "partner-open-issues.json", content: JSON.stringify(issuesOpenPriced) },
+    { path: "partner-open-issues.json", content: JSON.stringify(issuesOpenPricedFromMap) },
     { path: "partner-pull-requests.json", content: JSON.stringify(prs) },
     { path: "owners-avatars.json", content: JSON.stringify(owners) },
-    { path: "mirror-state.json", content: JSON.stringify(mirror) },
+    { path: "mirror-state.json", content: JSON.stringify(mirrorMerged) },
     { path: "statistics.json", content: JSON.stringify(stats) },
     { path: "sync-metadata.json", content: JSON.stringify(syncMeta) },
     { path: "twitter-map.json", content: JSON.stringify(twitterMap) },
     { path: "index.json", content: JSON.stringify(index) },
     { path: "summary.json", content: JSON.stringify(summary) },
-    { path: "lifetime-map.json", content: JSON.stringify(lifetimeMap) }
+    { path: "lifetime-map.json", content: JSON.stringify(lifetimeMap) },
+    { path: "issues-map.json", content: JSON.stringify(issuesMap) }
   ]);
 }
 main().catch((err) => {

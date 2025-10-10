@@ -38,7 +38,7 @@ async function main() {
   const issues = mergeIssues(issueChunks);
   const prs = mergePRs(prChunks);
   const mirror = mergeMirrorState(mirrorChunks);
-  // Restrict published issues file to open + priced items only
+  // Restrict published issues file to open + priced items only (initial set; will recompute from issues-map below)
   const issuesOpenPriced = issues.filter(
     (i) => i.state === "open" && (i.labels || []).some((l: string) => /^Price:\s*/.test(String(l)))
   );
@@ -52,18 +52,40 @@ async function main() {
     rewardsCompletedUSD: life.rewards.completed,
     tasksCompletedPriced: life.tasks.completed
   };
+  // Merge owners with prior artifact to retain avatars when a shard sees none
   const ownersMap: Record<string, { owner: string; type: "User" | "Organization"; avatar_url: string }> = {};
-  for (const chunk of ownerChunks) {
-    for (const o of chunk) ownersMap[o.owner] = o;
-  }
+  try {
+    const { data } = await (octokit as any).repos.getContent({ owner, repo, path: "owners-avatars.json", ref: branch });
+    const prev = JSON.parse(Buffer.from((data as any).content, "base64").toString("utf8"));
+    for (const o of prev) ownersMap[o.owner] = o;
+  } catch {}
+  for (const chunk of ownerChunks) for (const o of chunk) ownersMap[o.owner] = o;
   const owners = Object.values(ownersMap).sort((a, b) => a.owner.localeCompare(b.owner));
 
   const syncMeta = { perRepo: {} as Record<string, any> };
   for (const ch of syncChunks) Object.assign(syncMeta.perRepo, ch?.perRepo ?? ch);
 
-  // Build index from mirror state
+  // Load and update issues map (persistent), then compute open+priced from the full map
+  let issuesMap: Record<string, any> = {};
+  try {
+    const { data } = await (octokit as any).repos.getContent({ owner, repo, path: "issues-map.json", ref: branch });
+    issuesMap = JSON.parse(Buffer.from((data as any).content, "base64").toString("utf8"));
+  } catch { issuesMap = {}; }
+  for (const it of issues) issuesMap[it.node_id] = it;
+  const allIssues: any[] = Object.values(issuesMap);
+  const issuesOpenPricedFromMap = allIssues.filter((i) => i.state === "open" && (i.labels || []).some((l: string) => /^Price:\s*/.test(String(l))));
+
+  // Merge mirror-state with prior artifact to avoid dropping entries when a shard sees no changes
+  let mirrorPrev: Record<string, any> = {};
+  try {
+    const { data } = await (octokit as any).repos.getContent({ owner, repo, path: "mirror-state.json", ref: branch });
+    mirrorPrev = JSON.parse(Buffer.from((data as any).content, "base64").toString("utf8"));
+  } catch {}
+  const mirrorMerged = Object.assign({}, mirrorPrev, mirror);
+
+  // Build index from merged mirror state
   const index: Record<string, { number: number; url: string }> = {};
-  for (const [node, e] of Object.entries(mirror)) {
+  for (const [node, e] of Object.entries(mirrorMerged)) {
     if (e.directory_issue_number && e.directory_issue_url) index[node] = { number: e.directory_issue_number, url: e.directory_issue_url };
   }
 
@@ -126,14 +148,15 @@ async function main() {
 
   // Write local build outputs for debugging
   const outDir = path.join(process.cwd(), "out-agg");
-  writeJson(outDir, "partner-open-issues.json", issuesOpenPriced);
+  writeJson(outDir, "partner-open-issues.json", issuesOpenPricedFromMap);
   writeJson(outDir, "partner-pull-requests.json", prs);
   writeJson(outDir, "owners-avatars.json", owners);
-  writeJson(outDir, "mirror-state.json", mirror);
+  writeJson(outDir, "mirror-state.json", mirrorMerged);
   writeJson(outDir, "statistics.json", stats);
   writeJson(outDir, "sync-metadata.json", syncMeta);
   writeJson(outDir, "twitter-map.json", twitterMap);
   writeJson(outDir, "index.json", index);
+  writeJson(outDir, "issues-map.json", issuesMap);
   writeJson(outDir, "lifetime-map.json", lifetimeMap);
 
   // Build human-friendly summary
@@ -170,16 +193,17 @@ async function main() {
 
   await ensureBranch(octokit, owner, repo, branch);
   await commitChanges(octokit, owner, repo, branch, "sync: update artifacts", [
-    { path: "partner-open-issues.json", content: JSON.stringify(issuesOpenPriced) },
+    { path: "partner-open-issues.json", content: JSON.stringify(issuesOpenPricedFromMap) },
     { path: "partner-pull-requests.json", content: JSON.stringify(prs) },
     { path: "owners-avatars.json", content: JSON.stringify(owners) },
-    { path: "mirror-state.json", content: JSON.stringify(mirror) },
+    { path: "mirror-state.json", content: JSON.stringify(mirrorMerged) },
     { path: "statistics.json", content: JSON.stringify(stats) },
     { path: "sync-metadata.json", content: JSON.stringify(syncMeta) },
     { path: "twitter-map.json", content: JSON.stringify(twitterMap) },
     { path: "index.json", content: JSON.stringify(index) },
     { path: "summary.json", content: JSON.stringify(summary) },
-    { path: "lifetime-map.json", content: JSON.stringify(lifetimeMap) }
+    { path: "lifetime-map.json", content: JSON.stringify(lifetimeMap) },
+    { path: "issues-map.json", content: JSON.stringify(issuesMap) }
   ]);
 }
 
