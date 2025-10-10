@@ -18,7 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Node is preinstalled; run bundled scripts directly
+      # Ensure Node is available; run bundled scripts directly
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
 
       - name: Write E2E config (focused)
         run: |

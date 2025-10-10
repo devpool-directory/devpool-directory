@@ -25,7 +25,9 @@ jobs:
       max_parallel: ${{ steps.out.outputs.max_parallel }}
     steps:
       - uses: actions/checkout@v4
-      # Node is preinstalled on ubuntu-latest; run bundled scripts directly
+      # Ensure Node is available, then run bundled scripts directly
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
       - name: Generate plan
         run: |
           node dist/bin/plan.js > plan.json
@@ -70,7 +72,9 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
-      # No dependency install required for bundled scripts
+      # Ensure Node is available; no dependency install required for bundled scripts
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
       - name: Create GitHub App token (repo)
         id: app_token
         uses: actions/create-github-app-token@v1
@@ -109,7 +113,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # No dependency install required for bundled scripts
+      # Ensure Node is available; no dependency install required for bundled scripts
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
       - uses: actions/download-artifact@v4
         with: { path: ./shards }
       - name: Create GitHub App token (repo)
@@ -133,7 +139,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # No dependency install required for bundled scripts
+      # Ensure Node is available; no dependency install required for bundled scripts
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
       - run: node dist/bin/summary.js >> $GITHUB_STEP_SUMMARY
         env:
           GITHUB_TOKEN: ${{ github.token }}
