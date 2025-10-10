@@ -51,8 +51,20 @@ async function main() {
     if (e.directory_issue_number && e.directory_issue_url) index[node] = { number: e.directory_issue_number, url: e.directory_issue_url };
   }
 
-  // Merge twitter deltas (support both record form and {creates,deletes})
-  const twitterMap: Record<string, string> = {};
+  // Seed twitter map from existing artifact on data branch, then merge deltas
+  const octokit = getOctokit();
+  const owner = process.env.DIRECTORY_OWNER ?? "";
+  const repo = process.env.DIRECTORY_REPO ?? "";
+  const branch = process.env.DATA_BRANCH ?? "__STORAGE__";
+
+  let twitterMap: Record<string, string> = {};
+  try {
+    const { data } = await (octokit as any).repos.getContent({ owner, repo, path: "twitter-map.json", ref: branch });
+    const content = Buffer.from((data as any).content, "base64").toString("utf8");
+    twitterMap = JSON.parse(content || "{}");
+  } catch {
+    twitterMap = {};
+  }
   for (const d of twitterDeltas) {
     if (d && typeof d === "object") {
       if (d.creates || d.deletes) {
@@ -108,12 +120,6 @@ async function main() {
   writeJson(outDir, "summary.json", summary);
 
   if (process.env.DRY_RUN === "true") return;
-
-  // Commit to data branch
-  const octokit = getOctokit();
-  const owner = process.env.DIRECTORY_OWNER ?? "";
-  const repo = process.env.DIRECTORY_REPO ?? "";
-  const branch = process.env.DATA_BRANCH ?? "__STORAGE__";
 
   await ensureBranch(octokit, owner, repo, branch);
   await commitChanges(octokit, owner, repo, branch, "sync: update artifacts", [
