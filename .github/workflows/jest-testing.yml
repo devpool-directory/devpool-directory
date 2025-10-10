@@ -28,8 +28,11 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Install dependencies
+        run: npm install
+
       - name: Jest With Coverage
-        run: yarn install --immutable --immutable-cache --check-cache && yarn test
+        run: npm test
 
       - name: Add Jest Report to Summary
         if: always()

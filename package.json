@@ -17,7 +17,10 @@
     "test:integration": "jest --config jest.integration.config.json --runInBand",
     "test:unit": "DOTENV_CONFIG_PATH=.env.test jest --setupFiles dotenv/config --testPathIgnorePatterns=integration",
     "deduplicate": "tsx src/deduplicate-issues.ts",
-    "deduplicate:dry": "tsx src/deduplicate-issues.ts --dry-run"
+    "deduplicate:dry": "tsx src/deduplicate-issues.ts --dry-run",
+    "twitter:plan": "tsx src/cli/twitter-plan.ts",
+    "twitter:apply": "tsx src/cli/twitter-apply.ts",
+    "twitter:audit": "tsx src/cli/twitter-audit.ts"
   },
   "keywords": [
     "typescript",
@@ -66,7 +69,7 @@
   },
   "lint-staged": {
     "*.ts": [
-      "yarn prettier --write",
+      "prettier --write",
       "eslint --fix"
     ],
     "src/**.{ts,json}": [

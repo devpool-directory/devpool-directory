@@ -18,7 +18,7 @@ jobs:
           node-version: "20.10.0"
 
       - name: Install cspell
-        run: yarn add cspell
+        run: npm install --no-save cspell
 
       - name: Run cspell
-        run: yarn format:cspell
+        run: npx cspell .

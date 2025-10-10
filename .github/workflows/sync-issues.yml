@@ -45,3 +45,62 @@ jobs:
           DEVPOOL_OWNER_NAME: ${{ github.repository_owner }}
           DEVPOOL_REPO_NAME: "devpool-directory"
         run: npx tsx index.ts
+
+  twitter-sync:
+    name: Twitter Sync
+    needs: sync-issues
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install
+        run: npm ci || npm install
+
+      - name: Get GitHub App token
+        uses: tibdex/github-app-token@v1.7.0
+        id: get_installation_token
+        with:
+          app_id: ${{ secrets.APP_ID }}
+          private_key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Plan Twitter changes
+        env:
+          DEVPOOL_GITHUB_API_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+          DEVPOOL_OWNER_NAME: ${{ github.repository_owner }}
+          DEVPOOL_REPO_NAME: "devpool-directory"
+          MAX_TWEETS_SCAN: "1000"
+          TWEET_SCAN_MAX_AGE_DAYS: "365"
+          DELETE_WINDOW_DAYS: "0"
+        run: npm run twitter:plan
+
+      - name: Apply Twitter changes
+        env:
+          DEVPOOL_GITHUB_API_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+          GITHUB_TOKEN: ${{ steps.get_installation_token.outputs.token }}
+          DEVPOOL_OWNER_NAME: ${{ github.repository_owner }}
+          DEVPOOL_REPO_NAME: "devpool-directory"
+          TWEET_BUDGET_CREATE: "10"
+          TWEET_BUDGET_DELETE: "200"
+          DRY_RUN: "false"
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_KEY_SECRET: ${{ secrets.TWITTER_API_KEY_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+        run: npm run twitter:apply
+
+      - name: Audit Twitter state
+        env:
+          DEVPOOL_OWNER_NAME: ${{ github.repository_owner }}
+          DEVPOOL_REPO_NAME: "devpool-directory"
+          TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
+          TWITTER_API_KEY_SECRET: ${{ secrets.TWITTER_API_KEY_SECRET }}
+          TWITTER_ACCESS_TOKEN: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          TWITTER_ACCESS_TOKEN_SECRET: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
+        run: npm run twitter:audit

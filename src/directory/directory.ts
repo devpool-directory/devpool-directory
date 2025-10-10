@@ -17,6 +17,11 @@ async function chooseBestToken(): Promise<string | undefined> {
   if (!ACTIONS_GITHUB_TOKEN && APP_INSTALLATION_TOKEN) return APP_INSTALLATION_TOKEN;
   if (!ACTIONS_GITHUB_TOKEN && !APP_INSTALLATION_TOKEN) return undefined;
 
+  // Optional preference for Actions GITHUB_TOKEN regardless of immediate budget
+  if (process.env.GH_PREFER_GITHUB_TOKEN === "true") {
+    return ACTIONS_GITHUB_TOKEN;
+  }
+
   // If both exist, compare remaining rate limit and pick the larger budget
   try {
     const ghOcto = new Octokit({ auth: ACTIONS_GITHUB_TOKEN });
@@ -41,35 +46,43 @@ async function chooseBestToken(): Promise<string | undefined> {
   }
 }
 
-// Compose Octokit with plugins
-const BaseOctokit = Octokit.plugin(throttling, retry);
+// Compose Octokit with plugins unless disabled (keep tests stable)
+const inTest = process.env.NODE_ENV === "test";
+const enablePlugins = !inTest && process.env.GH_ENABLE_THROTTLING !== "false";
+const BaseOctokit = enablePlugins ? Octokit.plugin(throttling, retry) : Octokit;
 
 function createClient(token?: string) {
   const client = new BaseOctokit({
     auth: token,
     userAgent: "devpool-directory/1.0",
-    throttle: {
-      onRateLimit: (retryAfter: number, options: any) => {
-        console.warn(`Rate limit for ${options.method} ${options.url}. Retry after ${retryAfter}s.`);
-        return true; // retry once
-      },
-      onSecondaryRateLimit: (retryAfter: number, options: any) => {
-        console.warn(`Secondary rate limit for ${options.method} ${options.url}. Backoff ${retryAfter}s.`);
-        return true; // retry once
-      },
-    },
-    retry: {
-      doNotRetry: [400, 401, 404, 422],
-      maxRetries: 2,
-    },
+    ...(enablePlugins
+      ? {
+          throttle: {
+            onRateLimit: (retryAfter: number, options: any) => {
+              console.warn(`Rate limit for ${options.method} ${options.url}. Retry after ${retryAfter}s.`);
+              return true; // retry once
+            },
+            onSecondaryRateLimit: (retryAfter: number, options: any) => {
+              console.warn(`Secondary rate limit for ${options.method} ${options.url}. Backoff ${retryAfter}s.`);
+              return true; // retry once
+            },
+          },
+          retry: {
+            doNotRetry: [400, 401, 404, 422],
+            maxRetries: 2,
+          },
+        }
+      : {}),
   } as any);
 
-  installOctokitCache(client as any, {
-    persist: process.env.GH_CACHE_PERSIST !== "false",
-    persistDir: process.env.GH_CACHE_DIR || ".cache/octokit",
-    ttlMs: Number(process.env.GH_CACHE_TTL_MS || 5 * 60 * 1000),
-    alwaysRevalidate: process.env.GH_CACHE_ALWAYS_REVALIDATE !== "false",
-  });
+  if (process.env.GH_ENABLE_CACHE !== "false" && !inTest) {
+    installOctokitCache(client as any, {
+      persist: process.env.GH_CACHE_PERSIST !== "false",
+      persistDir: process.env.GH_CACHE_DIR || ".cache/octokit",
+      ttlMs: Number(process.env.GH_CACHE_TTL_MS || 5 * 60 * 1000),
+      alwaysRevalidate: process.env.GH_CACHE_ALWAYS_REVALIDATE !== "false",
+    });
+  }
 
   return client as unknown as Octokit;
 }
@@ -90,32 +103,56 @@ function installRateLimitFallback(client: Octokit, getAlt: () => Octokit | undef
 
       console.warn(`Primary token exhausted. Switching to alternate token and retrying once.`);
       const res = await (alt as any).request(options as any);
-      (module.exports as any).octokit = alt;
+      octokit = alt;
       return res;
     }
+  });
+}
+
+function installBudgetGuard(client: Octokit, getAlt: () => Octokit | undefined) {
+  const minRemaining = Number(process.env.GH_MIN_REMAINING || 100);
+  client.hook.after("request", async (response, options) => {
+    try {
+      const remainingHeader = (response as any)?.headers?.["x-ratelimit-remaining"];
+      const remaining = remainingHeader != null ? Number(remainingHeader) : NaN;
+      if (!isNaN(remaining) && remaining >= 0 && remaining < minRemaining) {
+        const alt = getAlt();
+        if (alt) {
+          octokit = alt;
+          console.warn(`Low remaining budget (${remaining}). Switching token proactively.`);
+        }
+      }
+    } catch {
+      // ignore guard failures
+    }
+    return;
   });
 }
 
 // Build both clients (if tokens exist)
 let ghClient: Octokit | undefined = ACTIONS_GITHUB_TOKEN ? createClient(ACTIONS_GITHUB_TOKEN) : undefined;
 let appClient: Octokit | undefined = APP_INSTALLATION_TOKEN ? createClient(APP_INSTALLATION_TOKEN) : undefined;
-if (ghClient) installRateLimitFallback(ghClient, () => appClient);
-if (appClient) installRateLimitFallback(appClient, () => ghClient);
+if (ghClient) {
+  installRateLimitFallback(ghClient, () => appClient);
+  installBudgetGuard(ghClient, () => appClient);
+}
+if (appClient) {
+  installRateLimitFallback(appClient, () => ghClient);
+  installBudgetGuard(appClient, () => ghClient);
+}
 
 // Initialize with best guess
-let _octokit: Octokit = ghClient || appClient || createClient();
-export const octokit = _octokit;
+export let octokit: Octokit = ghClient || appClient || createClient();
 
 // Async choose based on remaining budget
 chooseBestToken()
   .then((best) => {
     if (!best) return;
     if (ACTIONS_GITHUB_TOKEN && best === ACTIONS_GITHUB_TOKEN && ghClient) {
-      _octokit = ghClient;
+      octokit = ghClient;
     } else if (APP_INSTALLATION_TOKEN && best === APP_INSTALLATION_TOKEN && appClient) {
-      _octokit = appClient;
+      octokit = appClient;
     }
-    (module.exports as any).octokit = _octokit;
   })
   .catch(() => void 0);
 

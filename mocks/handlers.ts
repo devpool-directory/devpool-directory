@@ -80,8 +80,27 @@ export const handlers = [
     });
     return HttpResponse.json(updatedItem);
   }),
-  http.post("https://api.github.com/repos/:owner/:repo/labels", async ({ request }) => {
-    const body = (await request.json()) as { labels: string[] };
+  http.post("https://api.github.com/repos/:owner/:repo/labels", async ({ request, params: { owner, repo } }) => {
+    const body = (await request.json()) as any;
+    const name: string | undefined = body?.name;
+    if (name) {
+      // If any issue in this repo already has this label, simulate GitHub 422 already_exists
+      const exists = db.issue.findFirst({
+        where: {
+          owner: { equals: owner as string },
+          repo: { equals: repo as string },
+          labels: {
+            some: (l: any) => (l?.name as string) === name,
+          } as any,
+        },
+      });
+      if (exists) {
+        return HttpResponse.json(
+          { message: "Validation Failed", errors: [{ code: "already_exists" }] },
+          { status: 422 }
+        );
+      }
+    }
     return HttpResponse.json(body);
   }),
 

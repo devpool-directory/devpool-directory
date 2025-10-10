@@ -152,3 +152,13 @@ export async function commitLastRun(lastRun: Record<string, string>) {
     console.error(`Error preparing last-run map for github file: ${error}`);
   }
 }
+
+// Generic artifact writer for __STORAGE__ branch JSON files.
+// Use this to stage arbitrary JSON artifacts (plan/current/delta/summary).
+export async function commitArtifact(fileName: string, data: unknown) {
+  try {
+    await gitCommit(data, fileName);
+  } catch (error) {
+    console.error(`Error preparing artifact for github file ${fileName}: ${error}`);
+  }
+}
