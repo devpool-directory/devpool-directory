@@ -2,6 +2,7 @@ import type { Octokit } from "@octokit/rest";
 import pLimit from "p-limit";
 import type { MirrorState, PartnerIssue } from "../artifacts/types.js";
 import { fetchIssuesForRepo, fetchPRsForRepo, fetchOwnersAvatars } from "../fetch.js";
+import { fetchIssuesForRepoGQL, fetchPRsForRepoGQL } from "../fetch-graphql.js";
 import { computeMirrorStateEntry } from "../artifacts/state.js";
 import { reconcileMirror, type IndexMap } from "./reconcile.js";
 
@@ -64,7 +65,17 @@ export async function syncShard(
             since = new Date(sinceMs).toISOString();
           }
         }
-        iss = await fetchIssuesForRepo(okRead, full, since);
+        const useGql = process.env.USE_GRAPHQL === "true";
+        if (useGql) {
+          try {
+            iss = await fetchIssuesForRepoGQL(okRead, full, since);
+          } catch (gqlErr) {
+            console.warn(`[sync] GQL issues fallback to REST for ${full}: ${gqlErr instanceof Error ? gqlErr.message : gqlErr}`);
+            iss = await fetchIssuesForRepo(okRead, full, since);
+          }
+        } else {
+          iss = await fetchIssuesForRepo(okRead, full, since);
+        }
       } catch (e: any) {
         console.warn(`[sync] fetchIssues failed for ${full}: ${e?.status ?? e?.message ?? e}`);
         iss = [];
@@ -115,7 +126,10 @@ export async function syncShard(
       }
 
       try {
-        const rawPrs = await fetchPRsForRepo(okRead, full);
+        const useGql = process.env.USE_GRAPHQL === "true";
+        const rawPrs = useGql
+          ? await (async () => { try { return await fetchPRsForRepoGQL(okRead, full, undefined); } catch { return await fetchPRsForRepo(okRead, full); } })()
+          : await fetchPRsForRepo(okRead, full);
         prs.push(...rawPrs);
       } catch (e: any) {
         console.warn(`[sync] fetchPRs failed for ${full}: ${e?.status ?? e?.message ?? e}`);

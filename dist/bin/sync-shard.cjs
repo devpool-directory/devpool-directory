@@ -1349,7 +1349,7 @@ function withDefaults3(request22, newDefaults) {
     endpoint: newRequest.endpoint
   });
 }
-withDefaults3(request, {
+var graphql2 = withDefaults3(request, {
   headers: {
     "user-agent": `octokit-graphql.js/${VERSION3} ${getUserAgent()}`
   },
@@ -8174,6 +8174,139 @@ async function fetchOwnersAvatars(octokit, owners) {
   return out;
 }
 
+// src/fetch-graphql.ts
+async function sleep2(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+async function withBackoff2(fn, attempt = 0) {
+  try {
+    return await fn();
+  } catch (e) {
+    const status = e?.status ?? e?.response?.status;
+    const reset = Number(e?.response?.headers?.["x-ratelimit-reset"]) || 0;
+    const retryAfter = Number(e?.response?.headers?.["retry-after"]) || 0;
+    if (status === 403 || status === 429) {
+      const nowSec = Math.floor(Date.now() / 1e3);
+      const untilResetMs = reset > nowSec ? (reset - nowSec) * 1e3 : 0;
+      const base = Math.min(3e4, 2e3 * Math.pow(2, attempt));
+      const wait = Math.max(base, retryAfter * 1e3, untilResetMs);
+      await sleep2(Math.min(wait, 6e4));
+      return withBackoff2(fn, Math.min(attempt + 1, 5));
+    }
+    throw e;
+  }
+}
+function getGql() {
+  const token = process.env.GH_TOKEN || process.env.GITHUB_TOKEN;
+  return token ? graphql2.defaults({ headers: { authorization: `token ${token}` } }) : graphql2;
+}
+async function fetchIssuesForRepoGQL(_octokit, full, sinceISO) {
+  const [owner, repo] = full.split("/");
+  const q = (
+    /* GraphQL */
+    `
+    query RepoIssues($owner: String!, $name: String!, $since: DateTime, $after: String) {
+      repository(owner: $owner, name: $name) {
+        issues(first: 100, after: $after, orderBy: {field: UPDATED_AT, direction: DESC}, filterBy: {since: $since, states: [OPEN, CLOSED]}) {
+          pageInfo { hasNextPage endCursor }
+          nodes {
+            id
+            number
+            title
+            url
+            body
+            state
+            stateReason
+            createdAt
+            updatedAt
+            labels(first: 100) { nodes { name } }
+            assignees(first: 10) { nodes { login } }
+          }
+        }
+      }
+    }
+  `
+  );
+  const out = [];
+  const gql = getGql();
+  let after;
+  const cutoff = sinceISO ? new Date(sinceISO).getTime() : void 0;
+  while (true) {
+    const res = await withBackoff2(() => gql(q, { owner, name: repo, since: sinceISO, after }));
+    const conn = res?.repository?.issues;
+    const nodes = conn?.nodes ?? [];
+    for (const n of nodes) {
+      if (n.state === "CLOSED" && n.stateReason === "NOT_PLANNED") continue;
+      if (cutoff && n.updatedAt && new Date(n.updatedAt).getTime() < cutoff) {
+        after = void 0;
+        break;
+      }
+      out.push({
+        owner,
+        repo,
+        number: n.number,
+        node_id: n.id,
+        title: n.title ?? "",
+        url: n.url ?? "",
+        body: n.body ?? "",
+        labels: (n.labels?.nodes ?? []).map((l) => l?.name).filter(Boolean),
+        assignees: (n.assignees?.nodes ?? []).map((a) => a?.login).filter(Boolean),
+        state: n.state === "OPEN" ? "open" : "closed",
+        created_at: n.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+        updated_at: n.updatedAt ?? (/* @__PURE__ */ new Date()).toISOString()
+      });
+    }
+    if (!conn?.pageInfo?.hasNextPage || !conn?.pageInfo?.endCursor || !after) break;
+    after = conn.pageInfo.endCursor;
+  }
+  return out;
+}
+async function fetchPRsForRepoGQL(_octokit, full, sinceISO) {
+  const [owner, repo] = full.split("/");
+  const q = (
+    /* GraphQL */
+    `
+    query RepoPRs($owner: String!, $name: String!, $after: String) {
+      repository(owner: $owner, name: $name) {
+        pullRequests(first: 100, after: $after, orderBy: { field: UPDATED_AT, direction: DESC }, states: [OPEN, MERGED, CLOSED]) {
+          pageInfo { hasNextPage endCursor }
+          nodes {
+            number
+            title
+            url
+            createdAt
+            updatedAt
+            state
+          }
+        }
+      }
+    }
+  `
+  );
+  const out = [];
+  const gql = getGql();
+  let after;
+  while (true) {
+    const res = await withBackoff2(() => gql(q, { owner, name: repo, after }));
+    const conn = res?.repository?.pullRequests;
+    const nodes = conn?.nodes ?? [];
+    for (const n of nodes) {
+      out.push({
+        owner,
+        repo,
+        number: n.number,
+        state: n.state === "OPEN" ? "open" : "closed",
+        url: n.url ?? "",
+        title: n.title ?? "",
+        created_at: n.createdAt ?? (/* @__PURE__ */ new Date()).toISOString(),
+        updated_at: n.updatedAt ?? (/* @__PURE__ */ new Date()).toISOString()
+      });
+    }
+    if (!conn?.pageInfo?.hasNextPage || !conn?.pageInfo?.endCursor || !after) break;
+  }
+  return out;
+}
+
 // src/artifacts/state.ts
 function computeMirrorStateEntry(issue, directory, category) {
   const price = issue.labels.find((l) => /^(Price:|Pricing:)/.test(l)) ?? null;
@@ -8266,7 +8399,17 @@ async function syncShard(octokitWrite, opts) {
             since = new Date(sinceMs).toISOString();
           }
         }
-        iss = await fetchIssuesForRepo(okRead, full, since);
+        const useGql = process.env.USE_GRAPHQL === "true";
+        if (useGql) {
+          try {
+            iss = await fetchIssuesForRepoGQL(okRead, full, since);
+          } catch (gqlErr) {
+            console.warn(`[sync] GQL issues fallback to REST for ${full}: ${gqlErr instanceof Error ? gqlErr.message : gqlErr}`);
+            iss = await fetchIssuesForRepo(okRead, full, since);
+          }
+        } else {
+          iss = await fetchIssuesForRepo(okRead, full, since);
+        }
       } catch (e) {
         console.warn(`[sync] fetchIssues failed for ${full}: ${e?.status ?? e?.message ?? e}`);
         iss = [];
@@ -8310,7 +8453,14 @@ async function syncShard(octokitWrite, opts) {
         mirrorState[it.node_id] = computeMirrorStateEntry(it, dir, void 0);
       }
       try {
-        const rawPrs = await fetchPRsForRepo(okRead, full);
+        const useGql = process.env.USE_GRAPHQL === "true";
+        const rawPrs = useGql ? await (async () => {
+          try {
+            return await fetchPRsForRepoGQL(okRead, full, void 0);
+          } catch {
+            return await fetchPRsForRepo(okRead, full);
+          }
+        })() : await fetchPRsForRepo(okRead, full);
         prs.push(...rawPrs);
       } catch (e) {
         console.warn(`[sync] fetchPRs failed for ${full}: ${e?.status ?? e?.message ?? e}`);

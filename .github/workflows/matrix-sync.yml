@@ -103,6 +103,7 @@ jobs:
           DIRECTORY_REPO: ${{ github.event.repository.name }}
           WRITE_TARGET_REPO: ${{ github.repository_owner }}/${{ github.event.repository.name }}
           FULL_RESYNC: ${{ inputs.full_resync }}
+          USE_GRAPHQL: "true"
           TWEET_ON_CREATE: "true"
           DELETE_TWEET_ON_COMPLETE: "true"
           TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
