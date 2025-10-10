@@ -42,4 +42,5 @@ export type MirrorState = Record<string, MirrorStateEntry>; // key = partner nod
 export type Statistics = {
   rewards: { notAssigned: number; assigned: number; completed: number; total: number };
   tasks: { notAssigned: number; assigned: number; completed: number; total: number };
+  lifetime?: { rewardsCompletedUSD: number; tasksCompletedPriced: number };
 };

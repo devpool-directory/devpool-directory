@@ -8070,6 +8070,14 @@ async function main() {
     (i) => i.state === "open" && (i.labels || []).some((l) => /^Price:\s*/.test(String(l)))
   );
   const stats = computeStatistics(issuesOpenPriced, mirror);
+  const issuesClosedPriced = issues.filter(
+    (i) => i.state === "closed" && (i.labels || []).some((l) => /^Price:\s*/.test(String(l)))
+  );
+  const life = computeStatistics(issuesClosedPriced, mirror);
+  stats.lifetime = {
+    rewardsCompletedUSD: life.rewards.completed,
+    tasksCompletedPriced: life.tasks.completed
+  };
   const ownersMap = {};
   for (const chunk of ownerChunks) {
     for (const o of chunk) ownersMap[o.owner] = o;

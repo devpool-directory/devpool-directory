@@ -43,6 +43,15 @@ async function main() {
     (i) => i.state === "open" && (i.labels || []).some((l: string) => /^Price:\s*/.test(String(l)))
   );
   const stats = computeStatistics(issuesOpenPriced, mirror);
+  // Lifetime (completed): compute over closed + priced to expose historical totals
+  const issuesClosedPriced = issues.filter(
+    (i) => i.state === "closed" && (i.labels || []).some((l: string) => /^Price:\s*/.test(String(l)))
+  );
+  const life = computeStatistics(issuesClosedPriced, mirror);
+  (stats as any).lifetime = {
+    rewardsCompletedUSD: life.rewards.completed,
+    tasksCompletedPriced: life.tasks.completed
+  };
   const ownersMap: Record<string, { owner: string; type: "User" | "Organization"; avatar_url: string }> = {};
   for (const chunk of ownerChunks) {
     for (const o of chunk) ownersMap[o.owner] = o;
