@@ -3587,17 +3587,33 @@ Initialized by workflow.
 }
 async function commitChanges(octokit, owner, repo, branch, message, changes) {
   if (changes.length === 0) return;
-  const { data: refData } = await octokit.git.getRef({ owner, repo, ref: `heads/${branch}` });
-  const baseSha = refData.object.sha;
-  const { data: baseCommit } = await octokit.git.getCommit({ owner, repo, commit_sha: baseSha });
-  const { data: tree } = await octokit.git.createTree({
-    owner,
-    repo,
-    base_tree: baseCommit.tree.sha,
-    tree: changes.map((c) => ({ path: c.path, mode: "100644", type: "blob", content: c.content }))
-  });
-  const { data: commit } = await octokit.git.createCommit({ owner, repo, message, tree: tree.sha, parents: [baseSha] });
-  await octokit.git.updateRef({ owner, repo, ref: `heads/${branch}`, sha: commit.sha });
+  const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+  const maxRetries = Number(process.env.COMMIT_RETRIES ?? 5);
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    const { data: refData } = await octokit.git.getRef({ owner, repo, ref: `heads/${branch}` });
+    const baseSha = refData.object.sha;
+    const { data: baseCommit } = await octokit.git.getCommit({ owner, repo, commit_sha: baseSha });
+    const { data: tree } = await octokit.git.createTree({
+      owner,
+      repo,
+      base_tree: baseCommit.tree.sha,
+      tree: changes.map((c) => ({ path: c.path, mode: "100644", type: "blob", content: c.content }))
+    });
+    const { data: commit } = await octokit.git.createCommit({ owner, repo, message, tree: tree.sha, parents: [baseSha] });
+    try {
+      await octokit.git.updateRef({ owner, repo, ref: `heads/${branch}`, sha: commit.sha });
+      return;
+    } catch (e) {
+      const status = e?.status ?? e?.response?.status;
+      const isNonFastForward = status === 422 || /fast\s*forward/i.test(String(e?.message ?? ""));
+      if (isNonFastForward && attempt < maxRetries) {
+        const delay = Math.min(2e3, 150 * attempt + Math.floor(Math.random() * 150));
+        await sleep(delay);
+        continue;
+      }
+      throw e;
+    }
+  }
 }
 
 // src/cli/aggregate.ts

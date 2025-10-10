@@ -47,17 +47,38 @@ export async function commitChanges(
 ) {
   if (changes.length === 0) return;
 
-  const { data: refData } = await octokit.git.getRef({ owner, repo, ref: `heads/${branch}` });
-  const baseSha = refData.object.sha;
-  const { data: baseCommit } = await octokit.git.getCommit({ owner, repo, commit_sha: baseSha });
+  const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+  const maxRetries = Number(process.env.COMMIT_RETRIES ?? 5);
 
-  const { data: tree } = await octokit.git.createTree({
-    owner,
-    repo,
-    base_tree: baseCommit.tree.sha,
-    tree: changes.map((c) => ({ path: c.path, mode: "100644", type: "blob", content: c.content }))
-  });
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    // Always fetch the latest ref just before creating the commit to minimize
+    // the window for non-fast-forward updates.
+    const { data: refData } = await octokit.git.getRef({ owner, repo, ref: `heads/${branch}` });
+    const baseSha = refData.object.sha;
+    const { data: baseCommit } = await octokit.git.getCommit({ owner, repo, commit_sha: baseSha });
 
-  const { data: commit } = await octokit.git.createCommit({ owner, repo, message, tree: tree.sha, parents: [baseSha] });
-  await octokit.git.updateRef({ owner, repo, ref: `heads/${branch}`, sha: commit.sha });
+    const { data: tree } = await octokit.git.createTree({
+      owner,
+      repo,
+      base_tree: baseCommit.tree.sha,
+      tree: changes.map((c) => ({ path: c.path, mode: "100644", type: "blob", content: c.content }))
+    });
+
+    const { data: commit } = await octokit.git.createCommit({ owner, repo, message, tree: tree.sha, parents: [baseSha] });
+
+    try {
+      await octokit.git.updateRef({ owner, repo, ref: `heads/${branch}`, sha: commit.sha });
+      return; // success
+    } catch (e: any) {
+      const status = e?.status ?? e?.response?.status;
+      const isNonFastForward = status === 422 || /fast\s*forward/i.test(String(e?.message ?? ""));
+      if (isNonFastForward && attempt < maxRetries) {
+        // Backoff with jitter then retry against the new tip
+        const delay = Math.min(2000, 150 * attempt + Math.floor(Math.random() * 150));
+        await sleep(delay);
+        continue;
+      }
+      throw e;
+    }
+  }
 }
