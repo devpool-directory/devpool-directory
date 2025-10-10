@@ -7950,9 +7950,16 @@ function env(name, required = false) {
 }
 
 // src/github/client.ts
-function getOctokit() {
-  const token = process.env.GH_TOKEN || env("GITHUB_TOKEN", true);
-  return new Octokit2({ auth: token, request: { retries: 0 } });
+function getOctokitRead() {
+  const pat = process.env.GH_TOKEN;
+  if (pat) return new Octokit2({ auth: pat, request: { retries: 0 } });
+  const gh = env("GITHUB_TOKEN", false);
+  if (gh) return new Octokit2({ auth: gh, request: { retries: 0 } });
+  return new Octokit2({ request: { retries: 0 } });
+}
+function getOctokitWrite() {
+  const app = env("GITHUB_TOKEN", true);
+  return new Octokit2({ auth: app, request: { retries: 0 } });
 }
 
 // node_modules/yocto-queue/index.js
@@ -14499,8 +14506,8 @@ async function main() {
     if (entry?.repos) repos = entry.repos;
   } catch {
   }
-  const octokitWrite = getOctokit();
-  const octokitRead = process.env.GH_TOKEN ? new Octokit2({ auth: process.env.GH_TOKEN }) : new Octokit2();
+  const octokitWrite = getOctokitWrite();
+  const octokitRead = getOctokitRead();
   const indexPath = "index.json";
   const twitterMapPath = "twitter-map.json";
   const lastRunPath = "last-run.json";

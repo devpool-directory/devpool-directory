@@ -7917,9 +7917,12 @@ function env(name, required = false) {
 }
 
 // src/github/client.ts
-function getOctokit() {
-  const token = process.env.GH_TOKEN || env("GITHUB_TOKEN", true);
-  return new Octokit2({ auth: token, request: { retries: 0 } });
+function getOctokitRead() {
+  const pat = process.env.GH_TOKEN;
+  if (pat) return new Octokit2({ auth: pat, request: { retries: 0 } });
+  const gh = env("GITHUB_TOKEN", false);
+  if (gh) return new Octokit2({ auth: gh, request: { retries: 0 } });
+  return new Octokit2({ request: { retries: 0 } });
 }
 
 // src/cli/summary.ts
@@ -7928,7 +7931,7 @@ async function main() {
   const owner = process.env.DIRECTORY_OWNER ?? repoEnv.split("/")[0] ?? "";
   const repo = process.env.DIRECTORY_REPO ?? repoEnv.split("/")[1] ?? "";
   const branch = process.env.DATA_BRANCH ?? "__STORAGE__";
-  const octokit = getOctokit();
+  const octokit = getOctokitRead();
   let summary = null;
   try {
     const { data } = await octokit.repos.getContent({ owner, repo, path: "summary.json", ref: branch });

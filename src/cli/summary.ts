@@ -1,5 +1,5 @@
 #!/usr/bin/env -S node --enable-source-maps
-import { getOctokit } from "../github/client.js";
+import { getOctokitRead } from "../github/client.js";
 
 async function main() {
   const repoEnv = process.env.GITHUB_REPOSITORY ?? "";
@@ -7,7 +7,7 @@ async function main() {
   const repo = process.env.DIRECTORY_REPO ?? repoEnv.split("/")[1] ?? "";
   const branch = process.env.DATA_BRANCH ?? "__STORAGE__";
 
-  const octokit = getOctokit();
+  const octokit = getOctokitRead();
   let summary: any = null;
   try {
     const { data } = await octokit.repos.getContent({ owner, repo, path: "summary.json", ref: branch });

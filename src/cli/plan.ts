@@ -1,5 +1,5 @@
 #!/usr/bin/env -S node --enable-source-maps
-import { getOctokit, getRateRemaining } from "../github/client.js";
+import { getOctokitRead, getRateRemaining } from "../github/client.js";
 import { loadConfig } from "../config/load.js";
 import { discoverRepos } from "../discovery.js";
 import fs from "fs";
@@ -49,7 +49,7 @@ function greedyBalanceShards(repos: Repo[], weights: Map<Repo, number>, K: numbe
 // Plan: discover repos, compute simple weights from prior artifacts, balance shards greedily
 async function main() {
   const cfg = loadConfig();
-  const octokit = getOctokit();
+  const octokit = getOctokitRead();
   const remaining = await getRateRemaining(octokit);
   const repos = await discoverRepos(octokit, cfg);
   const K = Math.max(1, Math.min(cfg.max_shards, repos.length || 1));

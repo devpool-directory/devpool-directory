@@ -1,5 +1,5 @@
 #!/usr/bin/env -S node --enable-source-maps
-import { getOctokit } from "../github/client.js";
+import { getOctokitRead, getOctokitWrite } from "../github/client.js";
 import { Octokit } from "@octokit/rest";
 import { syncShard } from "../mirror/sync.js";
 import { writeJson } from "../artifacts/write.js";
@@ -31,8 +31,8 @@ async function main() {
     if (entry?.repos) repos = entry.repos as string[];
   } catch {}
 
-  const octokitWrite = getOctokit();
-  const octokitRead = process.env.GH_TOKEN ? new Octokit({ auth: process.env.GH_TOKEN }) : new Octokit();
+  const octokitWrite = getOctokitWrite();
+  const octokitRead = getOctokitRead();
   // Optional inputs provided by plan job
   const indexPath = "index.json";
   const twitterMapPath = "twitter-map.json";

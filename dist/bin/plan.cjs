@@ -7932,9 +7932,12 @@ function env(name, required = false) {
 }
 
 // src/github/client.ts
-function getOctokit() {
-  const token = process.env.GH_TOKEN || env("GITHUB_TOKEN", true);
-  return new Octokit2({ auth: token, request: { retries: 0 } });
+function getOctokitRead() {
+  const pat = process.env.GH_TOKEN;
+  if (pat) return new Octokit2({ auth: pat, request: { retries: 0 } });
+  const gh = env("GITHUB_TOKEN", false);
+  if (gh) return new Octokit2({ auth: gh, request: { retries: 0 } });
+  return new Octokit2({ request: { retries: 0 } });
 }
 async function getRateRemaining(octokit) {
   const { data } = await octokit.rateLimit.get();
@@ -7996,7 +7999,7 @@ function greedyBalanceShards(repos, weights, K) {
 }
 async function main() {
   const cfg = loadConfig();
-  const octokit = getOctokit();
+  const octokit = getOctokitRead();
   await getRateRemaining(octokit);
   const repos = await discoverRepos(octokit, cfg);
   const K = Math.max(1, Math.min(cfg.max_shards, repos.length || 1));
