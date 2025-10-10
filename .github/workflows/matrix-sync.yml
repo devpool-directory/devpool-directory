@@ -136,6 +136,8 @@ jobs:
       - name: Aggregate & write artifacts
         run: node dist/bin/aggregate.cjs
         env:
+          # Prefer PAT for repo contents writes; fallback is App token
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
           DIRECTORY_OWNER: ${{ github.repository_owner }}
           DIRECTORY_REPO: ${{ github.event.repository.name }}

@@ -7951,7 +7951,7 @@ function env(name, required = false) {
 
 // src/github/client.ts
 function getOctokit() {
-  const token = env("GITHUB_TOKEN", true);
+  const token = process.env.GH_TOKEN || env("GITHUB_TOKEN", true);
   return new Octokit2({ auth: token, request: { retries: 0 } });
 }
 
