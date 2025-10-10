@@ -3,7 +3,6 @@ import fs from "fs";
 import path from "path";
 import { mergeIssues, mergeMirrorState, mergePRs, computeStatistics } from "../artifacts/merge.js";
 import { writeJson } from "../artifacts/write.js";
-import { getOctokit } from "../github/client.js";
 import { Octokit } from "@octokit/rest";
 import { ensureBranch, commitChanges } from "../storage/git.js";
 
@@ -54,6 +53,12 @@ async function main() {
     tasksCompletedPriced: life.tasks.completed
   };
   // Merge owners with prior artifact to retain avatars when a shard sees none
+  // Use the GitHub App token for reads/writes to the data branch
+  const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
+  const owner = process.env.DIRECTORY_OWNER ?? "";
+  const repo = process.env.DIRECTORY_REPO ?? "";
+  const branch = process.env.DATA_BRANCH ?? "__STORAGE__";
+
   const ownersMap: Record<string, { owner: string; type: "User" | "Organization"; avatar_url: string }> = {};
   try {
     const { data } = await (octokit as any).repos.getContent({ owner, repo, path: "owners-avatars.json", ref: branch });
@@ -91,11 +96,6 @@ async function main() {
   }
 
   // Seed twitter map from existing artifact on data branch, then merge deltas
-  // Use the GitHub App token for writes (GITHUB_TOKEN), not GH_TOKEN
-  const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
-  const owner = process.env.DIRECTORY_OWNER ?? "";
-  const repo = process.env.DIRECTORY_REPO ?? "";
-  const branch = process.env.DATA_BRANCH ?? "__STORAGE__";
 
   let twitterMap: Record<string, string> = {};
   try {

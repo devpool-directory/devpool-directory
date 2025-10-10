@@ -47,6 +47,17 @@ async function main() {
     ? JSON.parse(fs.readFileSync(twitterMapPath, "utf8"))
     : {};
 
+  // Cold-start guard: if the persistent issues map is absent in the workspace,
+  // force a full resync to bootstrap the dataset instead of doing incremental
+  // "since" queries that can return nothing and keep artifacts empty.
+  // Also allow manual override via FORCE_FULL_RESYNC=true.
+  const issuesMapPath = "issues-map.json";
+  const shouldForceFullResync = process.env.FORCE_FULL_RESYNC === "true" || !fs.existsSync(issuesMapPath);
+  if (shouldForceFullResync) {
+    process.env.FULL_RESYNC = "true";
+    console.error("[sync-shard] Forcing FULL_RESYNC (missing issues-map.json or override enabled)");
+  }
+
   const res = await syncShard(octokitWrite, { repos, directoryOwner, directoryRepo, index, prevSyncMeta: syncMetaIn.perRepo, octokitRead });
 
   // Twitter lifecycle: compute deltas using current state vs twitterMap

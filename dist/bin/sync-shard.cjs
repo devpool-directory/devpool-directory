@@ -14286,6 +14286,12 @@ async function main() {
   const syncMetaInPath = "sync-metadata.json";
   const syncMetaIn = fs4__namespace.default.existsSync(syncMetaInPath) ? JSON.parse(fs4__namespace.default.readFileSync(syncMetaInPath, "utf8")) : { perRepo: {} };
   const twitterMap = fs4__namespace.default.existsSync(twitterMapPath) ? JSON.parse(fs4__namespace.default.readFileSync(twitterMapPath, "utf8")) : {};
+  const issuesMapPath = "issues-map.json";
+  const shouldForceFullResync = process.env.FORCE_FULL_RESYNC === "true" || !fs4__namespace.default.existsSync(issuesMapPath);
+  if (shouldForceFullResync) {
+    process.env.FULL_RESYNC = "true";
+    console.error("[sync-shard] Forcing FULL_RESYNC (missing issues-map.json or override enabled)");
+  }
   const res = await syncShard(octokitWrite, { repos, directoryOwner, directoryRepo, index, prevSyncMeta: syncMetaIn.perRepo, octokitRead });
   const tweetOnCreate = process.env.TWEET_ON_CREATE !== "false";
   const deleteOnComplete = process.env.DELETE_TWEET_ON_COMPLETE !== "false";

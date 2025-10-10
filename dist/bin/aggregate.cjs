@@ -3642,6 +3642,10 @@ async function main() {
     rewardsCompletedUSD: life.rewards.completed,
     tasksCompletedPriced: life.tasks.completed
   };
+  const octokit = new Octokit2({ auth: process.env.GITHUB_TOKEN });
+  const owner = process.env.DIRECTORY_OWNER ?? "";
+  const repo = process.env.DIRECTORY_REPO ?? "";
+  const branch = process.env.DATA_BRANCH ?? "__STORAGE__";
   const ownersMap = {};
   try {
     const { data } = await octokit.repos.getContent({ owner, repo, path: "owners-avatars.json", ref: branch });
@@ -3674,10 +3678,6 @@ async function main() {
   for (const [node, e] of Object.entries(mirrorMerged)) {
     if (e.directory_issue_number && e.directory_issue_url) index[node] = { number: e.directory_issue_number, url: e.directory_issue_url };
   }
-  const octokit = new Octokit2({ auth: process.env.GITHUB_TOKEN });
-  const owner = process.env.DIRECTORY_OWNER ?? "";
-  const repo = process.env.DIRECTORY_REPO ?? "";
-  const branch = process.env.DATA_BRANCH ?? "__STORAGE__";
   let twitterMap = {};
   try {
     const { data } = await octokit.repos.getContent({ owner, repo, path: "twitter-map.json", ref: branch });
