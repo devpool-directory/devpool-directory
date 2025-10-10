@@ -12,6 +12,15 @@ jobs:
   enforce:
     runs-on: ubuntu-latest
     steps:
+      - name: Create GitHub App token
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
       - name: Delete unauthorized issue (non-App author)
         env:
           OWNER: ${{ github.repository_owner }}
@@ -19,7 +28,7 @@ jobs:
           ISSUE_ID: ${{ github.event.issue.node_id }}
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           AUTHOR: ${{ github.event.issue.user.login }}
-          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
           ALLOWED_1: devpool-directory-superintendent
           ALLOWED_2: devpool-directory-superintendent[bot]
         run: |
@@ -29,14 +38,6 @@ jobs:
             echo "Author is the App; allowed."
             exit 0
           fi
-          echo "Unauthorized author; attempting delete via GraphQL..."
-          if [ -n "${GH_TOKEN:-}" ]; then
-            if gh api graphql -f query='mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }' -F id="$ISSUE_ID" >/dev/null 2>&1; then
-              echo "Deleted issue #$ISSUE_NUMBER (unauthorized author: $AUTHOR)"
-              exit 0
-            fi
-          fi
-          echo "Delete failed or PAT unavailable; closing instead."
-          gh api -X PATCH repos/$OWNER/$REPO/issues/$ISSUE_NUMBER -f state=closed >/dev/null 2>&1 || true
-          echo "Closed issue #$ISSUE_NUMBER (unauthorized author: $AUTHOR)"
-
+          echo "Unauthorized author; deleting via GraphQL..."
+          gh api graphql -f query='mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }' -F id="$ISSUE_ID"
+          echo "Deleted issue #$ISSUE_NUMBER (unauthorized author: $AUTHOR)"
