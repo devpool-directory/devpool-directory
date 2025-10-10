@@ -31,8 +31,19 @@ export async function fetchIssuesForRepo(octokit: Octokit, full: string, sinceIS
   const [owner, repo] = full.split("/");
   const params: any = { owner, repo, state: "all", per_page: 100 };
   if (sinceISO) params.since = sinceISO;
-
-  const raw = await withBackoff(() => octokit.paginate(octokit.issues.listForRepo, params));
+  let raw: any[];
+  try {
+    raw = await withBackoff(() => octokit.paginate((octokit as any).issues.listForRepo, params));
+  } catch (e: any) {
+    const status = e?.status ?? e?.response?.status;
+    if ((status === 401 || status === 404) && (process.env.GH_TOKEN || process.env.GITHUB_TOKEN)) {
+      // Fallback to anonymous for public repos if token is bad/mis-scoped
+      const anon = new Octokit();
+      raw = await withBackoff(() => anon.paginate((anon as any).issues.listForRepo, params));
+    } else {
+      throw e;
+    }
+  }
 
   const issues: PartnerIssue[] = [];
   for (const i of raw as any[]) {
@@ -62,7 +73,18 @@ export async function fetchIssuesForRepo(octokit: Octokit, full: string, sinceIS
 
 export async function fetchPRsForRepo(octokit: Octokit, full: string): Promise<PartnerPullRequest[]> {
   const [owner, repo] = full.split("/");
-  const raw = await withBackoff(() => octokit.paginate(octokit.pulls.list, { owner, repo, state: "all", per_page: 100 }));
+  let raw: any[];
+  try {
+    raw = await withBackoff(() => octokit.paginate((octokit as any).pulls.list, { owner, repo, state: "all", per_page: 100 }));
+  } catch (e: any) {
+    const status = e?.status ?? e?.response?.status;
+    if ((status === 401 || status === 404) && (process.env.GH_TOKEN || process.env.GITHUB_TOKEN)) {
+      const anon = new Octokit();
+      raw = await withBackoff(() => anon.paginate((anon as any).pulls.list, { owner, repo, state: "all", per_page: 100 }));
+    } else {
+      throw e;
+    }
+  }
   return raw.map((pr) => ({
     owner,
     repo,

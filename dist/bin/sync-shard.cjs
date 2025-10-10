@@ -8096,7 +8096,18 @@ async function fetchIssuesForRepo(octokit, full, sinceISO) {
   const [owner, repo] = full.split("/");
   const params = { owner, repo, state: "all", per_page: 100 };
   if (sinceISO) params.since = sinceISO;
-  const raw = await withBackoff(() => octokit.paginate(octokit.issues.listForRepo, params));
+  let raw;
+  try {
+    raw = await withBackoff(() => octokit.paginate(octokit.issues.listForRepo, params));
+  } catch (e) {
+    const status = e?.status ?? e?.response?.status;
+    if ((status === 401 || status === 404) && (process.env.GH_TOKEN || process.env.GITHUB_TOKEN)) {
+      const anon = new Octokit2();
+      raw = await withBackoff(() => anon.paginate(anon.issues.listForRepo, params));
+    } else {
+      throw e;
+    }
+  }
   const issues = [];
   for (const i of raw) {
     if (i.pull_request) continue;
@@ -8120,7 +8131,18 @@ async function fetchIssuesForRepo(octokit, full, sinceISO) {
 }
 async function fetchPRsForRepo(octokit, full) {
   const [owner, repo] = full.split("/");
-  const raw = await withBackoff(() => octokit.paginate(octokit.pulls.list, { owner, repo, state: "all", per_page: 100 }));
+  let raw;
+  try {
+    raw = await withBackoff(() => octokit.paginate(octokit.pulls.list, { owner, repo, state: "all", per_page: 100 }));
+  } catch (e) {
+    const status = e?.status ?? e?.response?.status;
+    if ((status === 401 || status === 404) && (process.env.GH_TOKEN || process.env.GITHUB_TOKEN)) {
+      const anon = new Octokit2();
+      raw = await withBackoff(() => anon.paginate(anon.pulls.list, { owner, repo, state: "all", per_page: 100 }));
+    } else {
+      throw e;
+    }
+  }
   return raw.map((pr) => ({
     owner,
     repo,
