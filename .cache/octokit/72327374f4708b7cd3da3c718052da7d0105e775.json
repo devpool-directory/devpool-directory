@@ -1,0 +1,1 @@
+{"key":"GET /repos/{owner}/{repo} {\"method\":\"GET\",\"owner\":\"owner\",\"repo\":\"repo\",\"url\":\"/repos/{owner}/{repo}\"}","url":"https://api.github.com/repos/owner/repo","status":200,"data":{"id":1,"html_url":"https://github.com/owner/repo","name":"repo","owner":"owner"},"cachedAt":1759828270070,"headers":{"content-type":"application/json"}}

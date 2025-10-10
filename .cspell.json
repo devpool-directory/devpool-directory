@@ -4,7 +4,7 @@
   "ignorePaths": ["**/*.json", "**/*.css", "node_modules", "**/*.log"],
   "useGitignore": true,
   "language": "en",
-  "words": ["dataurl", "devpool", "outdir", "servedir"],
+  "words": ["dataurl", "devpool", "outdir", "servedir", "Ubiqui", "incase", "stringifying", "hackbar", "ubiquibot", "ubiquibar", "pavlovcik"],
   "dictionaries": ["typescript", "node", "software-terms"],
   "import": ["@cspell/dict-typescript/cspell-ext.json", "@cspell/dict-node/cspell-ext.json", "@cspell/dict-software-terms"],
   "ignoreRegExpList": ["[0-9a-fA-F]{6}"]

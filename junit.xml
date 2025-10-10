@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites name="jest tests" tests="91" failures="0" errors="0" time="25.364">
+  <testsuite name="Duplicate Issue Prevention" errors="0" failures="0" skipped="0" timestamp="2025-10-10T20:15:16" time="6.804" tests="11">
+    <testcase classname="Duplicate Issue Prevention Duplicate detection logic Should identify duplicate issues with same ID label" name="Duplicate Issue Prevention Duplicate detection logic Should identify duplicate issues with same ID label" time="0.003">
+    </testcase>
+    <testcase classname="Duplicate Issue Prevention Duplicate detection logic Should keep oldest issue and mark newer ones as duplicates" name="Duplicate Issue Prevention Duplicate detection logic Should keep oldest issue and mark newer ones as duplicates" time="0">
+    </testcase>
+    <testcase classname="Duplicate Issue Prevention Duplicate detection logic Should skip closed issues when checking for duplicates" name="Duplicate Issue Prevention Duplicate detection logic Should skip closed issues when checking for duplicates" time="0.001">
+    </testcase>
+    <testcase classname="Duplicate Issue Prevention Duplicate detection logic Should handle multiple duplicate sets" name="Duplicate Issue Prevention Duplicate detection logic Should handle multiple duplicate sets" time="0.002">
+    </testcase>
+    <testcase classname="Duplicate Issue Prevention API optimization Should use per_page parameter for efficiency" name="Duplicate Issue Prevention API optimization Should use per_page parameter for efficiency" time="0.001">
+    </testcase>
+    <testcase classname="Duplicate Issue Prevention API optimization Should check for existing issues when label exists" name="Duplicate Issue Prevention API optimization Should check for existing issues when label exists" time="0.004">
+    </testcase>
+    <testcase classname="Duplicate Issue Prevention API optimization Should not check for existing issues when label is new" name="Duplicate Issue Prevention API optimization Should not check for existing issues when label is new" time="0">
+    </testcase>
+    <testcase classname="Duplicate Issue Prevention Error handling Should have proper error message for duplicate check failure" name="Duplicate Issue Prevention Error handling Should have proper error message for duplicate check failure" time="0">
+    </testcase>
+    <testcase classname="Duplicate Issue Prevention Error handling Should distinguish between label creation errors" name="Duplicate Issue Prevention Error handling Should distinguish between label creation errors" time="0">
+    </testcase>
+    <testcase classname="Duplicate Issue Prevention Deduplication sorting Should correctly sort issues by creation date" name="Duplicate Issue Prevention Deduplication sorting Should correctly sort issues by creation date" time="0">
+    </testcase>
+    <testcase classname="Duplicate Issue Prevention Deduplication sorting Should handle issues with same timestamp" name="Duplicate Issue Prevention Deduplication sorting Should handle issues with same timestamp" time="0">
+    </testcase>
+  </testsuite>
+  <testsuite name="Unplanned Issues Filtering" errors="0" failures="0" skipped="0" timestamp="2025-10-10T20:15:16" time="6.924" tests="7">
+    <testcase classname="Unplanned Issues Filtering Issue Filtering Logic Should filter out issues closed as not_planned" name="Unplanned Issues Filtering Issue Filtering Logic Should filter out issues closed as not_planned" time="0.002">
+    </testcase>
+    <testcase classname="Unplanned Issues Filtering Issue Filtering Logic Should keep open issues regardless of state_reason" name="Unplanned Issues Filtering Issue Filtering Logic Should keep open issues regardless of state_reason" time="0.001">
+    </testcase>
+    <testcase classname="Unplanned Issues Filtering Issue Filtering Logic Should keep closed issues with other state_reasons" name="Unplanned Issues Filtering Issue Filtering Logic Should keep closed issues with other state_reasons" time="0">
+    </testcase>
+    <testcase classname="Unplanned Issues Filtering GitHubIssueWithStateReason interface Should accept valid state_reason values" name="Unplanned Issues Filtering GitHubIssueWithStateReason interface Should accept valid state_reason values" time="0">
+    </testcase>
+    <testcase classname="Unplanned Issues Filtering GitHubIssueWithStateReason interface Should properly extend GitHubIssue" name="Unplanned Issues Filtering GitHubIssueWithStateReason interface Should properly extend GitHubIssue" time="0">
+    </testcase>
+    <testcase classname="Unplanned Issues Filtering Filtering logic validation Should correctly identify unplanned issues" name="Unplanned Issues Filtering Filtering logic validation Should correctly identify unplanned issues" time="0">
+    </testcase>
+    <testcase classname="Unplanned Issues Filtering Filtering logic validation Should handle mixed issue states correctly" name="Unplanned Issues Filtering Filtering logic validation Should handle mixed issue states correctly" time="0.001">
+    </testcase>
+  </testsuite>
+  <testsuite name="Twitter Sync assigned -&gt; delete" errors="0" failures="0" skipped="0" timestamp="2025-10-10T20:15:16" time="7.214" tests="1">
+    <testcase classname="Twitter Sync assigned -&gt; delete assigned issues are excluded and mapped tweets are deleted" name="Twitter Sync assigned -&gt; delete assigned issues are excluded and mapped tweets are deleted" time="0.085">
+    </testcase>
+  </testsuite>
+  <testsuite name="GitHub items" errors="0" failures="0" skipped="0" timestamp="2025-10-10T20:15:16" time="7.249" tests="9">
+    <testcase classname="GitHub items Get owner and repo values" name="GitHub items Get owner and repo values" time="0.003">
+    </testcase>
+    <testcase classname="GitHub items Throw error on missing owner or repo" name="GitHub items Throw error on missing owner or repo" time="0.002">
+    </testcase>
+    <testcase classname="GitHub items Get social media text" name="GitHub items Get social media text" time="0.002">
+    </testcase>
+    <testcase classname="GitHub items Get issue price label" name="GitHub items Get issue price label" time="0.001">
+    </testcase>
+    <testcase classname="GitHub items Get issue label value" name="GitHub items Get issue label value" time="0.002">
+    </testcase>
+    <testcase classname="GitHub items Get issue by label" name="GitHub items Get issue by label" time="0.001">
+    </testcase>
+    <testcase classname="GitHub items Get DevPool labels" name="GitHub items Get DevPool labels" time="0.001">
+    </testcase>
+    <testcase classname="GitHub items Get repo urls" name="GitHub items Get repo urls" time="0.048">
+    </testcase>
+    <testcase classname="GitHub items Get all issues" name="GitHub items Get all issues" time="0.04">
+    </testcase>
+  </testsuite>
+  <testsuite name="Twitter Sync plan/apply" errors="0" failures="0" skipped="0" timestamp="2025-10-10T20:15:16" time="7.25" tests="1">
+    <testcase classname="Twitter Sync plan/apply creates tweet for open+priced+unassigned, then deletes when issue is closed" name="Twitter Sync plan/apply creates tweet for open+priced+unassigned, then deletes when issue is closed" time="0.068">
+    </testcase>
+  </testsuite>
+  <testsuite name="handleDevPoolIssue" errors="0" failures="0" skipped="9" timestamp="2025-10-10T20:15:16" time="18.044" tests="50">
+    <testcase classname="handleDevPoolIssue Devpool directory checkIfForkedRepo" name="handleDevPoolIssue Devpool directory checkIfForkedRepo" time="0.017">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool directory updates issue title in devpool when project issue title changes" name="handleDevPoolIssue Devpool directory updates issue title in devpool when project issue title changes" time="0.038">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool directory updates issue labels in devpool when project issue labels change" name="handleDevPoolIssue Devpool directory updates issue labels in devpool when project issue labels change" time="0.035">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool directory updates issue body in devpool when project issue url changes" name="handleDevPoolIssue Devpool directory updates issue body in devpool when project issue url changes" time="0.031">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool directory does not update issue when no metadata changes are detected" name="handleDevPoolIssue Devpool directory does not update issue when no metadata changes are detected" time="0.032">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool directory keeps devpool issue state unchanged when project issue state is open and devpool issue state is open" name="handleDevPoolIssue Devpool directory keeps devpool issue state unchanged when project issue state is open and devpool issue state is open" time="0.03">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool directory keeps devpool issue state unchanged when project issue state is closed and devpool issue state is closed" name="handleDevPoolIssue Devpool directory keeps devpool issue state unchanged when project issue state is closed and devpool issue state is closed" time="0.036">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool directory closes devpool issue when project issue is closed" name="handleDevPoolIssue Devpool directory closes devpool issue when project issue is closed" time="0.032">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool directory reopens devpool issue when project issue is reopened" name="handleDevPoolIssue Devpool directory reopens devpool issue when project issue is reopened" time="0.034">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool directory adds Unavailable label to devpool issue when project issue is assigned and open" name="handleDevPoolIssue Devpool directory adds Unavailable label to devpool issue when project issue is assigned and open" time="1.046">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool directory removes Unavailable label from devpool issue when project issue is closed" name="handleDevPoolIssue Devpool directory removes Unavailable label from devpool issue when project issue is closed" time="1.051">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool directory removes Unavailable label from devpool issue when project issue is unassigned and reopened" name="handleDevPoolIssue Devpool directory removes Unavailable label from devpool issue when project issue is unassigned and reopened" time="0.044">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool (transferred) directory checkIfForkedRepo" name="handleDevPoolIssue Devpool (transferred) directory checkIfForkedRepo" time="0.012">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool (transferred) directory updates issue title in devpool when project issue title changes" name="handleDevPoolIssue Devpool (transferred) directory updates issue title in devpool when project issue title changes" time="0.03">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool (transferred) directory updates issue labels in devpool when project issue labels change" name="handleDevPoolIssue Devpool (transferred) directory updates issue labels in devpool when project issue labels change" time="0.031">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool (transferred) directory updates issue body in devpool when project issue url changes" name="handleDevPoolIssue Devpool (transferred) directory updates issue body in devpool when project issue url changes" time="0.032">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool (transferred) directory does not update issue when no metadata changes are detected" name="handleDevPoolIssue Devpool (transferred) directory does not update issue when no metadata changes are detected" time="0.031">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool (transferred) directory keeps devpool issue state unchanged when project issue state is open and devpool issue state is open" name="handleDevPoolIssue Devpool (transferred) directory keeps devpool issue state unchanged when project issue state is open and devpool issue state is open" time="0.03">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool (transferred) directory keeps devpool issue state unchanged when project issue state is closed and devpool issue state is closed" name="handleDevPoolIssue Devpool (transferred) directory keeps devpool issue state unchanged when project issue state is closed and devpool issue state is closed" time="0.03">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool (transferred) directory closes devpool issue when project issue is closed" name="handleDevPoolIssue Devpool (transferred) directory closes devpool issue when project issue is closed" time="0.029">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool (transferred) directory reopens devpool issue when project issue is reopened" name="handleDevPoolIssue Devpool (transferred) directory reopens devpool issue when project issue is reopened" time="0.029">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool (transferred) directory adds Unavailable label to devpool issue when project issue is assigned and open" name="handleDevPoolIssue Devpool (transferred) directory adds Unavailable label to devpool issue when project issue is assigned and open" time="1.037">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool (transferred) directory removes Unavailable label from devpool issue when project issue is closed" name="handleDevPoolIssue Devpool (transferred) directory removes Unavailable label from devpool issue when project issue is closed" time="1.047">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Devpool (transferred) directory removes Unavailable label from devpool issue when project issue is unassigned and reopened" name="handleDevPoolIssue Devpool (transferred) directory removes Unavailable label from devpool issue when project issue is unassigned and reopened" time="0.042">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Forked Devpool directory checkIfForkedRepo" name="handleDevPoolIssue Forked Devpool directory checkIfForkedRepo" time="0.01">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Forked Devpool directory updates issue title in devpool when project issue title changes" name="handleDevPoolIssue Forked Devpool directory updates issue title in devpool when project issue title changes" time="0.032">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Forked Devpool directory updates issue labels in devpool when project issue labels change" name="handleDevPoolIssue Forked Devpool directory updates issue labels in devpool when project issue labels change" time="0.029">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Forked Devpool directory updates issue body in devpool when project issue url changes" name="handleDevPoolIssue Forked Devpool directory updates issue body in devpool when project issue url changes" time="0.032">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Forked Devpool directory does not update issue when no metadata changes are detected" name="handleDevPoolIssue Forked Devpool directory does not update issue when no metadata changes are detected" time="0.03">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Forked Devpool directory keeps devpool issue state unchanged when project issue state is open and devpool issue state is open" name="handleDevPoolIssue Forked Devpool directory keeps devpool issue state unchanged when project issue state is open and devpool issue state is open" time="0.032">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Forked Devpool directory keeps devpool issue state unchanged when project issue state is closed and devpool issue state is closed" name="handleDevPoolIssue Forked Devpool directory keeps devpool issue state unchanged when project issue state is closed and devpool issue state is closed" time="0.028">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Forked Devpool directory closes devpool issue when project issue is closed" name="handleDevPoolIssue Forked Devpool directory closes devpool issue when project issue is closed" time="0.031">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Forked Devpool directory reopens devpool issue when project issue is reopened" name="handleDevPoolIssue Forked Devpool directory reopens devpool issue when project issue is reopened" time="0.028">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Forked Devpool directory adds Unavailable label to devpool issue when project issue is assigned and open" name="handleDevPoolIssue Forked Devpool directory adds Unavailable label to devpool issue when project issue is assigned and open" time="1.035">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Forked Devpool directory removes Unavailable label from devpool issue when project issue is closed" name="handleDevPoolIssue Forked Devpool directory removes Unavailable label from devpool issue when project issue is closed" time="1.051">
+    </testcase>
+    <testcase classname="handleDevPoolIssue Forked Devpool directory removes Unavailable label from devpool issue when project issue is unassigned and reopened" name="handleDevPoolIssue Forked Devpool directory removes Unavailable label from devpool issue when project issue is unassigned and reopened" time="0.056">
+    </testcase>
+    <testcase classname="handleDevPoolIssue getRepoUrls" name="handleDevPoolIssue getRepoUrls" time="0.325">
+    </testcase>
+    <testcase classname="createDevPoolIssue (integration) Devpool directory only creates a new devpool issue if it&apos;s unassigned, opened and not already a devpool issue" name="createDevPoolIssue (integration) Devpool directory only creates a new devpool issue if it&apos;s unassigned, opened and not already a devpool issue" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="createDevPoolIssue (integration) Devpool directory does not create a new devpool issue if it&apos;s already a devpool issue" name="createDevPoolIssue (integration) Devpool directory does not create a new devpool issue if it&apos;s already a devpool issue" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="createDevPoolIssue (integration) Devpool directory does not create a new devpool issue if it&apos;s closed" name="createDevPoolIssue (integration) Devpool directory does not create a new devpool issue if it&apos;s closed" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="createDevPoolIssue (integration) Devpool (transferred) directory only creates a new devpool issue if it&apos;s unassigned, opened and not already a devpool issue" name="createDevPoolIssue (integration) Devpool (transferred) directory only creates a new devpool issue if it&apos;s unassigned, opened and not already a devpool issue" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="createDevPoolIssue (integration) Devpool (transferred) directory does not create a new devpool issue if it&apos;s already a devpool issue" name="createDevPoolIssue (integration) Devpool (transferred) directory does not create a new devpool issue if it&apos;s already a devpool issue" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="createDevPoolIssue (integration) Devpool (transferred) directory does not create a new devpool issue if it&apos;s closed" name="createDevPoolIssue (integration) Devpool (transferred) directory does not create a new devpool issue if it&apos;s closed" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="createDevPoolIssue (integration) Forked Devpool directory only creates a new devpool issue if it&apos;s unassigned, opened and not already a devpool issue" name="createDevPoolIssue (integration) Forked Devpool directory only creates a new devpool issue if it&apos;s unassigned, opened and not already a devpool issue" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="createDevPoolIssue (integration) Forked Devpool directory does not create a new devpool issue if it&apos;s already a devpool issue" name="createDevPoolIssue (integration) Forked Devpool directory does not create a new devpool issue if it&apos;s already a devpool issue" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="createDevPoolIssue (integration) Forked Devpool directory does not create a new devpool issue if it&apos;s closed" name="createDevPoolIssue (integration) Forked Devpool directory does not create a new devpool issue if it&apos;s closed" time="0">
+      <skipped/>
+    </testcase>
+    <testcase classname="getProjectUrls returns projects not included in Opt.out" name="getProjectUrls returns projects not included in Opt.out" time="0.077">
+    </testcase>
+    <testcase classname="calculateStatistics calculates statistics correctly for empty issues array" name="calculateStatistics calculates statistics correctly for empty issues array" time="0">
+    </testcase>
+    <testcase classname="calculateStatistics calculates statistics correctly for issues with different labels and states" name="calculateStatistics calculates statistics correctly for issues with different labels and states" time="2.025">
+    </testcase>
+    <testcase classname="calculateStatistics ignores invalid pricing labels and logs an error" name="calculateStatistics ignores invalid pricing labels and logs an error" time="1">
+    </testcase>
+  </testsuite>
+  <testsuite name="Sandbox GitHub API Integration Tests" errors="0" failures="0" skipped="0" timestamp="2025-10-10T20:15:16" time="24.863" tests="12">
+    <testcase classname="Sandbox GitHub API Integration Tests Issue Operations should create a new issue" name="Sandbox GitHub API Integration Tests Issue Operations should create a new issue" time="0.881">
+    </testcase>
+    <testcase classname="Sandbox GitHub API Integration Tests Issue Operations should update issue title" name="Sandbox GitHub API Integration Tests Issue Operations should update issue title" time="0.597">
+    </testcase>
+    <testcase classname="Sandbox GitHub API Integration Tests Issue Operations should add labels to issue" name="Sandbox GitHub API Integration Tests Issue Operations should add labels to issue" time="0.748">
+    </testcase>
+    <testcase classname="Sandbox GitHub API Integration Tests Issue Operations should list repository issues" name="Sandbox GitHub API Integration Tests Issue Operations should list repository issues" time="3.273">
+    </testcase>
+    <testcase classname="Sandbox GitHub API Integration Tests Issue Operations should close an issue" name="Sandbox GitHub API Integration Tests Issue Operations should close an issue" time="0.832">
+    </testcase>
+    <testcase classname="Sandbox GitHub API Integration Tests Issue Operations should reopen an issue" name="Sandbox GitHub API Integration Tests Issue Operations should reopen an issue" time="1.369">
+    </testcase>
+    <testcase classname="Sandbox GitHub API Integration Tests DevPool Directory Scenarios should simulate partner issue creation" name="Sandbox GitHub API Integration Tests DevPool Directory Scenarios should simulate partner issue creation" time="0.535">
+    </testcase>
+    <testcase classname="Sandbox GitHub API Integration Tests DevPool Directory Scenarios should create corresponding devpool issue" name="Sandbox GitHub API Integration Tests DevPool Directory Scenarios should create corresponding devpool issue" time="0.702">
+    </testcase>
+    <testcase classname="Sandbox GitHub API Integration Tests DevPool Directory Scenarios should sync title changes from partner to devpool" name="Sandbox GitHub API Integration Tests DevPool Directory Scenarios should sync title changes from partner to devpool" time="2.512">
+    </testcase>
+    <testcase classname="Sandbox GitHub API Integration Tests DevPool Directory Scenarios should handle issue assignment" name="Sandbox GitHub API Integration Tests DevPool Directory Scenarios should handle issue assignment" time="2.317">
+    </testcase>
+    <testcase classname="Sandbox GitHub API Integration Tests Error Handling should handle non-existent issue gracefully" name="Sandbox GitHub API Integration Tests Error Handling should handle non-existent issue gracefully" time="1.279">
+    </testcase>
+    <testcase classname="Sandbox GitHub API Integration Tests Error Handling should handle invalid operations gracefully" name="Sandbox GitHub API Integration Tests Error Handling should handle invalid operations gracefully" time="0.261">
+    </testcase>
+  </testsuite>
+</testsuites>
