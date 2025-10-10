@@ -4,6 +4,7 @@ import path from "path";
 import { mergeIssues, mergeMirrorState, mergePRs, computeStatistics } from "../artifacts/merge.js";
 import { writeJson } from "../artifacts/write.js";
 import { getOctokit } from "../github/client.js";
+import { Octokit } from "@octokit/rest";
 import { ensureBranch, commitChanges } from "../storage/git.js";
 
 async function main() {
@@ -90,7 +91,8 @@ async function main() {
   }
 
   // Seed twitter map from existing artifact on data branch, then merge deltas
-  const octokit = getOctokit();
+  // Use the GitHub App token for writes (GITHUB_TOKEN), not GH_TOKEN
+  const octokit = new Octokit({ auth: process.env.GITHUB_TOKEN });
   const owner = process.env.DIRECTORY_OWNER ?? "";
   const repo = process.env.DIRECTORY_REPO ?? "";
   const branch = process.env.DATA_BRANCH ?? "__STORAGE__";
