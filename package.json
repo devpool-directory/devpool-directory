@@ -12,6 +12,7 @@
     "sync:shard": "npm run build && node dist/cli/sync-shard.js",
     "aggregate": "npm run build && node dist/cli/aggregate.js",
     "summary": "npm run build && node dist/cli/summary.js",
+    "backfill": "npm run build && node dist/cli/backfill.js",
     "deduplicate": "npm run build && node dist/cli/dedup.js",
     "bundle": "tsup",
     "bundle:all": "tsup --config tsup.config.ts"

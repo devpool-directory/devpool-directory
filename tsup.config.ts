@@ -6,6 +6,7 @@ export default defineConfig({
     'bin/sync-shard': 'src/cli/sync-shard.ts',
     'bin/aggregate': 'src/cli/aggregate.ts',
     'bin/summary': 'src/cli/summary.ts',
+    'bin/backfill': 'src/cli/backfill.ts',
   },
   format: ['cjs'],
   platform: 'node',

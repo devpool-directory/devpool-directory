@@ -1,0 +1,51 @@
+name: Backfill Historical
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  issues: read
+
+jobs:
+  backfill:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build bundled binaries
+        run: |
+          npm ci --prefer-offline --no-audit --no-fund
+          npm run bundle:all
+
+      - name: Create GitHub App token
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+
+      - name: Run backfill
+        env:
+          GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          DIRECTORY_OWNER: ${{ github.repository_owner }}
+          DIRECTORY_REPO: ${{ github.event.repository.name }}
+          DATA_BRANCH: __STORAGE__
+          BACKFILL_CONCURRENCY: '6'
+        run: node dist/bin/backfill.cjs
+
+      - name: Aggregate after backfill
+        env:
+          GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
+          DIRECTORY_OWNER: ${{ github.repository_owner }}
+          DIRECTORY_REPO: ${{ github.event.repository.name }}
+          DATA_BRANCH: __STORAGE__
+        run: node dist/bin/aggregate.cjs
+
