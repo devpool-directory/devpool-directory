@@ -41,7 +41,16 @@ export async function syncShard(
       let iss: PartnerIssue[] = [];
       try {
         const fullResync = process.env.FULL_RESYNC === "true";
-        const since = fullResync ? undefined : opts.prevSyncMeta?.[full]?.lastSyncISO;
+        let since: string | undefined;
+        if (!fullResync) {
+          const prev = opts.prevSyncMeta?.[full]?.lastSyncISO;
+          if (prev) {
+            const fudgeMin = Math.max(0, Number(process.env.SYNC_SINCE_FUDGE_MINUTES ?? "5"));
+            const t = new Date(prev).getTime();
+            const sinceMs = isFinite(t) ? Math.max(0, t - fudgeMin * 60 * 1000) : Date.now();
+            since = new Date(sinceMs).toISOString();
+          }
+        }
         iss = await fetchIssuesForRepo(okRead, full, since);
       } catch (e: any) {
         console.warn(`[sync] fetchIssues failed for ${full}: ${e?.status ?? e?.message ?? e}`);
