@@ -8154,7 +8154,7 @@ async function fetchOwnersAvatars(octokit, owners) {
 
 // src/artifacts/state.ts
 function computeMirrorStateEntry(issue, directory, category) {
-  const price = issue.labels.find((l) => l.startsWith("Price:")) ?? null;
+  const price = issue.labels.find((l) => /^(Price:|Pricing:)/.test(l)) ?? null;
   const time = issue.labels.find((l) => l.startsWith("Time:")) ?? null;
   return {
     directory_issue_number: directory?.number,
@@ -8239,7 +8239,7 @@ async function syncShard(octokit, opts) {
         if (it.body && /^https?:\/\/(www\.)?github\.com\/[^\s]+\/issues\/\d+$/.test(it.body.trim())) {
           continue;
         }
-        const hasPrice = it.labels.some((l) => /^Price:\s*/.test(l));
+        const hasPrice = it.labels.some((l) => /^(Price:|Pricing:)\s*/.test(l));
         const isOpen = it.state === "open";
         let dir = null;
         if (isOpen && hasPrice) {
@@ -14271,9 +14271,9 @@ async function main() {
   const deletes = [];
   for (const issue of res.issues) {
     const nodeId = issue.node_id;
-    const priceLabel = issue.labels.find((l) => l.startsWith("Price:"));
+    const priceLabel = issue.labels.find((l) => /^(Price:|Pricing:)/.test(l));
     const timeLabel = issue.labels.find((l) => l.startsWith("Time:"));
-    const text = priceLabel ? `${priceLabel.replace(/^Price:\s*/, "")} for ${timeLabel?.replace(/^Time:\s*/, "") ?? "this task"}
+    const text = priceLabel ? `${priceLabel.replace(/^(Price:|Pricing:)\s*/, "")} for ${timeLabel?.replace(/^Time:\s*/, "") ?? "this task"}
 
 ${issue.url}` : null;
     if (issue.state === "open" && tweetOnCreate && text && !twitterMap[nodeId]) {

@@ -40,12 +40,12 @@ async function main() {
   const mirror = mergeMirrorState(mirrorChunks);
   // Restrict published issues file to open + priced items only (initial set; will recompute from issues-map below)
   const issuesOpenPriced = issues.filter(
-    (i) => i.state === "open" && (i.labels || []).some((l: string) => /^Price:\s*/.test(String(l)))
+    (i) => i.state === "open" && (i.labels || []).some((l: string) => /^(Price:|Pricing:)\s*/.test(String(l)))
   );
   const stats = computeStatistics(issuesOpenPriced, mirror);
   // Lifetime (completed): compute over closed + priced to expose historical totals
   const issuesClosedPriced = issues.filter(
-    (i) => i.state === "closed" && (i.labels || []).some((l: string) => /^Price:\s*/.test(String(l)))
+    (i) => i.state === "closed" && (i.labels || []).some((l: string) => /^(Price:|Pricing:)\s*/.test(String(l)))
   );
   const life = computeStatistics(issuesClosedPriced, mirror);
   (stats as any).lifetime = {
@@ -73,7 +73,7 @@ async function main() {
   } catch { issuesMap = {}; }
   for (const it of issues) issuesMap[it.node_id] = it;
   const allIssues: any[] = Object.values(issuesMap);
-  const issuesOpenPricedFromMap = allIssues.filter((i) => i.state === "open" && (i.labels || []).some((l: string) => /^Price:\s*/.test(String(l))));
+  const issuesOpenPricedFromMap = allIssues.filter((i) => i.state === "open" && (i.labels || []).some((l: string) => /^(Price:|Pricing:)\s*/.test(String(l))));
 
   // Merge mirror-state with prior artifact to avoid dropping entries when a shard sees no changes
   let mirrorPrev: Record<string, any> = {};
@@ -129,7 +129,7 @@ async function main() {
     lifetimeMap = {};
   }
   const parsePrice = (labels: string[]): number => {
-    const raw = (labels || []).find((l: string) => /^Price:\s*/.test(String(l)));
+    const raw = (labels || []).find((l: string) => /^(Price:|Pricing:)\s*/.test(String(l)));
     if (!raw) return 0;
     const n = parseInt(String(raw).replace(/[^0-9]/g, ""), 10);
     return Number.isFinite(n) ? n : 0;

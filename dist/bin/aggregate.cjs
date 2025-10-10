@@ -8067,11 +8067,11 @@ async function main() {
   const prs = mergePRs(prChunks);
   const mirror = mergeMirrorState(mirrorChunks);
   const issuesOpenPriced = issues.filter(
-    (i) => i.state === "open" && (i.labels || []).some((l) => /^Price:\s*/.test(String(l)))
+    (i) => i.state === "open" && (i.labels || []).some((l) => /^(Price:|Pricing:)\s*/.test(String(l)))
   );
   const stats = computeStatistics(issuesOpenPriced, mirror);
   const issuesClosedPriced = issues.filter(
-    (i) => i.state === "closed" && (i.labels || []).some((l) => /^Price:\s*/.test(String(l)))
+    (i) => i.state === "closed" && (i.labels || []).some((l) => /^(Price:|Pricing:)\s*/.test(String(l)))
   );
   const life = computeStatistics(issuesClosedPriced, mirror);
   stats.lifetime = {
@@ -8098,7 +8098,7 @@ async function main() {
   }
   for (const it of issues) issuesMap[it.node_id] = it;
   const allIssues = Object.values(issuesMap);
-  const issuesOpenPricedFromMap = allIssues.filter((i) => i.state === "open" && (i.labels || []).some((l) => /^Price:\s*/.test(String(l))));
+  const issuesOpenPricedFromMap = allIssues.filter((i) => i.state === "open" && (i.labels || []).some((l) => /^(Price:|Pricing:)\s*/.test(String(l))));
   let mirrorPrev = {};
   try {
     const { data } = await octokit.repos.getContent({ owner, repo, path: "mirror-state.json", ref: branch });
@@ -8145,7 +8145,7 @@ async function main() {
     lifetimeMap = {};
   }
   const parsePrice = (labels) => {
-    const raw = (labels || []).find((l) => /^Price:\s*/.test(String(l)));
+    const raw = (labels || []).find((l) => /^(Price:|Pricing:)\s*/.test(String(l)));
     if (!raw) return 0;
     const n = parseInt(String(raw).replace(/[^0-9]/g, ""), 10);
     return Number.isFinite(n) ? n : 0;

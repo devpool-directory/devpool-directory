@@ -1,7 +1,7 @@
 import type { MirrorStateEntry, PartnerIssue } from "./types.js";
 
 export function computeMirrorStateEntry(issue: PartnerIssue, directory: { number?: number; url?: string } | null, category?: string): MirrorStateEntry {
-  const price = issue.labels.find((l) => l.startsWith("Price:")) ?? null;
+  const price = issue.labels.find((l) => /^(Price:|Pricing:)/.test(l)) ?? null;
   const time = issue.labels.find((l) => l.startsWith("Time:")) ?? null;
   return {
     directory_issue_number: directory?.number,
@@ -13,4 +13,3 @@ export function computeMirrorStateEntry(issue: PartnerIssue, directory: { number
     category
   };
 }
-

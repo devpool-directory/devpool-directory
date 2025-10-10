@@ -52,7 +52,7 @@ export async function syncShard(
         if (it.body && /^https?:\/\/(www\.)?github\.com\/[^\s]+\/issues\/\d+$/.test(it.body.trim())) {
           continue;
         }
-        const hasPrice = it.labels.some((l) => /^Price:\s*/.test(l));
+        const hasPrice = it.labels.some((l) => /^(Price:|Pricing:)\s*/.test(l));
         const isOpen = it.state === "open";
         let dir: { number?: number; url?: string } | null = null;
 

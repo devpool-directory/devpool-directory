@@ -57,9 +57,9 @@ async function main() {
 
   for (const issue of res.issues) {
     const nodeId = issue.node_id;
-    const priceLabel = issue.labels.find((l) => l.startsWith("Price:"));
+    const priceLabel = issue.labels.find((l) => /^(Price:|Pricing:)/.test(l));
     const timeLabel = issue.labels.find((l) => l.startsWith("Time:"));
-    const text = priceLabel ? `${priceLabel.replace(/^Price:\s*/, "")} for ${timeLabel?.replace(/^Time:\s*/, "") ?? "this task"}\n\n${issue.url}` : null;
+    const text = priceLabel ? `${priceLabel.replace(/^(Price:|Pricing:)\s*/, "")} for ${timeLabel?.replace(/^Time:\s*/, "") ?? "this task"}\n\n${issue.url}` : null;
 
     if (issue.state === "open" && tweetOnCreate && text && !twitterMap[nodeId]) {
       if (!dryRun) {
