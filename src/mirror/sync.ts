@@ -1,4 +1,5 @@
 import type { Octokit } from "@octokit/rest";
+import pLimit from "p-limit";
 import type { MirrorState, PartnerIssue } from "../artifacts/types.js";
 import { fetchIssuesForRepo, fetchPRsForRepo, fetchOwnersAvatars } from "../fetch.js";
 import { computeMirrorStateEntry } from "../artifacts/state.js";
@@ -27,71 +28,78 @@ export async function syncShard(
   const index: IndexMap = opts.index ?? {};
   const dryRun = process.env.DRY_RUN === "true";
 
-  for (const full of opts.repos) {
-    const [owner] = full.split("/");
-    ownersSet.add(owner);
+  const poolSize = Math.max(1, Number(process.env.SHARD_CONCURRENCY ?? "4"));
+  const pool = pLimit(poolSize);
 
-    let iss: PartnerIssue[] = [];
-    try {
-      iss = await fetchIssuesForRepo(octokit, full);
-    } catch (e: any) {
-      console.warn(`[sync] fetchIssues failed for ${full}: ${e?.status ?? e?.message ?? e}`);
-      iss = [];
-    }
-    issues.push(...iss);
+  const tasks = opts.repos.map((full) =>
+    pool(async () => {
+      const [owner] = full.split("/");
+      ownersSet.add(owner);
 
-    for (const it of iss) {
-      // Skip potential mirror issues to avoid recursion: body exactly a GitHub issue URL
-      if (it.body && /^https?:\/\/(www\.)?github\.com\/[^\s]+\/issues\/\d+$/.test(it.body.trim())) {
-        continue;
+      let iss: PartnerIssue[] = [];
+      try {
+        iss = await fetchIssuesForRepo(octokit, full);
+      } catch (e: any) {
+        console.warn(`[sync] fetchIssues failed for ${full}: ${e?.status ?? e?.message ?? e}`);
+        iss = [];
       }
-      const hasPrice = it.labels.some((l) => /^Price:\s*/.test(l));
-      const isOpen = it.state === "open";
-      let dir: { number?: number; url?: string } | null = null;
+      issues.push(...iss);
 
-      // Create/Update mirrors only for open + priced issues
-      if (isOpen && hasPrice) {
-        try {
-          const res = await reconcileMirror(
-            octokit,
-            { owner: opts.directoryOwner, repo: opts.directoryRepo },
-            { node_id: it.node_id, title: it.title, html_url: it.url, state: it.state, labels: it.labels },
-            index,
-            { dryRun }
-          );
-          dir = res;
-          index[it.node_id] = { number: res.number!, url: res.url! };
-        } catch (e) {
-          console.warn(`[sync] mirror create/update failed for ${it.owner}/${it.repo}#${it.number}: ${e instanceof Error ? e.message : e}`);
+      for (const it of iss) {
+        // Skip potential mirror issues to avoid recursion: body exactly a GitHub issue URL
+        if (it.body && /^https?:\/\/(www\.)?github\.com\/[^\s]+\/issues\/\d+$/.test(it.body.trim())) {
+          continue;
         }
-      } else if (!isOpen && index[it.node_id]) {
-        // Close existing mirror when partner issue is closed
-        try {
-          const res = await reconcileMirror(
-            octokit,
-            { owner: opts.directoryOwner, repo: opts.directoryRepo },
-            { node_id: it.node_id, title: it.title, html_url: it.url, state: it.state, labels: it.labels },
-            index,
-            { dryRun }
-          );
-          dir = res;
-        } catch (e) {
-          console.warn(`[sync] mirror close failed for ${it.owner}/${it.repo}#${it.number}: ${e instanceof Error ? e.message : e}`);
+        const hasPrice = it.labels.some((l) => /^Price:\s*/.test(l));
+        const isOpen = it.state === "open";
+        let dir: { number?: number; url?: string } | null = null;
+
+        // Create/Update mirrors only for open + priced issues
+        if (isOpen && hasPrice) {
+          try {
+            const res = await reconcileMirror(
+              octokit,
+              { owner: opts.directoryOwner, repo: opts.directoryRepo },
+              { node_id: it.node_id, title: it.title, html_url: it.url, state: it.state, labels: it.labels },
+              index,
+              { dryRun }
+            );
+            dir = res;
+            index[it.node_id] = { number: res.number!, url: res.url! };
+          } catch (e) {
+            console.warn(`[sync] mirror create/update failed for ${it.owner}/${it.repo}#${it.number}: ${e instanceof Error ? e.message : e}`);
+          }
+        } else if (!isOpen && index[it.node_id]) {
+          // Close existing mirror when partner issue is closed
+          try {
+            const res = await reconcileMirror(
+              octokit,
+              { owner: opts.directoryOwner, repo: opts.directoryRepo },
+              { node_id: it.node_id, title: it.title, html_url: it.url, state: it.state, labels: it.labels },
+              index,
+              { dryRun }
+            );
+            dir = res;
+          } catch (e) {
+            console.warn(`[sync] mirror close failed for ${it.owner}/${it.repo}#${it.number}: ${e instanceof Error ? e.message : e}`);
+          }
         }
+
+        mirrorState[it.node_id] = computeMirrorStateEntry(it, dir, undefined);
       }
 
-      mirrorState[it.node_id] = computeMirrorStateEntry(it, dir, undefined);
-    }
+      try {
+        const rawPrs = await fetchPRsForRepo(octokit, full);
+        prs.push(...rawPrs);
+      } catch (e: any) {
+        console.warn(`[sync] fetchPRs failed for ${full}: ${e?.status ?? e?.message ?? e}`);
+      }
 
-    try {
-      const rawPrs = await fetchPRsForRepo(octokit, full);
-      prs.push(...rawPrs);
-    } catch (e: any) {
-      console.warn(`[sync] fetchPRs failed for ${full}: ${e?.status ?? e?.message ?? e}`);
-    }
+      syncMeta[full] = { lastSyncISO: new Date().toISOString() };
+    })
+  );
 
-    syncMeta[full] = { lastSyncISO: new Date().toISOString() };
-  }
+  await Promise.all(tasks);
 
   const owners = await fetchOwnersAvatars(octokit, ownersSet);
 
