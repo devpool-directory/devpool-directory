@@ -132,7 +132,7 @@ async function main() {
 
   await ensureBranch(octokit, owner, repo, branch);
   await commitChanges(octokit, owner, repo, branch, "sync: update artifacts", [
-    { path: "partner-open-issues.json", content: JSON.stringify(issues) },
+    { path: "partner-open-issues.json", content: JSON.stringify(issuesOpenPriced) },
     { path: "partner-pull-requests.json", content: JSON.stringify(prs) },
     { path: "owners-avatars.json", content: JSON.stringify(owners) },
     { path: "mirror-state.json", content: JSON.stringify(mirror) },
