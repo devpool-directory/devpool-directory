@@ -18,6 +18,7 @@ async function main() {
   const twitterDeltas: any[] = [];
   let tweetsCreated = 0;
   let tweetsDeleted = 0;
+  const shardIdSet = new Set<number>();
 
   for (const d of shardDirs) {
     const dir = path.join(shardsDir, d);
@@ -29,6 +30,8 @@ async function main() {
       if (f.endsWith("-owners.json")) ownerChunks.push(JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")));
       if (f.endsWith("-sync-meta.json")) syncChunks.push(JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")));
       if (f.endsWith("-twitter-delta.json")) twitterDeltas.push(JSON.parse(fs.readFileSync(path.join(dir, f), "utf8")));
+      const m = f.match(/^shard-(\d+)-/);
+      if (m) shardIdSet.add(Number(m[1]));
     }
   }
 
@@ -97,7 +100,7 @@ async function main() {
   const issuesClosed = issues.filter((i) => i.state === "closed").length;
   const summary = {
     reposProcessed,
-    shards: shardDirs.length,
+    shards: shardIdSet.size,
     issuesOpen,
     issuesClosed,
     prs: prs.length,

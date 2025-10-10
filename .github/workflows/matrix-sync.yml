@@ -68,7 +68,7 @@ jobs:
     strategy:
       matrix: ${{ fromJson(needs.plan.outputs.matrix_json) }}
       # Drive parallelism from plan (caps at OSS default 256)
-      max-parallel: ${{ needs.plan.outputs.max_parallel }}
+      max-parallel: ${{ fromJson(needs.plan.outputs.max_parallel) }}
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
