@@ -4,6 +4,12 @@ on:
   # schedule:
     # - cron: "*/15 * * * *"
   workflow_dispatch:
+    inputs:
+      full_resync:
+        description: "Ignore since; full fetch"
+        type: choice
+        options: ["false", "true"]
+        default: "false"
 
 permissions:
   contents: write
@@ -96,6 +102,7 @@ jobs:
           DIRECTORY_OWNER: ${{ github.repository_owner }}
           DIRECTORY_REPO: ${{ github.event.repository.name }}
           WRITE_TARGET_REPO: ${{ github.repository_owner }}/${{ github.event.repository.name }}
+          FULL_RESYNC: ${{ inputs.full_resync }}
           TWEET_ON_CREATE: "true"
           DELETE_TWEET_ON_COMPLETE: "true"
           TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}

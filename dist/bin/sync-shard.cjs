@@ -8227,7 +8227,8 @@ async function syncShard(octokit, opts) {
       ownersSet.add(owner);
       let iss = [];
       try {
-        const since = opts.prevSyncMeta?.[full]?.lastSyncISO;
+        const fullResync = process.env.FULL_RESYNC === "true";
+        const since = fullResync ? void 0 : opts.prevSyncMeta?.[full]?.lastSyncISO;
         iss = await fetchIssuesForRepo(octokit, full, since);
       } catch (e) {
         console.warn(`[sync] fetchIssues failed for ${full}: ${e?.status ?? e?.message ?? e}`);
