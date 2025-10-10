@@ -10,23 +10,20 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # needed to use yarn v4
-      - name: Enable corepack
-        run: corepack enable
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20.10.0
+          node-version: 20
 
-      - name: Install toolchain
-        run: yarn install
+      - name: Install (npm)
+        run: npm ci || npm install
 
       - name: Store PR number
         run: echo ${{ github.event.number }} > pr-number.txt
 
-      - name: Run Knip
-        run: yarn knip || yarn knip --reporter json > knip-results.json
+      - name: Run Knip (npm)
+        run: |
+          npx -y knip || npx -y knip --reporter json > knip-results.json
 
       - name: Upload knip result
         if: failure()
