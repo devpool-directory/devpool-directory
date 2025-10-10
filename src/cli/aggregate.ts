@@ -38,7 +38,11 @@ async function main() {
   const issues = mergeIssues(issueChunks);
   const prs = mergePRs(prChunks);
   const mirror = mergeMirrorState(mirrorChunks);
-  const stats = computeStatistics(issues, mirror);
+  // Restrict published issues file to open + priced items only
+  const issuesOpenPriced = issues.filter(
+    (i) => i.state === "open" && (i.labels || []).some((l: string) => /^Price:\s*/.test(String(l)))
+  );
+  const stats = computeStatistics(issuesOpenPriced, mirror);
   const ownersMap: Record<string, { owner: string; type: "User" | "Organization"; avatar_url: string }> = {};
   for (const chunk of ownerChunks) {
     for (const o of chunk) ownersMap[o.owner] = o;
@@ -85,7 +89,7 @@ async function main() {
 
   // Write local build outputs for debugging
   const outDir = path.join(process.cwd(), "out-agg");
-  writeJson(outDir, "partner-open-issues.json", issues);
+  writeJson(outDir, "partner-open-issues.json", issuesOpenPriced);
   writeJson(outDir, "partner-pull-requests.json", prs);
   writeJson(outDir, "owners-avatars.json", owners);
   writeJson(outDir, "mirror-state.json", mirror);
@@ -98,10 +102,12 @@ async function main() {
   const reposProcessed = Object.keys(syncMeta.perRepo || {}).length;
   const issuesOpen = issues.filter((i) => i.state === "open").length;
   const issuesClosed = issues.filter((i) => i.state === "closed").length;
+  const issuesOpenPricedCount = issuesOpenPriced.length;
   const summary = {
     reposProcessed,
     shards: shardIdSet.size,
     issuesOpen,
+    issuesOpenPriced: issuesOpenPricedCount,
     issuesClosed,
     prs: prs.length,
     mirrors: Object.keys(mirror).length,
