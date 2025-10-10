@@ -7,7 +7,7 @@ export default defineConfig({
     'bin/aggregate': 'src/cli/aggregate.ts',
     'bin/summary': 'src/cli/summary.ts',
   },
-  format: ['esm'],
+  format: ['cjs'],
   platform: 'node',
   target: 'node20',
   sourcemap: true,

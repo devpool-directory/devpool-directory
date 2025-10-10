@@ -8071,14 +8071,32 @@ function pLimit(concurrency) {
 
 // src/fetch.ts
 var limit = pLimit(6);
-async function fetchIssuesForRepo(octokit, full) {
+async function sleep(ms) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+async function withBackoff(fn, attempt = 0) {
+  try {
+    return await fn();
+  } catch (e) {
+    const status = e?.status ?? e?.response?.status;
+    const reset = Number(e?.response?.headers?.["x-ratelimit-reset"]) || 0;
+    const retryAfter = Number(e?.response?.headers?.["retry-after"]) || 0;
+    if (status === 403 || status === 429) {
+      const nowSec = Math.floor(Date.now() / 1e3);
+      const untilResetMs = reset > nowSec ? (reset - nowSec) * 1e3 : 0;
+      const base = Math.min(3e4, 2e3 * Math.pow(2, attempt));
+      const wait = Math.max(base, retryAfter * 1e3, untilResetMs);
+      await sleep(Math.min(wait, 6e4));
+      return withBackoff(fn, Math.min(attempt + 1, 5));
+    }
+    throw e;
+  }
+}
+async function fetchIssuesForRepo(octokit, full, sinceISO) {
   const [owner, repo] = full.split("/");
-  const raw = await octokit.paginate(octokit.issues.listForRepo, {
-    owner,
-    repo,
-    state: "all",
-    per_page: 100
-  });
+  const params = { owner, repo, state: "all", per_page: 100 };
+  if (sinceISO) params.since = sinceISO;
+  const raw = await withBackoff(() => octokit.paginate(octokit.issues.listForRepo, params));
   const issues = [];
   for (const i of raw) {
     if (i.pull_request) continue;
@@ -8102,7 +8120,7 @@ async function fetchIssuesForRepo(octokit, full) {
 }
 async function fetchPRsForRepo(octokit, full) {
   const [owner, repo] = full.split("/");
-  const raw = await octokit.paginate(octokit.pulls.list, { owner, repo, state: "all", per_page: 100 });
+  const raw = await withBackoff(() => octokit.paginate(octokit.pulls.list, { owner, repo, state: "all", per_page: 100 }));
   return raw.map((pr) => ({
     owner,
     repo,
@@ -8209,7 +8227,8 @@ async function syncShard(octokit, opts) {
       ownersSet.add(owner);
       let iss = [];
       try {
-        iss = await fetchIssuesForRepo(octokit, full);
+        const since = opts.prevSyncMeta?.[full]?.lastSyncISO;
+        iss = await fetchIssuesForRepo(octokit, full, since);
       } catch (e) {
         console.warn(`[sync] fetchIssues failed for ${full}: ${e?.status ?? e?.message ?? e}`);
         iss = [];
@@ -14239,8 +14258,10 @@ async function main() {
   const indexPath = "index.json";
   const twitterMapPath = "twitter-map.json";
   const index = fs4__namespace.default.existsSync(indexPath) ? JSON.parse(fs4__namespace.default.readFileSync(indexPath, "utf8")) : {};
+  const syncMetaInPath = "sync-metadata.json";
+  const syncMetaIn = fs4__namespace.default.existsSync(syncMetaInPath) ? JSON.parse(fs4__namespace.default.readFileSync(syncMetaInPath, "utf8")) : { perRepo: {} };
   const twitterMap = fs4__namespace.default.existsSync(twitterMapPath) ? JSON.parse(fs4__namespace.default.readFileSync(twitterMapPath, "utf8")) : {};
-  const res = await syncShard(octokit, { repos, directoryOwner, directoryRepo, index });
+  const res = await syncShard(octokit, { repos, directoryOwner, directoryRepo, index, prevSyncMeta: syncMetaIn.perRepo });
   const tweetOnCreate = process.env.TWEET_ON_CREATE !== "false";
   const deleteOnComplete = process.env.DELETE_TWEET_ON_COMPLETE !== "false";
   const dryRun = process.env.DRY_RUN === "true";

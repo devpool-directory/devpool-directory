@@ -16,7 +16,7 @@ export type SyncResult = {
 
 export async function syncShard(
   octokit: Octokit,
-  opts: { repos: string[]; directoryOwner: string; directoryRepo: string; index?: IndexMap }
+  opts: { repos: string[]; directoryOwner: string; directoryRepo: string; index?: IndexMap; prevSyncMeta?: Record<string, { lastSyncISO?: string }> }
 ): Promise<SyncResult> {
   const issues: PartnerIssue[] = [];
   const mirrorState: MirrorState = {};
@@ -38,7 +38,8 @@ export async function syncShard(
 
       let iss: PartnerIssue[] = [];
       try {
-        iss = await fetchIssuesForRepo(octokit, full);
+        const since = opts.prevSyncMeta?.[full]?.lastSyncISO;
+        iss = await fetchIssuesForRepo(octokit, full, since);
       } catch (e: any) {
         console.warn(`[sync] fetchIssues failed for ${full}: ${e?.status ?? e?.message ?? e}`);
         iss = [];

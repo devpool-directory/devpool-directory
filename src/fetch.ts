@@ -4,14 +4,35 @@ import type { PartnerIssue, PartnerPullRequest } from "./artifacts/types.js";
 
 const limit = pLimit(6);
 
-export async function fetchIssuesForRepo(octokit: Octokit, full: string): Promise<PartnerIssue[]> {
+async function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+async function withBackoff<T>(fn: () => Promise<T>, attempt = 0): Promise<T> {
+  try {
+    return await fn();
+  } catch (e: any) {
+    const status = e?.status ?? e?.response?.status;
+    const reset = Number(e?.response?.headers?.["x-ratelimit-reset"]) || 0;
+    const retryAfter = Number(e?.response?.headers?.["retry-after"]) || 0;
+    if (status === 403 || status === 429) {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const untilResetMs = reset > nowSec ? (reset - nowSec) * 1000 : 0;
+      const base = Math.min(30000, 2000 * Math.pow(2, attempt));
+      const wait = Math.max(base, retryAfter * 1000, untilResetMs);
+      await sleep(Math.min(wait, 60000));
+      return withBackoff(fn, Math.min(attempt + 1, 5));
+    }
+    throw e;
+  }
+}
+
+export async function fetchIssuesForRepo(octokit: Octokit, full: string, sinceISO?: string): Promise<PartnerIssue[]> {
   const [owner, repo] = full.split("/");
-  const raw = await octokit.paginate(octokit.issues.listForRepo, {
-    owner,
-    repo,
-    state: "all",
-    per_page: 100
-  });
+  const params: any = { owner, repo, state: "all", per_page: 100 };
+  if (sinceISO) params.since = sinceISO;
+
+  const raw = await withBackoff(() => octokit.paginate(octokit.issues.listForRepo, params));
 
   const issues: PartnerIssue[] = [];
   for (const i of raw as any[]) {
@@ -41,7 +62,7 @@ export async function fetchIssuesForRepo(octokit: Octokit, full: string): Promis
 
 export async function fetchPRsForRepo(octokit: Octokit, full: string): Promise<PartnerPullRequest[]> {
   const [owner, repo] = full.split("/");
-  const raw = await octokit.paginate(octokit.pulls.list, { owner, repo, state: "all", per_page: 100 });
+  const raw = await withBackoff(() => octokit.paginate(octokit.pulls.list, { owner, repo, state: "all", per_page: 100 }));
   return raw.map((pr) => ({
     owner,
     repo,

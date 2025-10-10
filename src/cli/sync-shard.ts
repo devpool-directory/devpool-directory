@@ -37,11 +37,15 @@ async function main() {
   const index: Record<string, { number: number; url: string }> = fs.existsSync(indexPath)
     ? JSON.parse(fs.readFileSync(indexPath, "utf8"))
     : {};
+  const syncMetaInPath = "sync-metadata.json";
+  const syncMetaIn: { perRepo: Record<string, { lastSyncISO?: string }> } = fs.existsSync(syncMetaInPath)
+    ? JSON.parse(fs.readFileSync(syncMetaInPath, "utf8"))
+    : { perRepo: {} };
   const twitterMap: Record<string, string> = fs.existsSync(twitterMapPath)
     ? JSON.parse(fs.readFileSync(twitterMapPath, "utf8"))
     : {};
 
-  const res = await syncShard(octokit, { repos, directoryOwner, directoryRepo, index });
+  const res = await syncShard(octokit, { repos, directoryOwner, directoryRepo, index, prevSyncMeta: syncMetaIn.perRepo });
 
   // Twitter lifecycle: compute deltas using current state vs twitterMap
   const tweetOnCreate = process.env.TWEET_ON_CREATE !== "false";
