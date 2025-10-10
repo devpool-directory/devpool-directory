@@ -88,6 +88,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
           DIRECTORY_OWNER: ${{ github.repository_owner }}
           DIRECTORY_REPO: ${{ github.event.repository.name }}
+          WRITE_TARGET_REPO: ${{ github.repository_owner }}/${{ github.event.repository.name }}
           TWEET_ON_CREATE: "true"
           DELETE_TWEET_ON_COMPLETE: "true"
           TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}

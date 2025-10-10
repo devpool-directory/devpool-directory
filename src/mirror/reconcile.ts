@@ -10,6 +10,11 @@ export async function reconcileMirror(
   opts?: { dryRun?: boolean }
 ): Promise<{ number: number; url: string }> {
   const dry = Boolean(opts?.dryRun);
+  const enforced = process.env.WRITE_TARGET_REPO;
+  const target = `${directory.owner}/${directory.repo}`;
+  if (enforced && enforced !== target) {
+    throw new Error(`write-blocked: target ${target} != enforced ${enforced}`);
+  }
   const existing = index[partnerIssue.node_id];
   const common = {
     owner: directory.owner,
@@ -21,13 +26,12 @@ export async function reconcileMirror(
 
   if (!existing) {
     if (dry) return { number: -1, url: "" };
-    const { data } = await octokit.issues.create({ ...common });
+    const { data } = await (octokit as any).rest.issues.create({ ...common });
     return { number: data.number, url: data.html_url ?? "" };
   }
 
   if (!dry) {
-    await octokit.issues.update({ ...common, issue_number: existing.number, state: partnerIssue.state });
+    await (octokit as any).rest.issues.update({ ...common, issue_number: existing.number, state: partnerIssue.state });
   }
   return existing;
 }
-
