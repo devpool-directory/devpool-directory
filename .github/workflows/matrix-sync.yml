@@ -30,7 +30,7 @@ jobs:
         with: { node-version: 20 }
       - name: Generate plan
         run: |
-          node dist/bin/plan.js > plan.json
+          node dist/bin/plan.cjs > plan.json
         env:
           # Use default Actions token for read-only planning (avoids PAT scope mismatches)
           GITHUB_TOKEN: ${{ github.token }}
@@ -88,7 +88,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with: { name: plan-extra }
       - name: Run shard
-        run: node dist/bin/sync-shard.js --shard ${{ matrix.shard_id }}
+        run: node dist/bin/sync-shard.cjs --shard ${{ matrix.shard_id }}
         env:
           # Use GitHub App token so mirrors are authored by the App
           GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
@@ -127,7 +127,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
       - name: Aggregate & write artifacts
-        run: node dist/bin/aggregate.js
+        run: node dist/bin/aggregate.cjs
         env:
           GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
           DIRECTORY_OWNER: ${{ github.repository_owner }}
@@ -142,7 +142,7 @@ jobs:
       # Ensure Node is available; no dependency install required for bundled scripts
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - run: node dist/bin/summary.js >> $GITHUB_STEP_SUMMARY
+      - run: node dist/bin/summary.cjs >> $GITHUB_STEP_SUMMARY
         env:
           GITHUB_TOKEN: ${{ github.token }}
           DIRECTORY_OWNER: ${{ github.repository_owner }}

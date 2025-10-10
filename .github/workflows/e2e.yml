@@ -32,7 +32,7 @@ jobs:
           CONFIG_PATH: config/e2e.config.json
 
       - name: Generate plan (K=1)
-        run: node dist/bin/plan.js > plan.json
+        run: node dist/bin/plan.cjs > plan.json
         env:
           GITHUB_TOKEN: ${{ github.token }}
           CONFIG_PATH: config/e2e.config.json
@@ -47,7 +47,7 @@ jobs:
           repositories: ${{ github.event.inputs.directory_repo }}
 
       - name: Run shard 0 against testing repo
-        run: node dist/bin/sync-shard.js --shard 0
+        run: node dist/bin/sync-shard.cjs --shard 0
         env:
           GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
           DIRECTORY_OWNER: ${{ github.repository_owner }}
@@ -68,7 +68,7 @@ jobs:
           if-no-files-found: ignore
 
       - name: Aggregate & write artifacts to testing repo
-        run: node dist/bin/aggregate.js
+        run: node dist/bin/aggregate.cjs
         env:
           GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
           DIRECTORY_OWNER: ${{ github.repository_owner }}
@@ -76,7 +76,7 @@ jobs:
           DATA_BRANCH: __STORAGE__
 
       - name: Summary
-        run: node dist/bin/summary.js >> $GITHUB_STEP_SUMMARY
+        run: node dist/bin/summary.cjs >> $GITHUB_STEP_SUMMARY
         env:
           GITHUB_TOKEN: ${{ github.token }}
           DIRECTORY_OWNER: ${{ github.repository_owner }}
