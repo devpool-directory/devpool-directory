@@ -5,4 +5,7 @@ dist/
 .env.*
 coverage/
 *.log
-
+dedupe-issues.jsonl
+dedupe-issues.all.jsonl
+dedupe-plan.json
+dedupe-to-delete.tsv

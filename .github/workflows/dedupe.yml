@@ -116,4 +116,3 @@ jobs:
           echo "- Dry run: ${{ inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
           echo "- Only bot authored: ${{ inputs.only_bot }}" >> $GITHUB_STEP_SUMMARY
           echo "- Duplicate groups: ${{ steps.plan.outputs.groups }}" >> $GITHUB_STEP_SUMMARY
-
