@@ -3741,7 +3741,8 @@ async function main() {
   }
   const rewardsCompletedUSD = Object.values(lifetimeMap).reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
   const tasksCompletedPriced = Object.values(lifetimeMap).filter((v) => (Number.isFinite(v) ? v : 0) > 0).length;
-  stats.lifetime = { rewardsCompletedUSD, tasksCompletedPriced };
+  const prevLifetime = stats.lifetime || {};
+  stats.lifetime = { ...prevLifetime, rewardsCompletedUSD, tasksCompletedPriced };
   const outDir = path2__default.default.join(process.cwd(), "out-agg");
   writeJson(outDir, "partner-open-issues.json", issuesOpenPricedFromMap);
   writeJson(outDir, "partner-pull-requests.json", prs);

@@ -172,7 +172,8 @@ async function main() {
   }
   const rewardsCompletedUSD = Object.values(lifetimeMap).reduce((a, b) => a + (Number.isFinite(b) ? b : 0), 0);
   const tasksCompletedPriced = Object.values(lifetimeMap).filter((v) => (Number.isFinite(v) ? v : 0) > 0).length;
-  (stats as any).lifetime = { rewardsCompletedUSD, tasksCompletedPriced };
+  const prevLifetime = (stats as any).lifetime || {};
+  (stats as any).lifetime = { ...prevLifetime, rewardsCompletedUSD, tasksCompletedPriced };
 
   // Write local build outputs for debugging
   const outDir = path.join(process.cwd(), "out-agg");
