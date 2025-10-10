@@ -15,8 +15,8 @@ export type SyncResult = {
 };
 
 export async function syncShard(
-  octokit: Octokit,
-  opts: { repos: string[]; directoryOwner: string; directoryRepo: string; index?: IndexMap; prevSyncMeta?: Record<string, { lastSyncISO?: string }> }
+  octokitWrite: Octokit,
+  opts: { repos: string[]; directoryOwner: string; directoryRepo: string; index?: IndexMap; prevSyncMeta?: Record<string, { lastSyncISO?: string }>; octokitRead?: Octokit }
 ): Promise<SyncResult> {
   const issues: PartnerIssue[] = [];
   const mirrorState: MirrorState = {};
@@ -31,6 +31,8 @@ export async function syncShard(
   const poolSize = Math.max(1, Number(process.env.SHARD_CONCURRENCY ?? "4"));
   const pool = pLimit(poolSize);
 
+  const okRead = opts.octokitRead ?? octokitWrite;
+
   const tasks = opts.repos.map((full) =>
     pool(async () => {
       const [owner] = full.split("/");
@@ -40,7 +42,7 @@ export async function syncShard(
       try {
         const fullResync = process.env.FULL_RESYNC === "true";
         const since = fullResync ? undefined : opts.prevSyncMeta?.[full]?.lastSyncISO;
-        iss = await fetchIssuesForRepo(octokit, full, since);
+        iss = await fetchIssuesForRepo(okRead, full, since);
       } catch (e: any) {
         console.warn(`[sync] fetchIssues failed for ${full}: ${e?.status ?? e?.message ?? e}`);
         iss = [];
@@ -60,7 +62,7 @@ export async function syncShard(
         if (isOpen && hasPrice) {
           try {
             const res = await reconcileMirror(
-              octokit,
+              octokitWrite,
               { owner: opts.directoryOwner, repo: opts.directoryRepo },
               { node_id: it.node_id, title: it.title, html_url: it.url, state: it.state, labels: it.labels },
               index,
@@ -75,7 +77,7 @@ export async function syncShard(
           // Close existing mirror when partner issue is closed
           try {
             const res = await reconcileMirror(
-              octokit,
+              octokitWrite,
               { owner: opts.directoryOwner, repo: opts.directoryRepo },
               { node_id: it.node_id, title: it.title, html_url: it.url, state: it.state, labels: it.labels },
               index,
@@ -91,7 +93,7 @@ export async function syncShard(
       }
 
       try {
-        const rawPrs = await fetchPRsForRepo(octokit, full);
+        const rawPrs = await fetchPRsForRepo(okRead, full);
         prs.push(...rawPrs);
       } catch (e: any) {
         console.warn(`[sync] fetchPRs failed for ${full}: ${e?.status ?? e?.message ?? e}`);
@@ -103,7 +105,7 @@ export async function syncShard(
 
   await Promise.all(tasks);
 
-  const owners = await fetchOwnersAvatars(octokit, ownersSet);
+  const owners = await fetchOwnersAvatars(okRead, ownersSet);
 
   return { issues, mirrorState, prs, owners, twitterDelta, syncMeta };
 }

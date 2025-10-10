@@ -1,5 +1,6 @@
 #!/usr/bin/env -S node --enable-source-maps
 import { getOctokit } from "../github/client.js";
+import { Octokit } from "@octokit/rest";
 import { syncShard } from "../mirror/sync.js";
 import { writeJson } from "../artifacts/write.js";
 import fs from "fs";
@@ -30,7 +31,8 @@ async function main() {
     if (entry?.repos) repos = entry.repos as string[];
   } catch {}
 
-  const octokit = getOctokit();
+  const octokitWrite = getOctokit();
+  const octokitRead = process.env.GH_TOKEN ? new Octokit({ auth: process.env.GH_TOKEN }) : new Octokit();
   // Optional inputs provided by plan job
   const indexPath = "index.json";
   const twitterMapPath = "twitter-map.json";
@@ -45,7 +47,7 @@ async function main() {
     ? JSON.parse(fs.readFileSync(twitterMapPath, "utf8"))
     : {};
 
-  const res = await syncShard(octokit, { repos, directoryOwner, directoryRepo, index, prevSyncMeta: syncMetaIn.perRepo });
+  const res = await syncShard(octokitWrite, { repos, directoryOwner, directoryRepo, index, prevSyncMeta: syncMetaIn.perRepo, octokitRead });
 
   // Twitter lifecycle: compute deltas using current state vs twitterMap
   const tweetOnCreate = process.env.TWEET_ON_CREATE !== "false";

@@ -8210,7 +8210,7 @@ async function reconcileMirror(octokit, directory, partnerIssue, index, opts) {
 }
 
 // src/mirror/sync.ts
-async function syncShard(octokit, opts) {
+async function syncShard(octokitWrite, opts) {
   const issues = [];
   const mirrorState = {};
   const prs = [];
@@ -8221,6 +8221,7 @@ async function syncShard(octokit, opts) {
   const dryRun = process.env.DRY_RUN === "true";
   const poolSize = Math.max(1, Number(process.env.SHARD_CONCURRENCY ?? "4"));
   const pool = pLimit(poolSize);
+  const okRead = opts.octokitRead ?? octokitWrite;
   const tasks = opts.repos.map(
     (full) => pool(async () => {
       const [owner] = full.split("/");
@@ -8229,7 +8230,7 @@ async function syncShard(octokit, opts) {
       try {
         const fullResync = process.env.FULL_RESYNC === "true";
         const since = fullResync ? void 0 : opts.prevSyncMeta?.[full]?.lastSyncISO;
-        iss = await fetchIssuesForRepo(octokit, full, since);
+        iss = await fetchIssuesForRepo(okRead, full, since);
       } catch (e) {
         console.warn(`[sync] fetchIssues failed for ${full}: ${e?.status ?? e?.message ?? e}`);
         iss = [];
@@ -8245,7 +8246,7 @@ async function syncShard(octokit, opts) {
         if (isOpen && hasPrice) {
           try {
             const res = await reconcileMirror(
-              octokit,
+              octokitWrite,
               { owner: opts.directoryOwner, repo: opts.directoryRepo },
               { node_id: it.node_id, title: it.title, html_url: it.url, state: it.state, labels: it.labels },
               index,
@@ -8259,7 +8260,7 @@ async function syncShard(octokit, opts) {
         } else if (!isOpen && index[it.node_id]) {
           try {
             const res = await reconcileMirror(
-              octokit,
+              octokitWrite,
               { owner: opts.directoryOwner, repo: opts.directoryRepo },
               { node_id: it.node_id, title: it.title, html_url: it.url, state: it.state, labels: it.labels },
               index,
@@ -8273,7 +8274,7 @@ async function syncShard(octokit, opts) {
         mirrorState[it.node_id] = computeMirrorStateEntry(it, dir, void 0);
       }
       try {
-        const rawPrs = await fetchPRsForRepo(octokit, full);
+        const rawPrs = await fetchPRsForRepo(okRead, full);
         prs.push(...rawPrs);
       } catch (e) {
         console.warn(`[sync] fetchPRs failed for ${full}: ${e?.status ?? e?.message ?? e}`);
@@ -8282,7 +8283,7 @@ async function syncShard(octokit, opts) {
     })
   );
   await Promise.all(tasks);
-  const owners = await fetchOwnersAvatars(octokit, ownersSet);
+  const owners = await fetchOwnersAvatars(okRead, ownersSet);
   return { issues, mirrorState, prs, owners, twitterDelta, syncMeta };
 }
 function writeJson(outDir, file, data) {
@@ -14255,14 +14256,15 @@ async function main() {
     if (entry?.repos) repos = entry.repos;
   } catch {
   }
-  const octokit = getOctokit();
+  const octokitWrite = getOctokit();
+  const octokitRead = process.env.GH_TOKEN ? new Octokit2({ auth: process.env.GH_TOKEN }) : new Octokit2();
   const indexPath = "index.json";
   const twitterMapPath = "twitter-map.json";
   const index = fs4__namespace.default.existsSync(indexPath) ? JSON.parse(fs4__namespace.default.readFileSync(indexPath, "utf8")) : {};
   const syncMetaInPath = "sync-metadata.json";
   const syncMetaIn = fs4__namespace.default.existsSync(syncMetaInPath) ? JSON.parse(fs4__namespace.default.readFileSync(syncMetaInPath, "utf8")) : { perRepo: {} };
   const twitterMap = fs4__namespace.default.existsSync(twitterMapPath) ? JSON.parse(fs4__namespace.default.readFileSync(twitterMapPath, "utf8")) : {};
-  const res = await syncShard(octokit, { repos, directoryOwner, directoryRepo, index, prevSyncMeta: syncMetaIn.perRepo });
+  const res = await syncShard(octokitWrite, { repos, directoryOwner, directoryRepo, index, prevSyncMeta: syncMetaIn.perRepo, octokitRead });
   const tweetOnCreate = process.env.TWEET_ON_CREATE !== "false";
   const deleteOnComplete = process.env.DELETE_TWEET_ON_COMPLETE !== "false";
   const dryRun = process.env.DRY_RUN === "true";
