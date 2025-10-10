@@ -1,0 +1,119 @@
+name: Dedupe Mirrors
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview only (no deletions)"
+        type: choice
+        options: ["true", "false"]
+        default: "true"
+        required: true
+      only_bot:
+        description: "Restrict to bot-authored (App/github-actions)"
+        type: choice
+        options: ["false", "true"]
+        default: "false"
+        required: true
+      owner:
+        description: "Target owner"
+        default: "${{ github.repository_owner }}"
+        required: true
+      repo:
+        description: "Target repo"
+        default: "${{ github.event.repository.name }}"
+        required: true
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  dedupe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (optional)
+        uses: actions/checkout@v4
+
+      - name: Build mirror list and duplicate plan
+        id: plan
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          OWNER: ${{ inputs.owner }}
+          REPO: ${{ inputs.repo }}
+          ONLY_BOT: ${{ inputs.only_bot }}
+        run: |
+          set -euo pipefail
+          : > dedupe-issues.jsonl
+          CURSOR=""
+          while : ; do
+            if [ -z "$CURSOR" ]; then
+              RESP=$(gh api graphql -f query='query($owner:String!,$name:String!){ repository(owner:$owner,name:$name){ issues(first:100, states:[OPEN,CLOSED]){ nodes{ id number url body createdAt author{ login } } pageInfo{ hasNextPage endCursor } } } }' -f owner="$OWNER" -f name="$REPO")
+            else
+              RESP=$(gh api graphql -f query='query($owner:String!,$name:String!,$cursor:String!){ repository(owner:$owner,name:$name){ issues(first:100, after:$cursor, states:[OPEN,CLOSED]){ nodes{ id number url body createdAt author{ login } } pageInfo{ hasNextPage endCursor } } } }' -f owner="$OWNER" -f name="$REPO" -f cursor="$CURSOR")
+            fi
+            echo "$RESP" | jq -r '
+              .data.repository.issues.nodes[] | . as $i |
+              ($i.body // "") as $b |
+              ($b | gsub("\\s+";" ") | gsub("^\\s+|\\s+$";"")) as $t |
+              if ($t | test("^https://(www\\.)?github\\.com/[^/]+/[^/]+/issues/[0-9]+$")) then
+                {id:$i.id, number:$i.number, url:$i.url, body:$t, author:($i.author.login//""), key: ($t | sub("https://www.github.com/";"https://github.com/"))} | @json
+              else empty end' >> dedupe-issues.jsonl
+            HAS_NEXT=$(echo "$RESP" | jq -r '.data.repository.issues.pageInfo.hasNextPage')
+            CURSOR=$(echo "$RESP" | jq -r '.data.repository.issues.pageInfo.endCursor')
+            [ "$HAS_NEXT" = "true" ] || break
+            sleep 0.05
+          done
+
+          # Optional author restriction
+          if [ "$ONLY_BOT" = "true" ]; then
+            cp dedupe-issues.jsonl dedupe-issues.all.jsonl
+            jq -R -s 'split("\n") | map(select(length>0) | (try fromjson catch empty)) | map(select( (.author//"") | IN("devpool-directory-superintendent","devpool-directory-superintendent[bot]","github-actions","github-actions[bot]") )) | .[] | @json' dedupe-issues.all.jsonl > dedupe-issues.jsonl
+          fi
+
+          # Build duplicate groups plan
+          jq -R -s 'split("\n") | map(select(length>0) | (try fromjson catch empty)) | group_by(.key) | map(select(length>1) | {key: .[0].key, keep:(min_by(.number).number), nums:(map(.number)|sort), ids: map({number:.number,id:.id})})' dedupe-issues.jsonl > dedupe-plan.json
+
+          GROUPS=$(jq -r 'length' dedupe-plan.json)
+          echo "groups=$GROUPS" >> $GITHUB_OUTPUT
+          echo "Built plan with $GROUPS duplicate groups."
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dedupe-plan
+          path: |
+            dedupe-issues.jsonl
+            dedupe-plan.json
+
+      - name: Execute dedupe (delete/close duplicates)
+        if: ${{ inputs.dry_run == 'false' && steps.plan.outputs.groups != '0' }}
+        env:
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: |
+          set -euo pipefail
+          jq -r '.[] | . as $g | $g.ids[] | select(.number != $g.keep) | [$g.key, ( .number|tostring ), .id] | @tsv' dedupe-plan.json > dedupe-to-delete.tsv
+          COUNT=$(wc -l < dedupe-to-delete.tsv | tr -d ' ')
+          echo "Deleting $COUNT duplicates..."
+          N=0
+          while IFS=$'\t' read -r KEY NUM ID; do
+            [ -z "$ID" ] && continue
+            if gh api graphql -f query='mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }' -F id="$ID" >/dev/null 2>&1; then
+              echo "Deleted #$NUM ($KEY)"
+            else
+              gh api graphql -f query='mutation($id:ID!){ closeIssue(input:{issueId:$id}){ issue{ number state } } }' -F id="$ID" >/dev/null 2>&1 || true
+              echo "Closed #$NUM ($KEY)"
+            fi
+            N=$((N+1))
+            sleep 0.06
+          done < dedupe-to-delete.tsv
+          echo "Done: processed $N entries."
+
+      - name: Summary
+        run: |
+          echo "# Deduplication Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- Owner/Repo: ${{ inputs.owner }}/${{ inputs.repo }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Dry run: ${{ inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Only bot authored: ${{ inputs.only_bot }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Duplicate groups: ${{ steps.plan.outputs.groups }}" >> $GITHUB_STEP_SUMMARY
+
