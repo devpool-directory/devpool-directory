@@ -17,12 +17,14 @@ on:
         required: true
       owner:
         description: "Target owner"
-        default: "${{ github.repository_owner }}"
-        required: true
+        type: string
+        default: ""
+        required: false
       repo:
         description: "Target repo"
-        default: "${{ github.event.repository.name }}"
-        required: true
+        type: string
+        default: ""
+        required: false
 
 permissions:
   contents: read
@@ -35,12 +37,22 @@ jobs:
       - name: Checkout (optional)
         uses: actions/checkout@v4
 
+      - name: Set repository parameters
+        id: params
+        run: |
+          OWNER="${{ inputs.owner }}"
+          REPO="${{ inputs.repo }}"
+          if [ -z "$OWNER" ]; then OWNER="${{ github.repository_owner }}"; fi
+          if [ -z "$REPO" ]; then REPO="${{ github.event.repository.name }}"; fi
+          echo "owner=$OWNER" >> $GITHUB_OUTPUT
+          echo "repo=$REPO" >> $GITHUB_OUTPUT
+
       - name: Build mirror list and duplicate plan
         id: plan
         env:
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
-          OWNER: ${{ inputs.owner }}
-          REPO: ${{ inputs.repo }}
+          OWNER: ${{ steps.params.outputs.owner }}
+          REPO: ${{ steps.params.outputs.repo }}
           ONLY_BOT: ${{ inputs.only_bot }}
         run: |
           set -euo pipefail
@@ -112,7 +124,7 @@ jobs:
       - name: Summary
         run: |
           echo "# Deduplication Summary" >> $GITHUB_STEP_SUMMARY
-          echo "- Owner/Repo: ${{ inputs.owner }}/${{ inputs.repo }}" >> $GITHUB_STEP_SUMMARY
+          echo "- Owner/Repo: ${{ steps.params.outputs.owner }}/${{ steps.params.outputs.repo }}" >> $GITHUB_STEP_SUMMARY
           echo "- Dry run: ${{ inputs.dry_run }}" >> $GITHUB_STEP_SUMMARY
           echo "- Only bot authored: ${{ inputs.only_bot }}" >> $GITHUB_STEP_SUMMARY
           echo "- Duplicate groups: ${{ steps.plan.outputs.groups }}" >> $GITHUB_STEP_SUMMARY
