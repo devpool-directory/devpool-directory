@@ -83,10 +83,18 @@ process_one() {
     http_code=$(curl -sS -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $READ_TOKEN" -o partner.json -w "%{http_code}" "$API" || true)
   fi
 
-  reason=""; act=""
+  reason=""; act=""; close_reason="not_planned"
   if [ "$http_code" = "200" ]; then
     state=$(jq -r '.state' < partner.json)
     assignees=$(jq -r '.assignees | length' < partner.json)
+    # If upstream is closed, capture its close reason to mirror
+    if [ "$state" = "closed" ]; then
+      pr=$(jq -r '.state_reason // ""' < partner.json)
+      case "$pr" in
+        completed|not_planned) close_reason="$pr" ;;
+        *) close_reason="completed" ;;
+      esac
+    fi
     bots_only="false"
     if [ "$IGNORE_BOTS" = "true" ]; then
       bots_only=$(jq -r '[.assignees[].login | test(".*\\[bot]$")] | all' < partner.json)
@@ -101,14 +109,14 @@ process_one() {
     if [ "$state" = "closed" ]; then
       reason="closed"; act="remediate"
     elif [ "$assignees" != "0" ]; then
-      reason="assigned"; act="remediate"
+      reason="assigned"; act="remediate"; close_reason="not_planned"
     else
-      reason="unknown"; act="$UNKNOWN_ACTION"
+      reason="unknown"; act="$UNKNOWN_ACTION"; close_reason="not_planned"
     fi
   elif [ "$http_code" = "404" ]; then
-    reason="not_found"; act="remediate"
+    reason="not_found"; act="remediate"; close_reason="not_planned"
   else
-    reason="unknown"; act="$UNKNOWN_ACTION"
+    reason="unknown"; act="$UNKNOWN_ACTION"; close_reason="not_planned"
   fi
   rm -f partner.json || true
 
@@ -157,7 +165,7 @@ process_one() {
   env -u GH_TOKEN gh api -X PATCH \
     -H "Accept: application/vnd.github+json" \
     "/repos/$OWNER/$REPO/issues/$ISSUE_NUMBER" \
-    -f state=closed -f state_reason=not_planned >/dev/null 2>&1 || true
+    -f state=closed -f state_reason="$close_reason" >/dev/null 2>&1 || true
   sleep 0.06
   echo -e "$ISSUE_NUMBER\tlabeled_closed\t$reason\t$PURL" >> target-health-actions.tsv
 }
