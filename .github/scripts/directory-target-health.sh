@@ -40,8 +40,8 @@ while : ; do
   echo "$RESP" | jq -r '
     .data.repository.issues.nodes[]
     | {id:.id, number:.number, body:(.body//""), url}
-    | (.body | gsub("https://www.github.com/";"https://github.com/") | gsub("\s+$"; "")) as $bodyNorm
-    | select($bodyNorm | test("^https://github\.com/[^/]+/[^/]+/issues/[0-9]+$"))
+    | (.body | gsub("https://www.github.com/";"https://github.com/") | gsub("[[:space:]]+$"; "")) as $bodyNorm
+    | select($bodyNorm | test("^https://github[.]com/[^/]+/[^/]+/issues/[0-9]+$"))
     | [.number, .id, $bodyNorm] | @tsv' >> mirrors.tsv
   HAS_NEXT=$(echo "$RESP" | jq -r '.data.repository.issues.pageInfo.hasNextPage')
   CURSOR=$(echo "$RESP" | jq -r '.data.repository.issues.pageInfo.endCursor')
@@ -213,4 +213,3 @@ jq -n --arg repo "$OWNER/$REPO" --arg mode "$MODE" --arg dry "$DRY_RUN" --arg co
 } >> "$GITHUB_STEP_SUMMARY"
 
 exit 0
-
