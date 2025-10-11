@@ -1,0 +1,99 @@
+name: Directory Target Health
+
+on:
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: Preview only (no writes)
+        type: choice
+        options: ["true", "false"]
+        default: "true"
+      mode:
+        description: Remediation mode
+        type: choice
+        options: ["delete_then_label", "label_only"]
+        default: "delete_then_label"
+      unknown_action:
+        description: Behavior for unknown partner status
+        type: choice
+        options: ["label_only", "delete_then_label"]
+        default: "label_only"
+      max_to_process:
+        description: Optional maximum number of issues to process
+        required: false
+      concurrency:
+        description: Parallel workers (8-12 recommended)
+        default: '10'
+      owner:
+        description: Target owner (defaults to current)
+        default: devpool-directory
+      repo:
+        description: Target repo (defaults to current)
+        default: devpool-directory
+      ignore_assigned_to_bots:
+        description: Treat only-bot assignees as unassigned
+        type: choice
+        options: ["false", "true"]
+        default: "false"
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  health:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Create GitHub App token (dispatch)
+        id: app_token_dispatch
+        if: ${{ github.event_name == 'workflow_dispatch' }}
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ inputs.owner }}
+          repositories: ${{ inputs.repo }}
+
+      - name: Configure tokens
+        id: cfg
+        run: |
+          set -euo pipefail
+          APP_TOKEN="${{ steps.app_token_dispatch.outputs.token }}"
+          # Prefer GH_TOKEN (PAT) for cross-org reads if provided; fallback to App token
+          READ_TOKEN="${{ secrets.GH_TOKEN }}"
+          if [ -z "$READ_TOKEN" ]; then READ_TOKEN="$APP_TOKEN"; fi
+          echo "APP_TOKEN=$APP_TOKEN" >> "$GITHUB_ENV"
+          echo "READ_TOKEN=$READ_TOKEN" >> "$GITHUB_ENV"
+          # Export App token as GITHUB_TOKEN for gh writes; export PAT as GH_TOKEN for reads
+          echo "GITHUB_TOKEN=$APP_TOKEN" >> "$GITHUB_ENV"
+          echo "GH_TOKEN=${{ secrets.GH_TOKEN }}" >> "$GITHUB_ENV"
+          # Guardrail context
+          echo "WRITE_TARGET_REPO=${{ github.repository }}" >> "$GITHUB_ENV"
+
+      - name: Target health scan and remediation
+        env:
+          # Inputs may be empty on scheduled runs; resolve in script
+          INPUT_OWNER: ${{ inputs.owner }}
+          INPUT_REPO: ${{ inputs.repo }}
+          INPUT_DRY_RUN: ${{ inputs.dry_run }}
+          INPUT_MODE: ${{ inputs.mode }}
+          INPUT_MAX: ${{ inputs.max_to_process }}
+          INPUT_CONCURRENCY: ${{ inputs.concurrency }}
+          INPUT_UNKNOWN_ACTION: ${{ inputs.unknown_action }}
+          INPUT_IGNORE_ASSIGNEES_BOT: ${{ inputs.ignore_assigned_to_bots }}
+          # Tokens
+          GITHUB_TOKEN: ${{ env.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ env.GH_TOKEN }}
+          APP_TOKEN: ${{ env.APP_TOKEN }}
+          READ_TOKEN: ${{ env.READ_TOKEN }}
+        run: bash .github/scripts/directory-target-health.sh
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: directory-target-health-${{ github.run_id }}
+          path: |
+            target-health-actions.tsv
+            target-health-report.json
+
