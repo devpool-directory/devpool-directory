@@ -44,6 +44,9 @@ jobs:
   health:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
       - name: Create GitHub App token (dispatch)
         id: app_token_dispatch
         if: ${{ github.event_name == 'workflow_dispatch' }}
@@ -96,4 +99,3 @@ jobs:
           path: |
             target-health-actions.tsv
             target-health-report.json
-
