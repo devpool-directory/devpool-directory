@@ -38,9 +38,9 @@ jobs:
       - name: Install deps
         run: |
           npm ci || npm i --no-audit --no-fund
-      - name: Generate plan
+      - name: Generate plan (tsx)
         run: |
-          npm run plan > plan.json
+          npx tsx src/cli/plan.ts > plan.json
         env:
           # Use default Actions token for read-only planning (avoids PAT scope mismatches)
           GITHUB_TOKEN: ${{ github.token }}
@@ -97,10 +97,9 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
-      - name: Install deps and build
+      - name: Install deps
         run: |
           npm ci || npm i --no-audit --no-fund
-          npm run build
       - uses: actions/download-artifact@v4
         with: { name: plan }
       - uses: actions/download-artifact@v4
@@ -108,7 +107,7 @@ jobs:
       - name: Run shard (with timeout)
         run: |
           # Gracefully abort a shard if it stalls (exit 124)
-          timeout ${SHARD_TIMEOUT_MINUTES:-12}m node dist/cli/sync-shard.js --shard ${{ matrix.shard_id }}
+          timeout ${SHARD_TIMEOUT_MINUTES:-12}m npx tsx src/cli/sync-shard.ts --shard ${{ matrix.shard_id }}
         env:
           # Use GitHub App token so mirrors are authored by the App
           GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
@@ -138,10 +137,9 @@ jobs:
       # Ensure Node is available
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - name: Install deps and build
+      - name: Install deps
         run: |
           npm ci || npm i --no-audit --no-fund
-          npm run build
       - uses: actions/download-artifact@v4
         with: { path: ./shards }
       - name: Create GitHub App token (repo)
@@ -153,7 +151,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
       - name: Aggregate & write artifacts
-        run: node dist/cli/aggregate.js
+        run: npx tsx src/cli/aggregate.ts
         env:
           # Prefer PAT for repo contents writes; fallback is App token
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -170,11 +168,10 @@ jobs:
       # Ensure Node is available
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - name: Install deps and build
+      - name: Install deps
         run: |
           npm ci || npm i --no-audit --no-fund
-          npm run build
-      - run: node dist/cli/summary.js >> $GITHUB_STEP_SUMMARY
+      - run: npx tsx src/cli/summary.ts >> $GITHUB_STEP_SUMMARY
         env:
           GITHUB_TOKEN: ${{ github.token }}
           DIRECTORY_OWNER: ${{ github.repository_owner }}
