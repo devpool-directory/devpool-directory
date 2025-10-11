@@ -63,8 +63,7 @@ jobs:
         with:
           app-id: ${{ secrets.APP_ID }}
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
-          owner: ${{ github.repository_owner }}
-          repositories: ${{ github.event.repository.name }}
+          # For scheduled/default, rely on action defaults (current repo owner/installation scope)
 
       - name: Configure tokens
         id: cfg
@@ -141,9 +140,9 @@ jobs:
             echo "$RESP" | jq -r '
               .data.repository.issues.nodes[]
               | {id:.id, number:.number, body:(.body//""), url}
-              | select((.body | gsub("https://www.github.com/";"https://github.com/") | gsub("\\s+$"; ""))
-                       | test("^https://github\\.com/[^/]+/[^/]+/issues/[0-9]+$"))
-              | [.number, .id, (.body | gsub("https://www.github.com/";"https://github.com/") | gsub("\\s+$"; ""))] | @tsv' >> mirrors.tsv
+              | (.body | gsub("https://www.github.com/";"https://github.com/") | gsub("\\s+$"; "")) as $bodyNorm
+              | select($bodyNorm | test("^https://github\\.com/[^/]+/[^/]+/issues/[0-9]+$"))
+              | [.number, .id, $bodyNorm] | @tsv' >> mirrors.tsv
             HAS_NEXT=$(echo "$RESP" | jq -r '.data.repository.issues.pageInfo.hasNextPage')
             CURSOR=$(echo "$RESP" | jq -r '.data.repository.issues.pageInfo.endCursor')
             [ "$HAS_NEXT" = "true" ] || break
@@ -190,7 +189,7 @@ jobs:
               assignees=$(jq -r '.assignees | length' < partner.json)
               bots_only="false"
               if [ "$IGNORE_BOTS" = "true" ]; then
-                bots_only=$(jq -r '[.assignees[].login | test("\\[bot\\]$")] | all' < partner.json)
+                bots_only=$(jq -r '[.assignees[].login | test(".*\\[bot\\]$")] | all' < partner.json)
               fi
               # treat only-bot assignees as unassigned when enabled
               if [ "$bots_only" = "true" ]; then assignees=0; fi
@@ -221,11 +220,18 @@ jobs:
               return 0
             fi
 
-            # Ensure labels exist (best-effort)
-            env -u GH_TOKEN gh api -X POST \
-              "/repos/$OWNER/$REPO/labels" -f name="Unavailable" -f color=808080 -f description="Directory health remediation" >/dev/null 2>&1 || true
-            env -u GH_TOKEN gh api -X POST \
-              "/repos/$OWNER/$REPO/labels" -f name="Unavailable: ${reason}" -f color=808080 -f description="Unavailable due to ${reason}" >/dev/null 2>&1 || true
+            # Ensure labels exist (memoized per run)
+            ensure_reason_label() {
+              local LBL="$1"
+              mkdir -p .label_cache
+              if [ ! -f ".label_cache/${LBL//[^A-Za-z0-9_-]/_}" ]; then
+                env -u GH_TOKEN gh api -X POST \
+                  "/repos/$OWNER/$REPO/labels" -f name="$LBL" -f color=808080 -f description="Directory health remediation" >/dev/null 2>&1 || true
+                : > ".label_cache/${LBL//[^A-Za-z0-9_-]/_}"
+              fi
+            }
+            ensure_reason_label "Unavailable"
+            ensure_reason_label "Unavailable: ${reason}"
 
             if [ "$effective_mode" = "delete_then_label" ]; then
               # Delete via GraphQL using App token (retry once)
@@ -256,14 +262,20 @@ jobs:
             echo -e "$ISSUE_NUMBER\tlabeled_closed\t$reason\t$PURL" >> target-health-actions.tsv
           }
 
-          # Run with limited concurrency
+          # Pre-create base label once
+          env -u GH_TOKEN gh api -X POST \
+            "/repos/$OWNER/$REPO/labels" -f name="Unavailable" -f color=808080 -f description="Directory health remediation" >/dev/null 2>&1 || true
+
+          # Run with limited concurrency (counter-based)
+          running_jobs=0
           while IFS=$'\t' read -r ISSUE_NUMBER ISSUE_ID PARTNER_URL; do
             [ -z "$ISSUE_ID" ] && continue
             process_one "$ISSUE_NUMBER" "$ISSUE_ID" "$PARTNER_URL" &
-            while [ "$(jobs -rp | wc -l | tr -d ' ')" -ge "$CONCURRENCY" ]; do
+            running_jobs=$((running_jobs + 1))
+            if [ "$running_jobs" -ge "$CONCURRENCY" ]; then
               wait -n || true
-              sleep 0.05
-            done
+              running_jobs=$((running_jobs - 1))
+            fi
           done < mirrors.work
           wait || true
 
