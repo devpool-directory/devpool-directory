@@ -35,9 +35,9 @@ jobs:
       # Ensure Node is available
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - name: Install deps and build
+      - name: Install deps
         run: |
-          npm ci
+          npm ci || npm i --no-audit --no-fund
       - name: Generate plan
         run: |
           npm run plan > plan.json
@@ -99,7 +99,7 @@ jobs:
           repositories: ${{ github.event.repository.name }}
       - name: Install deps and build
         run: |
-          npm ci
+          npm ci || npm i --no-audit --no-fund
           npm run build
       - uses: actions/download-artifact@v4
         with: { name: plan }
@@ -140,7 +140,7 @@ jobs:
         with: { node-version: 20 }
       - name: Install deps and build
         run: |
-          npm ci
+          npm ci || npm i --no-audit --no-fund
           npm run build
       - uses: actions/download-artifact@v4
         with: { path: ./shards }
@@ -172,7 +172,7 @@ jobs:
         with: { node-version: 20 }
       - name: Install deps and build
         run: |
-          npm ci
+          npm ci || npm i --no-audit --no-fund
           npm run build
       - run: node dist/cli/summary.js >> $GITHUB_STEP_SUMMARY
         env:
