@@ -1,8 +1,6 @@
 name: Directory Target Health
 
 on:
-  schedule:
-    - cron: '0 */6 * * *'
   workflow_dispatch:
     inputs:
       dry_run:
@@ -101,6 +99,9 @@ jobs:
           APP_TOKEN: ${{ env.APP_TOKEN }}
           READ_TOKEN: ${{ env.READ_TOKEN }}
         run: |
+          bash .github/scripts/directory-target-health.sh
+          exit 0
+          # Fallback inline implementation (kept for reference)
           set -euo pipefail
           echo "Starting Directory Target Health job"
 
