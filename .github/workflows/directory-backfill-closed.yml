@@ -1,0 +1,120 @@
+name: Directory Backfill Closed Mirrors
+
+on:
+  workflow_dispatch:
+    inputs:
+      limit:
+        description: Max closed items to backfill (blank=all)
+        required: false
+      since_days:
+        description: Only backfill closed updated within N days (blank=all)
+        required: false
+
+permissions:
+  contents: read
+  issues: write
+  actions: read
+
+jobs:
+  backfill-closed:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Create GitHub App token (repo)
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+
+      - name: Prepare env
+        run: |
+          echo "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" >> $GITHUB_ENV
+          echo "READ_TOKEN=${{ secrets.GH_TOKEN }}" >> $GITHUB_ENV
+
+      - name: Backfill closed mirrors from __STORAGE__/issues-map.json
+        env:
+          INPUT_LIMIT: ${{ inputs.limit }}
+          INPUT_SINCE_DAYS: ${{ inputs.since_days }}
+        run: |
+          set -euo pipefail
+          OWNER="${GITHUB_REPOSITORY%/*}"; REPO="${GITHUB_REPOSITORY#*/}"
+          LIMIT="${INPUT_LIMIT:-}"
+          SINCE_DAYS="${INPUT_SINCE_DAYS:-}"
+          tmpdir=$(mktemp -d); trap 'rm -rf "$tmpdir"' EXIT
+          echo "Loading issues-map.json from __STORAGE__..."
+          curl -sS -H "Authorization: Bearer $GITHUB_TOKEN" -H "Accept: application/vnd.github.raw+json" \
+            "https://raw.githubusercontent.com/$OWNER/$REPO/__STORAGE__/issues-map.json" > "$tmpdir/map.json"
+
+          # Collect existing directory issue bodies (all states)
+          echo "Indexing existing directory issues..."
+          : > "$tmpdir/existing.tsv"
+          cursor=""; while : ; do
+            if [ -z "$cursor" ]; then
+              resp=$(gh api graphql -f owner="$OWNER" -f name="$REPO" -f query='query($owner:String!,$name:String!){ repository(owner:$owner,name:$name){ issues(first:100, states:[OPEN,CLOSED]){ nodes{ number body } pageInfo{ hasNextPage endCursor } } } }')
+            else
+              resp=$(gh api graphql -f owner="$OWNER" -f name="$REPO" -f cursor="$cursor" -f query='query($owner:String!,$name:String!,$cursor:String!){ repository(owner:$owner,name:$name){ issues(first:100, after:$cursor, states:[OPEN,CLOSED]){ nodes{ number body } pageInfo{ hasNextPage endCursor } } } }')
+            fi
+            echo "$resp" | jq -r '.data.repository.issues.nodes[] | [.number, (.body//"" | gsub("https://www.github.com/";"https://github.com/") | gsub("[\\s]+$";""))] | @tsv' >> "$tmpdir/existing.tsv"
+            has_next=$(echo "$resp" | jq -r '.data.repository.issues.pageInfo.hasNextPage')
+            cursor=$(echo "$resp" | jq -r '.data.repository.issues.pageInfo.endCursor')
+            [ "$has_next" = "true" ] || break
+            sleep 0.05
+          done
+
+          # Build a set of existing bodies for quick contains checks
+          awk -F '\t' '{print $2}' "$tmpdir/existing.tsv" | grep -E '^https://github[.]com/.+/.+/issues/[0-9]+$' | sort -u > "$tmpdir/existing-bodies.txt"
+
+          # Select closed items to backfill
+          echo "Selecting closed items from map..."
+          jq -r 'to_entries | map(.value) | map(select(.state=="closed")) | .[] | [.owner+"/"+.repo, .number, .title, .url, .updated_at] | @tsv' "$tmpdir/map.json" > "$tmpdir/closed.tsv"
+          if [ -n "$SINCE_DAYS" ]; then
+            cutoff=$(date -u -d "$SINCE_DAYS days ago" +%s 2>/dev/null || date -u -v-"$SINCE_DAYS"d +%s)
+            awk -F '\t' -v CUTOFF="$cutoff" 'BEGIN{OFS="\t"} { gsub(/Z/,"",$5); gsub(/T/," ",$5); cmd="date -u -d \""$5"\" +%s"; cmd | getline ts; close(cmd); if (ts >= CUTOFF) print $0 }' "$tmpdir/closed.tsv" > "$tmpdir/closed.filt.tsv" || cp "$tmpdir/closed.tsv" "$tmpdir/closed.filt.tsv"
+          else
+            cp "$tmpdir/closed.tsv" "$tmpdir/closed.filt.tsv"
+          fi
+          if [ -n "$LIMIT" ]; then head -n "$LIMIT" "$tmpdir/closed.filt.tsv" > "$tmpdir/work.tsv"; else cp "$tmpdir/closed.filt.tsv" "$tmpdir/work.tsv"; fi
+
+          total=$(wc -l < "$tmpdir/work.tsv" | tr -d ' ')
+          echo "Closed items selected: $total"
+          created=0; skipped=0; failed=0
+          : > "$tmpdir/created.tsv"
+
+          while IFS=$'\t' read -r FULL PNUM TITLE PURL UPDATED; do
+            [ -z "$PURL" ] && continue
+            PURL=$(echo "$PURL" | sed -e 's#https://www.github.com/#https://github.com/#' -e 's/[[:space:]]*$//')
+            if grep -Fxq "$PURL" "$tmpdir/existing-bodies.txt"; then
+              skipped=$((skipped+1)); continue
+            fi
+            safe_title=$(printf '%s' "[Closed] $FULL#$PNUM: $TITLE" | head -c 240)
+            # Create open, then close with reason not_planned; a later step will align reasons
+            num=$(gh api -X POST \
+              "/repos/$OWNER/$REPO/issues" -f title="$safe_title" -f body="$PURL" --jq '.number' 2>/dev/null || echo '')
+            if [ -n "$num" ]; then
+              gh api -X PATCH \
+                "/repos/$OWNER/$REPO/issues/$num" -f state=closed -f state_reason=not_planned >/dev/null 2>&1 || true
+              echo -e "$num\t$PURL" >> "$tmpdir/created.tsv"
+              created=$((created+1))
+            else
+              failed=$((failed+1))
+            fi
+            sleep 0.08
+          done < "$tmpdir/work.tsv"
+
+          echo "Created=$created Skipped(existing)=$skipped Failed=$failed"
+          echo "Backfill Closed Summary" >> "$GITHUB_STEP_SUMMARY"
+          echo >> "$GITHUB_STEP_SUMMARY"
+          echo "- Selected: $total" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Created: $created" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Skipped: $skipped" >> "$GITHUB_STEP_SUMMARY"
+          echo "- Failed: $failed" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Align close reasons to upstream
+        env:
+          READ_TOKEN: ${{ secrets.GH_TOKEN }}
+        run: bash .github/scripts/fix-close-reasons.sh
+
