@@ -32,12 +32,15 @@ jobs:
       max_parallel: ${{ steps.out.outputs.max_parallel }}
     steps:
       - uses: actions/checkout@v4
-      # Ensure Node is available, then run bundled scripts directly
+      # Ensure Node is available
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
+      - name: Install deps and build
+        run: |
+          npm ci
       - name: Generate plan
         run: |
-          node dist/bin/plan.cjs > plan.json
+          npm run plan > plan.json
         env:
           # Use default Actions token for read-only planning (avoids PAT scope mismatches)
           GITHUB_TOKEN: ${{ github.token }}
@@ -83,7 +86,7 @@ jobs:
       fail-fast: false
     steps:
       - uses: actions/checkout@v4
-      # Ensure Node is available; no dependency install required for bundled scripts
+      # Ensure Node is available
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
       - name: Create GitHub App token (repo)
@@ -94,6 +97,10 @@ jobs:
           private-key: ${{ secrets.APP_PRIVATE_KEY }}
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
+      - name: Install deps and build
+        run: |
+          npm ci
+          npm run build
       - uses: actions/download-artifact@v4
         with: { name: plan }
       - uses: actions/download-artifact@v4
@@ -101,7 +108,7 @@ jobs:
       - name: Run shard (with timeout)
         run: |
           # Gracefully abort a shard if it stalls (exit 124)
-          timeout ${SHARD_TIMEOUT_MINUTES:-12}m node dist/bin/sync-shard.cjs --shard ${{ matrix.shard_id }}
+          timeout ${SHARD_TIMEOUT_MINUTES:-12}m node dist/cli/sync-shard.js --shard ${{ matrix.shard_id }}
         env:
           # Use GitHub App token so mirrors are authored by the App
           GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
@@ -128,9 +135,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Ensure Node is available; no dependency install required for bundled scripts
+      # Ensure Node is available
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
+      - name: Install deps and build
+        run: |
+          npm ci
+          npm run build
       - uses: actions/download-artifact@v4
         with: { path: ./shards }
       - name: Create GitHub App token (repo)
@@ -142,7 +153,7 @@ jobs:
           owner: ${{ github.repository_owner }}
           repositories: ${{ github.event.repository.name }}
       - name: Aggregate & write artifacts
-        run: node dist/bin/aggregate.cjs
+        run: node dist/cli/aggregate.js
         env:
           # Prefer PAT for repo contents writes; fallback is App token
           GH_TOKEN: ${{ secrets.GH_TOKEN }}
@@ -156,10 +167,14 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      # Ensure Node is available; no dependency install required for bundled scripts
+      # Ensure Node is available
       - uses: actions/setup-node@v4
         with: { node-version: 20 }
-      - run: node dist/bin/summary.cjs >> $GITHUB_STEP_SUMMARY
+      - name: Install deps and build
+        run: |
+          npm ci
+          npm run build
+      - run: node dist/cli/summary.js >> $GITHUB_STEP_SUMMARY
         env:
           GITHUB_TOKEN: ${{ github.token }}
           DIRECTORY_OWNER: ${{ github.repository_owner }}
