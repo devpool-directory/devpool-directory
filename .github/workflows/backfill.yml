@@ -21,7 +21,7 @@ jobs:
 
       - name: Build bundled binaries
         run: |
-          npm ci --prefer-offline --no-audit --no-fund
+          npm ci --no-audit --no-fund || npm i --no-audit --no-fund
           npm run bundle:all
 
       - name: Create GitHub App token
@@ -48,4 +48,3 @@ jobs:
           DIRECTORY_REPO: ${{ github.event.repository.name }}
           DATA_BRANCH: __STORAGE__
         run: node dist/bin/aggregate.cjs
-
