@@ -92,12 +92,26 @@ jobs:
             fi
             # Title should match upstream exactly (trim to GitHub limit)
             safe_title=$(printf '%s' "$TITLE" | tr -d '\r' | head -c 240)
-            # Create open, then close with reason not_planned; a later step will align reasons
+            # Fetch partner reason to close with correct reason immediately
+            POWNER=$(echo "$PURL" | awk -F/ '{print $4}')
+            PREPO=$(echo "$PURL" | awk -F/ '{print $5}')
+            PNUM=$(echo "$PURL" | awk -F/ '{print $7}')
+            desired_reason="completed"
+            http=$(curl -sS -H "Accept: application/vnd.github+json" -H "Authorization: Bearer ${READ_TOKEN:-$GITHUB_TOKEN}" -o "$tmpdir/p.json" -w "%{http_code}" "https://api.github.com/repos/$POWNER/$PREPO/issues/$PNUM" || true)
+            if [ "$http" = "200" ]; then
+              pr=$(jq -r '.state_reason // ""' < "$tmpdir/p.json")
+              case "$pr" in
+                completed|COMPLETED) desired_reason="completed" ;;
+                not_planned|NOT_PLANNED) desired_reason="not_planned" ;;
+                *) desired_reason="completed" ;;
+              esac
+            fi
+            # Create open, then close once with the partner close reason
             num=$(gh api -X POST \
               "/repos/$OWNER/$REPO/issues" -f title="$safe_title" -f body="$PURL" --jq '.number' 2>/dev/null || echo '')
             if [ -n "$num" ]; then
               gh api -X PATCH \
-                "/repos/$OWNER/$REPO/issues/$num" -f state=closed -f state_reason=not_planned >/dev/null 2>&1 || true
+                "/repos/$OWNER/$REPO/issues/$num" -f state=closed -f state_reason="$desired_reason" >/dev/null 2>&1 || true
               echo -e "$num\t$PURL" >> "$tmpdir/created.tsv"
               created=$((created+1))
             else
