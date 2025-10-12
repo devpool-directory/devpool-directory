@@ -16,13 +16,6 @@ READ_TOKEN="${READ_TOKEN:-${GH_TOKEN:-$GITHUB_TOKEN}}"
 tmpdir=$(mktemp -d)
 trap 'rm -rf "$tmpdir"' EXIT
 
-echo "Loading issues-map.json from __STORAGE__..."
-curl -sS -H "Authorization: Bearer $READ_TOKEN" -H "Accept: application/vnd.github.raw+json" \
-  "https://raw.githubusercontent.com/$OWNER/$REPO/__STORAGE__/issues-map.json" > "$tmpdir/map.json"
-
-# Build mapping URL -> title
-jq -r 'to_entries | map(.value) | .[] | select(.url!=null) | [.url, .title] | @tsv' "$tmpdir/map.json" > "$tmpdir/map.tsv"
-
 echo "Enumerating directory issues..."
 : > "$tmpdir/issues.tsv"
 cursor=""
@@ -47,16 +40,22 @@ updated=0
 skipped=0
 failed=0
 
-# Precompute join output; do not fail the script if join emits non-zero when no matches
-join -t $'\t' -1 3 -2 1 <(sort -u -k3,3 "$tmpdir/issues.tsv") <(sort -u -k1,1 "$tmpdir/map.tsv") > "$tmpdir/joined.tsv" || true
-
-while IFS=$'\t' read -r URL NUM TITLE_CUR PARTNER_TITLE; do
-  # If title matches partner, skip; also skip empty partner title
-  if [ -z "$PARTNER_TITLE" ] || [ "$TITLE_CUR" = "$PARTNER_TITLE" ]; then
-    skipped=$((skipped+1))
-    continue
+while IFS=$'\t' read -r NUM TITLE_CUR BODY; do
+  [ -z "$NUM" ] && continue
+  PURL=$(printf '%s' "$BODY" | sed -e 's#https://www.github.com/#https://github.com/#' -e 's/[[:space:]]*$//')
+  if ! echo "$PURL" | grep -qE '^https://github[.]com/[^/]+/[^/]+/issues/[0-9]+$'; then
+    skipped=$((skipped+1)); continue
   fi
-  # Update title to partner title (trim to limit)
+  POWNER=$(echo "$PURL" | awk -F/ '{print $4}')
+  PREPO=$(echo "$PURL" | awk -F/ '{print $5}')
+  PNUM=$(echo "$PURL" | awk -F/ '{print $7}')
+  http=$(curl -sS -H "Accept: application/vnd.github+json" -H "Authorization: Bearer $READ_TOKEN" -o "$tmpdir/p.json" -w "%{http_code}" "https://api.github.com/repos/$POWNER/$PREPO/issues/$PNUM" || true)
+  if [ "$http" != "200" ]; then skipped=$((skipped+1)); continue; fi
+  PARTNER_TITLE=$(jq -r '.title // ""' < "$tmpdir/p.json")
+  rm -f "$tmpdir/p.json"
+  if [ -z "$PARTNER_TITLE" ] || [ "$TITLE_CUR" = "$PARTNER_TITLE" ]; then
+    skipped=$((skipped+1)); continue
+  fi
   desired=$(printf '%s' "$PARTNER_TITLE" | tr -d '\r' | head -c 240)
   if gh api -X PATCH \
        "/repos/$OWNER/$REPO/issues/$NUM" -f title="$desired" >/dev/null 2>&1; then
@@ -67,6 +66,6 @@ while IFS=$'\t' read -r URL NUM TITLE_CUR PARTNER_TITLE; do
     failed=$((failed+1))
   fi
   sleep 0.06
-done < "$tmpdir/joined.tsv"
+done < "$tmpdir/issues.tsv"
 
 echo "Done. updated=$updated skipped=$skipped failed=$failed"
