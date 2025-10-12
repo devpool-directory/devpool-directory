@@ -1,0 +1,40 @@
+name: Cleanup Deduplicates (App)
+
+on:
+  # Auto-run on development pushes to clean any duplicates introduced during active dev
+  push:
+    branches:
+      - development
+  workflow_dispatch: {}
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  cleanup:
+    concurrency:
+      group: cleanup-dedup-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Create GitHub App token (repo)
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+      - name: Install deps
+        run: |
+          npm ci || npm i --no-audit --no-fund
+      - name: Run dedupe & normalization
+        run: npx tsx src/cli/cleanup.ts
+        env:
+          GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
+          DIRECTORY_OWNER: ${{ github.repository_owner }}
+          DIRECTORY_REPO: ${{ github.event.repository.name }}

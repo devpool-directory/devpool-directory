@@ -21,7 +21,7 @@ export function buildDesiredSet(
       if ((issue as any).state && (issue as any).state !== "open") continue;
       const rawLabels = ((issue as any).labels || []) as Array<string | GitHubLabel>;
       const labelNames = rawLabels.map((l) => (typeof l === "string" ? l : l?.name)).filter(Boolean) as string[];
-      const priceName = labelNames.find((name) => /^(Price:|Pricing:)\s*/.test(name));
+      const priceName = labelNames.find((name) => /^Price:\s*/.test(name));
       const priceLabel = priceName ? ({ name: priceName } as GitHubLabel) : undefined;
       if (!priceLabel) continue;
       const assigned = Array.isArray((issue as any).assignees) && (issue as any).assignees.length > 0;
@@ -49,7 +49,7 @@ export function buildDesiredSet(
 }
 
 export function extractAmount(label: string): string | null {
-  // Accept things like: "Price: $1,200 USD" or "Pricing: 500 USD"; we extract first integer amount.
+  // Accept things like: "Price: $1,200 USD"; we extract first integer amount.
   const m = label.match(/([0-9][0-9,]*)/);
   if (!m) return null;
   const raw = m[1].replace(/,/g, "");

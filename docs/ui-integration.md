@@ -11,6 +11,7 @@ This guide explains how a UI can consume the directory’s analytics artifacts p
 ## Core Artifacts
 - `summary.json` — run summary; use for quick change checks and dashboards.
 - `partner-open-issues.json` — open + priced items only (primary list for UIs).
+- `partner-open-proposals.json` — open + unpriced items (proposals) to avoid reading the large `issues-map.json`.
 - `mirror-state.json` — per partner `node_id`: directory issue linkage and assignment state.
 - `index.json` — quick map `node_id -> { number, url }` for directory links.
 - `statistics.json` — aggregate counts; includes `lifetime` rollups.
@@ -62,7 +63,7 @@ async function refresh() {
   etags['summary.json'] = sum.etag;
 
   const files = [
-    'partner-open-issues.json', 'mirror-state.json', 'index.json',
+    'partner-open-issues.json', 'partner-open-proposals.json', 'mirror-state.json', 'index.json',
     'statistics.json', 'owners-avatars.json', 'twitter-map.json'
   ];
   const results = await Promise.all(
@@ -99,12 +100,12 @@ async function getJsonServer(owner: string, repo: string, path: string, etag?: s
 - To show assignment, prefer `mirror-state.json[node_id].assigned` and `assignees`.
 
 ## Price/Time Labels
-- Price labels are raw strings like `"Price: $500"` or `"Pricing: $500"`.
+- Price labels are raw strings like `"Price: $500"`.
 - Time labels are raw strings like `"Time: 1 week"`.
 - Simple parsing helpers:
 ```ts
 function parsePriceUSD(labels: string[]): number | null {
-  const m = (labels || []).find((l) => /^(Price:|Pricing:)\s*/.test(String(l)));
+  const m = (labels || []).find((l) => /^Price:\s*/.test(String(l)));
   if (!m) return null;
   const n = parseInt(String(m).replace(/[^0-9]/g, ''), 10);
   return Number.isFinite(n) ? n : null;
@@ -167,4 +168,3 @@ interface Statistics {
 
 ---
 For questions or API stability concerns, check the repo’s README and `docs/spec.md`. If you need example queries or a small SDK wrapper, open an issue or PR.
-

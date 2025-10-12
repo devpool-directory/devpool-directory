@@ -156,7 +156,7 @@ chooseBestToken()
   })
   .catch(() => void 0);
 
-export const PRICING_NOT_SET = "Pricing: not set";
+export const PRICING_NOT_SET = "Price: not set"; // legacy constant name retained; value standardized
 
 export const DEVPOOL_OWNER_NAME = process.env.DEVPOOL_OWNER_NAME as string;
 export const DEVPOOL_REPO_NAME = process.env.DEVPOOL_REPO_NAME as string;

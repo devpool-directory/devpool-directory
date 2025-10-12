@@ -40,7 +40,7 @@ async function main() {
   let totalFetched = 0;
 
   const parsePrice = (labels: string[]): number => {
-    const raw = (labels || []).find((l: string) => /^(Price:|Pricing:)\s*/.test(String(l)));
+    const raw = (labels || []).find((l: string) => /^Price:\s*/.test(String(l)));
     if (!raw) return 0;
     const n = parseInt(String(raw).replace(/[^0-9]/g, ""), 10);
     return Number.isFinite(n) ? n : 0;

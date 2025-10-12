@@ -21,7 +21,7 @@ The system is designed to be stateless at runtime: artifacts in the data branch 
 
 **Artifacts**
 - `partner-open-issues.json`
-  - Array of partner issues that are both open and “priced” (i.e., have a label beginning with "Price:").
+  - Array of partner issues that are both open and “priced” (i.e., have a label beginning with `Price:`).
   - Shape (TypeScript):
     - `{
          owner: string; repo: string; number: number; node_id: string;
@@ -31,6 +31,11 @@ The system is designed to be stateless at runtime: artifacts in the data branch 
          created_at: string; updated_at: string
        }`
   - Notes: Array order is not guaranteed; consumers should sort as needed.
+
+- `partner-open-proposals.json`
+  - Array of partner issues that are open and do NOT have a `Price:` label (unpriced “proposals”).
+  - Shape: identical to `partner-open-issues.json`.
+  - Notes: Published to keep the UI lightweight so it does not need to read `issues-map.json` just to derive proposals.
 
 - `partner-pull-requests.json`
   - Array of partner PRs (state=all) for visibility/analytics.
@@ -86,6 +91,7 @@ The system is designed to be stateless at runtime: artifacts in the data branch 
       shards: number;
       issuesOpen: number;             // across all processed partner issues
       issuesOpenPriced: number;       // equals partner-open-issues.json length
+      issuesOpenUnpriced: number;     // equals partner-open-proposals.json length
       issuesClosed: number;
       prs: number;
       mirrors: number;                // keys in mirror-state.json

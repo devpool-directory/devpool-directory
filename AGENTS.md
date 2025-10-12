@@ -19,6 +19,12 @@ Operational Notes
 - Aggregate: commits to `__STORAGE__` use the App token and retry on non‑fast‑forward to avoid ref races.
 - Dedupe: if you must remove duplicates, prefer deletion (not closing) for invalid/unauthorized mirrors.
 
+Automation
+- Cleanup Deduplicates (App): `.github/workflows/cleanup-dedup.yml` runs automatically on pushes to `development` and can also be dispatched manually. It uses the GitHub App token to:
+  - Delete duplicate mirrors (keeping the oldest per target URL).
+  - Normalize kept mirrors’ body format to canonical `https://github.com/...`.
+  - This provides fast feedback during active development and prevents dupe bursts from lingering.
+
 Do/Don’t
 - DO ensure new mirrors’ body is the exact partner issue URL (identity), and let the post‑create sweep collapse concurrent duplicates.
 - DO run the cleanup workflow after large auth/token changes to remove historical non‑App mirrors.

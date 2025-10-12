@@ -40,12 +40,12 @@ async function main() {
   const mirror = mergeMirrorState(mirrorChunks);
   // Restrict published issues file to open + priced items only (initial set; will recompute from issues-map below)
   const issuesOpenPriced = issues.filter(
-    (i) => i.state === "open" && (i.labels || []).some((l: string) => /^(Price:|Pricing:)\s*/.test(String(l)))
+    (i) => i.state === "open" && (i.labels || []).some((l: string) => /^Price:\s*/.test(String(l)))
   );
   const stats = computeStatistics(issuesOpenPriced, mirror);
   // Lifetime (completed): compute over closed + priced to expose historical totals
   const issuesClosedPriced = issues.filter(
-    (i) => i.state === "closed" && (i.labels || []).some((l: string) => /^(Price:|Pricing:)\s*/.test(String(l)))
+    (i) => i.state === "closed" && (i.labels || []).some((l: string) => /^Price:\s*/.test(String(l)))
   );
   const life = computeStatistics(issuesClosedPriced, mirror);
   (stats as any).lifetime = {
@@ -84,7 +84,11 @@ async function main() {
   } catch { issuesMap = {}; }
   for (const it of issues) issuesMap[it.node_id] = it;
   const allIssues: any[] = Object.values(issuesMap);
-  const issuesOpenPricedFromMap = allIssues.filter((i) => i.state === "open" && (i.labels || []).some((l: string) => /^(Price:|Pricing:)\s*/.test(String(l))));
+  const issuesOpenPricedFromMap = allIssues.filter((i) => i.state === "open" && (i.labels || []).some((l: string) => /^Price:\s*/.test(String(l))));
+  // Open issues without an explicit Price label (proposals)
+  const issuesOpenUnpricedFromMap = allIssues.filter(
+    (i) => i.state === "open" && !((i.labels || []).some((l: string) => /^Price:\s*/.test(String(l))))
+  );
 
   // Compute additional aggregate helpers for UI rendering
   const closedAllCount = allIssues.filter((i) => i.state === "closed").length;
@@ -157,7 +161,7 @@ async function main() {
     lifetimeMap = {};
   }
   const parsePrice = (labels: string[]): number => {
-    const raw = (labels || []).find((l: string) => /^(Price:|Pricing:)\s*/.test(String(l)));
+    const raw = (labels || []).find((l: string) => /^Price:\s*/.test(String(l)));
     if (!raw) return 0;
     const n = parseInt(String(raw).replace(/[^0-9]/g, ""), 10);
     return Number.isFinite(n) ? n : 0;
@@ -178,6 +182,7 @@ async function main() {
   // Write local build outputs for debugging
   const outDir = path.join(process.cwd(), "out-agg");
   writeJson(outDir, "partner-open-issues.json", issuesOpenPricedFromMap);
+  writeJson(outDir, "partner-open-proposals.json", issuesOpenUnpricedFromMap);
   writeJson(outDir, "partner-pull-requests.json", prs);
   writeJson(outDir, "owners-avatars.json", owners);
   writeJson(outDir, "mirror-state.json", mirrorMerged);
@@ -198,6 +203,7 @@ async function main() {
     shards: shardIdSet.size,
     issuesOpen,
     issuesOpenPriced: issuesOpenPricedCount,
+    issuesOpenUnpriced: issuesOpenUnpricedFromMap.length,
     issuesClosed,
     prs: prs.length,
     mirrors: Object.keys(mirror).length,
@@ -206,6 +212,7 @@ async function main() {
     tweetsDeleted,
     committedFiles: [
       "partner-open-issues.json",
+      "partner-open-proposals.json",
       "partner-pull-requests.json",
       "owners-avatars.json",
       "mirror-state.json",
@@ -223,6 +230,7 @@ async function main() {
   await ensureBranch(octokit, owner, repo, branch);
   await commitChanges(octokit, owner, repo, branch, "sync: update artifacts", [
     { path: "partner-open-issues.json", content: JSON.stringify(issuesOpenPricedFromMap) },
+    { path: "partner-open-proposals.json", content: JSON.stringify(issuesOpenUnpricedFromMap) },
     { path: "partner-pull-requests.json", content: JSON.stringify(prs) },
     { path: "owners-avatars.json", content: JSON.stringify(owners) },
     { path: "mirror-state.json", content: JSON.stringify(mirrorMerged) },

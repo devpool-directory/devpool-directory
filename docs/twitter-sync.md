@@ -18,7 +18,7 @@
   - `issues-map.json`: persistent full set (all repos), used for historical consistency if needed.
   - `twitter-map.json`: current mapping: partner `node_id` → `tweet_id`.
 - “Available” = open + priced + unassigned, where:
-  - “Priced” is any label matching `/^(Price:|Pricing:)\s*/`.
+  - “Priced” is any label matching `/^Price:\\s*/`.
   - “Unassigned” means `mirrorState[node_id]?.assigned === false`.
 
 **Desired End State**
@@ -35,7 +35,7 @@
   - `<amount> for <time_label or ‘this task’>\n\n<issue_title>\n<issue_url>`
   - Example: `$500 for 1–3 days\n\nAdd pagination to feed\nhttps://github.com/owner/repo/issues/123`
 - Parsing inputs:
-  - `amount`: parse from `Price:` or `Pricing:` label; extract the leading integer amount, ignore symbols/commas.
+  - `amount`: parse from the `Price:` label; extract the leading integer amount, ignore symbols/commas.
   - `time_label`: optional from label `Time: …` (fallback: `this task`).
   - `issue_title`: partner issue title.
   - `issue_url`: partner `html_url` (prefer non-www; www acceptable).
@@ -145,7 +145,7 @@ Add npm scripts:
 **Tweet Builder (formatter)**
 
 - Implement `formatTweet(issue)` used by `desired.ts`:
-  - Extract amount from `Price:` or `Pricing:` label: match leading number (e.g., `"$1,200` → `1200`).
+  - Extract amount from the `Price:` label: match leading number (e.g., `"$1,200` → `1200`).
   - `time_label`: from `Time:` label; if absent, use `this task`.
   - Return single tweet text: `<amount> for <time_label>\n\n<issue_title>\n<issue_url>`.
 - Idempotency: identity is `node_id` (not text). Changing the formatter later will not break identity.
@@ -268,7 +268,7 @@ Example manual check:
 **Testing**
 
 - Unit
-  - `desired.ts`: price parsing (Price:/Pricing:), assigned gating, text formatting.
+  - `desired.ts`: price parsing (Price:), assigned gating, text formatting.
   - `plan.ts`: diffing correctness; unmanaged detection by regex; `DELETE_WINDOW_DAYS` handling.
   - `apply.ts`: budget enforcement; idempotency (recreate missing); delete 404 tolerance; backoff on 429.
 - Integration (dry)

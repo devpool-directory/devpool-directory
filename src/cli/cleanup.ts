@@ -11,7 +11,7 @@ function parsePartnerUrl(text: string): { owner: string; repo: string; number: n
 }
 
 function hasPrice(labels: string[]): boolean {
-  return (labels || []).some((l) => /^(Price:|Pricing:)\s*/.test(String(l)));
+  return (labels || []).some((l) => /^Price:\s*/.test(String(l)));
 }
 
 async function main() {
@@ -131,4 +131,3 @@ async function main() {
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });
-
