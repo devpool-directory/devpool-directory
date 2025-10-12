@@ -173,6 +173,42 @@ async function main() {
     }
   }
 
+  // Final safety: hard-delete duplicate mirrors by partner URL (keep the oldest issue number per URL).
+  // This runs in the aggregate step (single writer) using the App token and removes any legacy or concurrent duplicates.
+  try {
+    const allDirIssues: any[] = await (octokit as any).paginate((octokit as any).issues.listForRepo, {
+      owner,
+      repo,
+      state: "all",
+      per_page: 100
+    });
+    const byUrl: Record<string, Array<{ number: number; node_id?: string }>> = {};
+    for (const it of allDirIssues) {
+      if ((it as any).pull_request) continue;
+      const raw = String((it as any).body || "").trim();
+      const norm = raw.replace("https://www.github.com/", "https://github.com/");
+      if (!/^https:\/\/(www\.)?github\.com\/[^\s]+\/issues\/\d+$/.test(raw)) continue;
+      (byUrl[norm] ||= []).push({ number: it.number, node_id: (it as any).node_id });
+    }
+    for (const [urlKey, list] of Object.entries(byUrl)) {
+      if (list.length <= 1) continue;
+      list.sort((a, b) => a.number - b.number);
+      const keep = list[0];
+      for (const dup of list.slice(1)) {
+        try {
+          if (dup.node_id) {
+            await (octokit as any).request("POST /graphql", {
+              query: "mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }",
+              id: dup.node_id,
+            });
+          } else {
+            await (octokit as any).issues.update({ owner, repo, issue_number: dup.number, state: "closed" });
+          }
+        } catch {}
+      }
+    }
+  } catch {}
+
   // Lifetime completed rollup (closed+priced) via persistent map
   // Load prior lifetime map (node_id -> amountUSD), update only changed issues, then sum
   let lifetimeMap: Record<string, number> = {};
