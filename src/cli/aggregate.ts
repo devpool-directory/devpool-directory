@@ -260,7 +260,7 @@ Notes:
     issuesOpenUnpriced: issuesOpenUnpricedFromMap.length,
     issuesClosed,
     prs: prs.length,
-    mirrors: Object.keys(mirror).length,
+    mirrors: Object.keys(mirrorStateNew).length,
     owners: owners.length,
     tweetsCreated,
     tweetsDeleted,
