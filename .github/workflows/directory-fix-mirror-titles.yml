@@ -1,0 +1,29 @@
+name: Directory Fix Mirror Titles
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  fix:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create GitHub App token
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+      - name: Configure tokens
+        run: |
+          echo "GITHUB_TOKEN=${{ steps.app_token.outputs.token }}" >> $GITHUB_ENV
+          echo "READ_TOKEN=${{ secrets.GH_TOKEN }}" >> $GITHUB_ENV
+      - name: Normalize titles to upstream
+        run: bash .github/scripts/fix-mirror-titles.sh
+

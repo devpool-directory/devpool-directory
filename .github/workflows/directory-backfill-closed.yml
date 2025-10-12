@@ -90,7 +90,8 @@ jobs:
             if grep -Fxq "$PURL" "$tmpdir/existing-bodies.txt"; then
               skipped=$((skipped+1)); continue
             fi
-            safe_title=$(printf '%s' "[Closed] $FULL#$PNUM: $TITLE" | head -c 240)
+            # Title should match upstream exactly (trim to GitHub limit)
+            safe_title=$(printf '%s' "$TITLE" | tr -d '\r' | head -c 240)
             # Create open, then close with reason not_planned; a later step will align reasons
             num=$(gh api -X POST \
               "/repos/$OWNER/$REPO/issues" -f title="$safe_title" -f body="$PURL" --jq '.number' 2>/dev/null || echo '')
@@ -117,4 +118,3 @@ jobs:
         env:
           READ_TOKEN: ${{ secrets.GH_TOKEN }}
         run: bash .github/scripts/fix-close-reasons.sh
-
