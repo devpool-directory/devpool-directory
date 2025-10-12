@@ -175,34 +175,36 @@ async function main() {
   }
 
   // Final safety: hard-delete duplicate mirrors by partner URL (keep the oldest issue number per URL).
-  // Targeted search per URL to stay within rate budget and avoid full-repo listings.
-  try {
-    const candidateUrls = Array.from(new Set(issuesOpenPricedFromMap.map((i) => String(i.url))));
-    for (const url of candidateUrls) {
-      try {
-        const urlWww = url.replace("https://github.com/", "https://www.github.com/");
-        const q = `repo:${owner}/${repo} in:body is:issue ${JSON.stringify(url)}`;
-        const res = await (octokit as any).search.issuesAndPullRequests({ q, per_page: 50 });
-        const items = (res.data.items || []).filter((it: any) => {
-          const b = String((it as any).body || "").trim();
-          return b === url || b === urlWww;
-        });
-        if (items.length > 1) {
-          const sorted = items.map((it: any) => ({ number: it.number, node_id: it.node_id })).sort((a: any, b: any) => a.number - b.number);
-          for (const dup of sorted.slice(1)) {
-            try {
-              if (dup.node_id) {
-                await (octokit as any).request("POST /graphql", { query: "mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }", id: dup.node_id });
-              } else {
-                await (octokit as any).issues.update({ owner, repo, issue_number: dup.number, state: "closed" });
-              }
-              duplicatesDeleted++;
-            } catch {}
+  // Targeted search per URL, opt-in via FINAL_DEDUP=true to avoid rate-limit issues by default.
+  if (process.env.FINAL_DEDUP === "true") {
+    try {
+      const candidateUrls = Array.from(new Set(issuesOpenPricedFromMap.map((i) => String(i.url))));
+      for (const url of candidateUrls) {
+        try {
+          const urlWww = url.replace("https://github.com/", "https://www.github.com/");
+          const q = `repo:${owner}/${repo} in:body is:issue ${JSON.stringify(url)}`;
+          const res = await (octokit as any).search.issuesAndPullRequests({ q, per_page: 50 });
+          const items = (res.data.items || []).filter((it: any) => {
+            const b = String((it as any).body || "").trim();
+            return b === url || b === urlWww;
+          });
+          if (items.length > 1) {
+            const sorted = items.map((it: any) => ({ number: it.number, node_id: it.node_id })).sort((a: any, b: any) => a.number - b.number);
+            for (const dup of sorted.slice(1)) {
+              try {
+                if (dup.node_id) {
+                  await (octokit as any).request("POST /graphql", { query: "mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }", id: dup.node_id });
+                } else {
+                  await (octokit as any).issues.update({ owner, repo, issue_number: dup.number, state: "closed" });
+                }
+                duplicatesDeleted++;
+              } catch {}
+            }
           }
-        }
-      } catch {}
-    }
-  } catch {}
+        } catch {}
+      }
+    } catch {}
+  }
 
   // Lifetime completed rollup (closed+priced) via persistent map
   // Load prior lifetime map (node_id -> amountUSD), update only changed issues, then sum
