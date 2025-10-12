@@ -1,0 +1,34 @@
+﻿2025-10-12T18:07:37.8186797Z Current runner version: '2.328.0'
+2025-10-12T18:07:37.8213085Z ##[group]Runner Image Provisioner
+2025-10-12T18:07:37.8214601Z Hosted Compute Agent
+2025-10-12T18:07:37.8215859Z Version: 20250912.392
+2025-10-12T18:07:37.8216885Z Commit: d921fda672a98b64f4f82364647e2f10b2267d0b
+2025-10-12T18:07:37.8217945Z Build Date: 2025-09-12T15:23:14Z
+2025-10-12T18:07:37.8218995Z ##[endgroup]
+2025-10-12T18:07:37.8219882Z ##[group]Operating System
+2025-10-12T18:07:37.8220763Z Ubuntu
+2025-10-12T18:07:37.8221693Z 24.04.3
+2025-10-12T18:07:37.8222521Z LTS
+2025-10-12T18:07:37.8223330Z ##[endgroup]
+2025-10-12T18:07:37.8224521Z ##[group]Runner Image
+2025-10-12T18:07:37.8225445Z Image: ubuntu-24.04
+2025-10-12T18:07:37.8226379Z Version: 20250929.60.1
+2025-10-12T18:07:37.8227938Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20250929.60/images/ubuntu/Ubuntu2404-Readme.md
+2025-10-12T18:07:37.8229732Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20250929.60
+2025-10-12T18:07:37.8231463Z ##[endgroup]
+2025-10-12T18:07:37.8233268Z ##[group]GITHUB_TOKEN Permissions
+2025-10-12T18:07:37.8235639Z Actions: read
+2025-10-12T18:07:37.8236659Z Contents: write
+2025-10-12T18:07:37.8237514Z Issues: write
+2025-10-12T18:07:37.8238407Z Metadata: read
+2025-10-12T18:07:37.8239313Z ##[endgroup]
+2025-10-12T18:07:37.8241618Z Secret source: Actions
+2025-10-12T18:07:37.8242800Z Prepare workflow directory
+2025-10-12T18:07:37.8567303Z Prepare all required actions
+2025-10-12T18:07:37.8604706Z Getting action download info
+2025-10-12T18:07:38.4398198Z Download action repository 'actions/checkout@v4' (SHA:08eba0b27e820071cde6df949e0beb9ba4906955)
+2025-10-12T18:07:38.6264487Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2025-10-12T18:07:38.7761724Z Download action repository 'actions/create-github-app-token@v1' (SHA:d72941d797fd3113feb6b93fd0dec494b13a2547)
+2025-10-12T18:07:39.2862919Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+2025-10-12T18:07:39.8016015Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2025-10-12T18:07:40.0930009Z Complete job name: sync-shard (63, ubiquity/audit.ubq.fi)

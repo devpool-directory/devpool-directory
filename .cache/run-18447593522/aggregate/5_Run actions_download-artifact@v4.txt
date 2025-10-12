@@ -1,0 +1,25 @@
+﻿2025-10-12T18:08:34.9691969Z ##[group]Run actions/download-artifact@v4
+2025-10-12T18:08:34.9692363Z with:
+2025-10-12T18:08:34.9692629Z   path: ./shards
+2025-10-12T18:08:34.9692906Z   merge-multiple: false
+2025-10-12T18:08:34.9693255Z   repository: devpool-directory/devpool-directory
+2025-10-12T18:08:34.9693628Z   run-id: 18447593522
+2025-10-12T18:08:34.9693907Z ##[endgroup]
+2025-10-12T18:08:35.3146622Z Found 2 artifact(s)
+2025-10-12T18:08:35.3148004Z No input name, artifact-ids or pattern filtered specified, downloading all artifacts
+2025-10-12T18:08:35.3149110Z An extra directory with the artifact name will be created for each download
+2025-10-12T18:08:35.3149932Z Preparing to download the following artifacts:
+2025-10-12T18:08:35.3150756Z - plan-extra (ID: 4249011326, Size: 392, Expected Digest: sha256:f7ad60781ce4b98b6b6dee1977da558f4010cc58aa36e8c3327f95920d397aa9)
+2025-10-12T18:08:35.3151825Z - plan (ID: 4249011291, Size: 2347, Expected Digest: sha256:46522a69ffe369abb170b19bc52ec63fdd081c27e6669afc69d477b734ae89ef)
+2025-10-12T18:08:35.4071406Z Redirecting to blob download url: https://productionresultssa6.blob.core.windows.net/actions-results/bb15fbec-a566-4abd-9ef9-0787a90f6ceb/workflow-job-run-1e767b5b-7160-5b86-8e60-767989ac5d45/artifacts/b7eb00c313744339a069ab1524736cbe1cba2ccfdc9ff6d06e5e9375b19aadd6.zip
+2025-10-12T18:08:35.4073595Z Starting download of artifact to: /home/runner/work/devpool-directory/devpool-directory/shards/plan-extra
+2025-10-12T18:08:35.4824342Z Redirecting to blob download url: https://productionresultssa6.blob.core.windows.net/actions-results/bb15fbec-a566-4abd-9ef9-0787a90f6ceb/workflow-job-run-1e767b5b-7160-5b86-8e60-767989ac5d45/artifacts/64879f7d6b960a01909762d911a32d4582c20010c5641ee90278b644a9e3b525.zip
+2025-10-12T18:08:35.4826477Z Starting download of artifact to: /home/runner/work/devpool-directory/devpool-directory/shards/plan
+2025-10-12T18:08:35.5353448Z (node:2157) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+2025-10-12T18:08:35.5355478Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2025-10-12T18:08:35.5410978Z SHA256 digest of downloaded artifact is f7ad60781ce4b98b6b6dee1977da558f4010cc58aa36e8c3327f95920d397aa9
+2025-10-12T18:08:35.5412269Z Artifact download completed successfully.
+2025-10-12T18:08:35.6197869Z SHA256 digest of downloaded artifact is 46522a69ffe369abb170b19bc52ec63fdd081c27e6669afc69d477b734ae89ef
+2025-10-12T18:08:35.6198883Z Artifact download completed successfully.
+2025-10-12T18:08:35.6199670Z Total of 2 artifact(s) downloaded
+2025-10-12T18:08:35.6206370Z Download artifact has finished successfully

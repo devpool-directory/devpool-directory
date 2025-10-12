@@ -1,0 +1,33 @@
+﻿2025-10-12T18:08:23.1469702Z Current runner version: '2.328.0'
+2025-10-12T18:08:23.1509140Z ##[group]Runner Image Provisioner
+2025-10-12T18:08:23.1511159Z Hosted Compute Agent
+2025-10-12T18:08:23.1512838Z Version: 20250912.392
+2025-10-12T18:08:23.1514676Z Commit: d921fda672a98b64f4f82364647e2f10b2267d0b
+2025-10-12T18:08:23.1516420Z Build Date: 2025-09-12T15:23:14Z
+2025-10-12T18:08:23.1518098Z ##[endgroup]
+2025-10-12T18:08:23.1519801Z ##[group]Operating System
+2025-10-12T18:08:23.1521552Z Ubuntu
+2025-10-12T18:08:23.1523040Z 24.04.3
+2025-10-12T18:08:23.1524428Z LTS
+2025-10-12T18:08:23.1525882Z ##[endgroup]
+2025-10-12T18:08:23.1527254Z ##[group]Runner Image
+2025-10-12T18:08:23.1528913Z Image: ubuntu-24.04
+2025-10-12T18:08:23.1530760Z Version: 20250929.60.1
+2025-10-12T18:08:23.1533241Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20250929.60/images/ubuntu/Ubuntu2404-Readme.md
+2025-10-12T18:08:23.1536606Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20250929.60
+2025-10-12T18:08:23.1539413Z ##[endgroup]
+2025-10-12T18:08:23.1542666Z ##[group]GITHUB_TOKEN Permissions
+2025-10-12T18:08:23.1545285Z Actions: read
+2025-10-12T18:08:23.1546234Z Contents: write
+2025-10-12T18:08:23.1547132Z Issues: write
+2025-10-12T18:08:23.1547972Z Metadata: read
+2025-10-12T18:08:23.1548846Z ##[endgroup]
+2025-10-12T18:08:23.1551607Z Secret source: Actions
+2025-10-12T18:08:23.1553057Z Prepare workflow directory
+2025-10-12T18:08:23.1942275Z Prepare all required actions
+2025-10-12T18:08:23.1997240Z Getting action download info
+2025-10-12T18:08:23.5871017Z Download action repository 'actions/checkout@v4' (SHA:08eba0b27e820071cde6df949e0beb9ba4906955)
+2025-10-12T18:08:23.7939635Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2025-10-12T18:08:24.1327594Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+2025-10-12T18:08:24.6648054Z Download action repository 'actions/create-github-app-token@v1' (SHA:d72941d797fd3113feb6b93fd0dec494b13a2547)
+2025-10-12T18:08:25.2881531Z Complete job name: aggregate

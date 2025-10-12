@@ -1,0 +1,34 @@
+﻿2025-10-12T18:06:11.6146893Z Current runner version: '2.328.0'
+2025-10-12T18:06:11.6172952Z ##[group]Runner Image Provisioner
+2025-10-12T18:06:11.6174540Z Hosted Compute Agent
+2025-10-12T18:06:11.6175604Z Version: 20250912.392
+2025-10-12T18:06:11.6176667Z Commit: d921fda672a98b64f4f82364647e2f10b2267d0b
+2025-10-12T18:06:11.6177743Z Build Date: 2025-09-12T15:23:14Z
+2025-10-12T18:06:11.6178823Z ##[endgroup]
+2025-10-12T18:06:11.6179773Z ##[group]Operating System
+2025-10-12T18:06:11.6180706Z Ubuntu
+2025-10-12T18:06:11.6181629Z 24.04.3
+2025-10-12T18:06:11.6182493Z LTS
+2025-10-12T18:06:11.6183439Z ##[endgroup]
+2025-10-12T18:06:11.6184694Z ##[group]Runner Image
+2025-10-12T18:06:11.6185766Z Image: ubuntu-24.04
+2025-10-12T18:06:11.6186701Z Version: 20250929.60.1
+2025-10-12T18:06:11.6188239Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20250929.60/images/ubuntu/Ubuntu2404-Readme.md
+2025-10-12T18:06:11.6190044Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20250929.60
+2025-10-12T18:06:11.6191807Z ##[endgroup]
+2025-10-12T18:06:11.6193941Z ##[group]GITHUB_TOKEN Permissions
+2025-10-12T18:06:11.6196642Z Actions: read
+2025-10-12T18:06:11.6197762Z Contents: write
+2025-10-12T18:06:11.6198650Z Issues: write
+2025-10-12T18:06:11.6199751Z Metadata: read
+2025-10-12T18:06:11.6200708Z ##[endgroup]
+2025-10-12T18:06:11.6203196Z Secret source: Actions
+2025-10-12T18:06:11.6204772Z Prepare workflow directory
+2025-10-12T18:06:11.6533899Z Prepare all required actions
+2025-10-12T18:06:11.6571848Z Getting action download info
+2025-10-12T18:06:12.1688764Z Download action repository 'actions/checkout@v4' (SHA:08eba0b27e820071cde6df949e0beb9ba4906955)
+2025-10-12T18:06:12.3467249Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2025-10-12T18:06:12.4480026Z Download action repository 'actions/create-github-app-token@v1' (SHA:d72941d797fd3113feb6b93fd0dec494b13a2547)
+2025-10-12T18:06:12.9394945Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+2025-10-12T18:06:13.4638164Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2025-10-12T18:06:13.7222028Z Complete job name: sync-shard (10, ondecentral/ecommerce-client-sdk-example)

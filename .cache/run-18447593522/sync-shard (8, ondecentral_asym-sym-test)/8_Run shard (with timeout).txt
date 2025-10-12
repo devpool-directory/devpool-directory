@@ -1,0 +1,27 @@
+﻿2025-10-12T18:07:09.3819815Z ##[group]Run # Gracefully abort a shard if it stalls (exit 124)
+2025-10-12T18:07:09.3820481Z [36;1m# Gracefully abort a shard if it stalls (exit 124)[0m
+2025-10-12T18:07:09.3821118Z [36;1mtimeout ${SHARD_TIMEOUT_MINUTES:-12}m npx tsx src/cli/sync-shard.ts --shard 8[0m
+2025-10-12T18:07:09.3854662Z shell: /usr/bin/bash -e {0}
+2025-10-12T18:07:09.3855083Z env:
+2025-10-12T18:07:09.3856018Z   GITHUB_TOKEN: ***
+2025-10-12T18:07:09.3856532Z   GH_TOKEN: ***
+2025-10-12T18:07:09.3856925Z   DIRECTORY_OWNER: devpool-directory
+2025-10-12T18:07:09.3857410Z   DIRECTORY_REPO: devpool-directory
+2025-10-12T18:07:09.3857946Z   WRITE_TARGET_REPO: devpool-directory/devpool-directory
+2025-10-12T18:07:09.3858478Z   FULL_RESYNC: false
+2025-10-12T18:07:09.3858855Z   USE_GRAPHQL: true
+2025-10-12T18:07:09.3859235Z   TWEET_ON_CREATE: true
+2025-10-12T18:07:09.3859633Z   DELETE_TWEET_ON_COMPLETE: true
+2025-10-12T18:07:09.3860120Z   TWITTER_API_KEY: ***
+2025-10-12T18:07:09.3860688Z   TWITTER_API_KEY_SECRET: ***
+2025-10-12T18:07:09.3861313Z   TWITTER_ACCESS_TOKEN: ***
+2025-10-12T18:07:09.3861898Z   TWITTER_ACCESS_TOKEN_SECRET: ***
+2025-10-12T18:07:09.3862338Z ##[endgroup]
+2025-10-12T18:07:10.5197353Z SyntaxError: Unexpected end of JSON input
+2025-10-12T18:07:10.5201382Z     at JSON.parse (<anonymous>)
+2025-10-12T18:07:10.5205005Z     at main (file:///home/runner/work/devpool-directory/devpool-directory/src/cli/sync-shard.ts:41:12)
+2025-10-12T18:07:10.5209562Z     at file:///home/runner/work/devpool-directory/devpool-directory/src/cli/sync-shard.ts:108:1
+2025-10-12T18:07:10.5211237Z     at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+2025-10-12T18:07:10.5212743Z     at ModuleLoader.import (node:internal/modules/esm/loader:606:24)
+2025-10-12T18:07:10.5214301Z     at asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+2025-10-12T18:07:10.5465124Z ##[error]Process completed with exit code 1.

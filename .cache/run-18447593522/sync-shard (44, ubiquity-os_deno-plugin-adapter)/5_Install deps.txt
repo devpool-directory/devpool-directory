@@ -1,0 +1,31 @@
+﻿2025-10-12T18:06:35.4666067Z ##[group]Run npm ci || npm i --no-audit --no-fund
+2025-10-12T18:06:35.4666623Z [36;1mnpm ci || npm i --no-audit --no-fund[0m
+2025-10-12T18:06:35.4779163Z shell: /usr/bin/bash -e {0}
+2025-10-12T18:06:35.4779570Z ##[endgroup]
+2025-10-12T18:06:39.7195878Z npm error code EUSAGE
+2025-10-12T18:06:39.7202805Z npm error
+2025-10-12T18:06:39.7204755Z npm error `npm ci` can only install packages when your package.json and package-lock.json or npm-shrinkwrap.json are in sync. Please update your lock file with `npm install` before continuing.
+2025-10-12T18:06:39.7206331Z npm error
+2025-10-12T18:06:39.7207152Z npm error Missing: tsx@4.20.6 from lock file
+2025-10-12T18:06:39.7207900Z npm error
+2025-10-12T18:06:39.7208542Z npm error Clean install a project
+2025-10-12T18:06:39.7209203Z npm error
+2025-10-12T18:06:39.7209743Z npm error Usage:
+2025-10-12T18:06:39.7210585Z npm error npm ci
+2025-10-12T18:06:39.7211145Z npm error
+2025-10-12T18:06:39.7211720Z npm error Options:
+2025-10-12T18:06:39.7212806Z npm error [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
+2025-10-12T18:06:39.7214476Z npm error [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+2025-10-12T18:06:39.7215982Z npm error [--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+2025-10-12T18:06:39.7217495Z npm error [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]
+2025-10-12T18:06:39.7218739Z npm error [--no-bin-links] [--no-fund] [--dry-run]
+2025-10-12T18:06:39.7220195Z npm error [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+2025-10-12T18:06:39.7221577Z npm error [-ws|--workspaces] [--include-workspace-root] [--install-links]
+2025-10-12T18:06:39.7222490Z npm error
+2025-10-12T18:06:39.7223455Z npm error aliases: clean-install, ic, install-clean, isntall-clean
+2025-10-12T18:06:39.7224382Z npm error
+2025-10-12T18:06:39.7225095Z npm error Run "npm help ci" for more info
+2025-10-12T18:06:39.7226518Z npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-10-12T18_06_35_542Z-debug-0.log
+2025-10-12T18:06:41.3502214Z npm warn deprecated source-map@0.8.0-beta.0: The work that was done in this beta branch won't be included in future versions
+2025-10-12T18:06:42.3565355Z 
+2025-10-12T18:06:42.3566519Z added 130 packages in 3s

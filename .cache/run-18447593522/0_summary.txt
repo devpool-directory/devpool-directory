@@ -1,0 +1,167 @@
+﻿2025-10-12T18:08:45.9651931Z Current runner version: '2.328.0'
+2025-10-12T18:08:45.9678883Z ##[group]Runner Image Provisioner
+2025-10-12T18:08:45.9679940Z Hosted Compute Agent
+2025-10-12T18:08:45.9680522Z Version: 20250912.392
+2025-10-12T18:08:45.9681144Z Commit: d921fda672a98b64f4f82364647e2f10b2267d0b
+2025-10-12T18:08:45.9681801Z Build Date: 2025-09-12T15:23:14Z
+2025-10-12T18:08:45.9682434Z ##[endgroup]
+2025-10-12T18:08:45.9683007Z ##[group]Operating System
+2025-10-12T18:08:45.9683607Z Ubuntu
+2025-10-12T18:08:45.9684074Z 24.04.3
+2025-10-12T18:08:45.9684642Z LTS
+2025-10-12T18:08:45.9685099Z ##[endgroup]
+2025-10-12T18:08:45.9685613Z ##[group]Runner Image
+2025-10-12T18:08:45.9686295Z Image: ubuntu-24.04
+2025-10-12T18:08:45.9686805Z Version: 20250929.60.1
+2025-10-12T18:08:45.9687853Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20250929.60/images/ubuntu/Ubuntu2404-Readme.md
+2025-10-12T18:08:45.9689678Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20250929.60
+2025-10-12T18:08:45.9690669Z ##[endgroup]
+2025-10-12T18:08:45.9691970Z ##[group]GITHUB_TOKEN Permissions
+2025-10-12T18:08:45.9693794Z Actions: read
+2025-10-12T18:08:45.9694468Z Contents: write
+2025-10-12T18:08:45.9694945Z Issues: write
+2025-10-12T18:08:45.9695428Z Metadata: read
+2025-10-12T18:08:45.9695917Z ##[endgroup]
+2025-10-12T18:08:45.9698187Z Secret source: Actions
+2025-10-12T18:08:45.9698889Z Prepare workflow directory
+2025-10-12T18:08:46.0125142Z Prepare all required actions
+2025-10-12T18:08:46.0181184Z Getting action download info
+2025-10-12T18:08:46.3059495Z Download action repository 'actions/checkout@v4' (SHA:08eba0b27e820071cde6df949e0beb9ba4906955)
+2025-10-12T18:08:46.5060016Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2025-10-12T18:08:46.6632748Z Complete job name: summary
+2025-10-12T18:08:46.7360242Z ##[group]Run actions/checkout@v4
+2025-10-12T18:08:46.7361135Z with:
+2025-10-12T18:08:46.7361604Z   repository: devpool-directory/devpool-directory
+2025-10-12T18:08:46.7362333Z   token: ***
+2025-10-12T18:08:46.7362736Z   ssh-strict: true
+2025-10-12T18:08:46.7363166Z   ssh-user: git
+2025-10-12T18:08:46.7363574Z   persist-credentials: true
+2025-10-12T18:08:46.7364053Z   clean: true
+2025-10-12T18:08:46.7364512Z   sparse-checkout-cone-mode: true
+2025-10-12T18:08:46.7365025Z   fetch-depth: 1
+2025-10-12T18:08:46.7365452Z   fetch-tags: false
+2025-10-12T18:08:46.7365910Z   show-progress: true
+2025-10-12T18:08:46.7366319Z   lfs: false
+2025-10-12T18:08:46.7366694Z   submodules: false
+2025-10-12T18:08:46.7367096Z   set-safe-directory: true
+2025-10-12T18:08:46.7367807Z ##[endgroup]
+2025-10-12T18:08:46.8423119Z Syncing repository: devpool-directory/devpool-directory
+2025-10-12T18:08:46.8424863Z ##[group]Getting Git version info
+2025-10-12T18:08:46.8425740Z Working directory is '/home/runner/work/devpool-directory/devpool-directory'
+2025-10-12T18:08:46.8426828Z [command]/usr/bin/git version
+2025-10-12T18:08:46.8495468Z git version 2.51.0
+2025-10-12T18:08:46.8522320Z ##[endgroup]
+2025-10-12T18:08:46.8538287Z Temporarily overriding HOME='/home/runner/work/_temp/5892bac0-bcfc-424c-9150-49b8d3455c43' before making global git config changes
+2025-10-12T18:08:46.8540893Z Adding repository directory to the temporary git global config as a safe directory
+2025-10-12T18:08:46.8552261Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/devpool-directory/devpool-directory
+2025-10-12T18:08:46.8587329Z Deleting the contents of '/home/runner/work/devpool-directory/devpool-directory'
+2025-10-12T18:08:46.8591702Z ##[group]Initializing the repository
+2025-10-12T18:08:46.8596430Z [command]/usr/bin/git init /home/runner/work/devpool-directory/devpool-directory
+2025-10-12T18:08:46.8691575Z hint: Using 'master' as the name for the initial branch. This default branch name
+2025-10-12T18:08:46.8692807Z hint: is subject to change. To configure the initial branch name to use in all
+2025-10-12T18:08:46.8693992Z hint: of your new repositories, which will suppress this warning, call:
+2025-10-12T18:08:46.8695284Z hint:
+2025-10-12T18:08:46.8695997Z hint: 	git config --global init.defaultBranch <name>
+2025-10-12T18:08:46.8697230Z hint:
+2025-10-12T18:08:46.8698251Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2025-10-12T18:08:46.8700112Z hint: 'development'. The just-created branch can be renamed via this command:
+2025-10-12T18:08:46.8701433Z hint:
+2025-10-12T18:08:46.8702155Z hint: 	git branch -m <name>
+2025-10-12T18:08:46.8702956Z hint:
+2025-10-12T18:08:46.8703987Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2025-10-12T18:08:46.8706002Z Initialized empty Git repository in /home/runner/work/devpool-directory/devpool-directory/.git/
+2025-10-12T18:08:46.8709462Z [command]/usr/bin/git remote add origin https://github.com/devpool-directory/devpool-directory
+2025-10-12T18:08:46.8744785Z ##[endgroup]
+2025-10-12T18:08:46.8745988Z ##[group]Disabling automatic garbage collection
+2025-10-12T18:08:46.8749717Z [command]/usr/bin/git config --local gc.auto 0
+2025-10-12T18:08:46.8777960Z ##[endgroup]
+2025-10-12T18:08:46.8779483Z ##[group]Setting up auth
+2025-10-12T18:08:46.8785628Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-10-12T18:08:46.8815883Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-10-12T18:08:46.9148005Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-10-12T18:08:46.9175849Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-10-12T18:08:46.9398908Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2025-10-12T18:08:46.9434140Z ##[endgroup]
+2025-10-12T18:08:46.9434923Z ##[group]Fetching the repository
+2025-10-12T18:08:46.9450556Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +3df23a495734da13625abe8b33ad0b6f5333f8ae:refs/remotes/origin/development
+2025-10-12T18:08:47.2537953Z From https://github.com/devpool-directory/devpool-directory
+2025-10-12T18:08:47.2538948Z  * [new ref]         3df23a495734da13625abe8b33ad0b6f5333f8ae -> origin/development
+2025-10-12T18:08:47.2569716Z ##[endgroup]
+2025-10-12T18:08:47.2570917Z ##[group]Determining the checkout info
+2025-10-12T18:08:47.2572805Z ##[endgroup]
+2025-10-12T18:08:47.2578272Z [command]/usr/bin/git sparse-checkout disable
+2025-10-12T18:08:47.2619291Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2025-10-12T18:08:47.2652297Z ##[group]Checking out the ref
+2025-10-12T18:08:47.2655927Z [command]/usr/bin/git checkout --progress --force -B development refs/remotes/origin/development
+2025-10-12T18:08:47.2828362Z Switched to a new branch 'development'
+2025-10-12T18:08:47.2831420Z branch 'development' set up to track 'origin/development'.
+2025-10-12T18:08:47.2837399Z ##[endgroup]
+2025-10-12T18:08:47.2871442Z [command]/usr/bin/git log -1 --format=%H
+2025-10-12T18:08:47.2892687Z 3df23a495734da13625abe8b33ad0b6f5333f8ae
+2025-10-12T18:08:47.3128165Z ##[group]Run actions/setup-node@v4
+2025-10-12T18:08:47.3128692Z with:
+2025-10-12T18:08:47.3129050Z   node-version: 20
+2025-10-12T18:08:47.3129756Z   always-auth: false
+2025-10-12T18:08:47.3130162Z   check-latest: false
+2025-10-12T18:08:47.3130725Z   token: ***
+2025-10-12T18:08:47.3131138Z ##[endgroup]
+2025-10-12T18:08:47.4923749Z Found in cache @ /opt/hostedtoolcache/node/20.19.5/x64
+2025-10-12T18:08:47.4931647Z ##[group]Environment details
+2025-10-12T18:08:50.6187703Z node: v20.19.5
+2025-10-12T18:08:50.6188409Z npm: 10.8.2
+2025-10-12T18:08:50.6188873Z yarn: 1.22.22
+2025-10-12T18:08:50.6190697Z ##[endgroup]
+2025-10-12T18:08:50.6300397Z ##[group]Run npm ci || npm i --no-audit --no-fund
+2025-10-12T18:08:50.6300866Z [36;1mnpm ci || npm i --no-audit --no-fund[0m
+2025-10-12T18:08:50.6345285Z shell: /usr/bin/bash -e {0}
+2025-10-12T18:08:50.6345597Z ##[endgroup]
+2025-10-12T18:08:54.8878901Z npm error code EUSAGE
+2025-10-12T18:08:54.8879841Z npm error
+2025-10-12T18:08:54.8880945Z npm error `npm ci` can only install packages when your package.json and package-lock.json or npm-shrinkwrap.json are in sync. Please update your lock file with `npm install` before continuing.
+2025-10-12T18:08:54.8881723Z npm error
+2025-10-12T18:08:54.8882056Z npm error Missing: tsx@4.20.6 from lock file
+2025-10-12T18:08:54.8882370Z npm error
+2025-10-12T18:08:54.8882657Z npm error Clean install a project
+2025-10-12T18:08:54.8882963Z npm error
+2025-10-12T18:08:54.8883172Z npm error Usage:
+2025-10-12T18:08:54.8883397Z npm error npm ci
+2025-10-12T18:08:54.8883603Z npm error
+2025-10-12T18:08:54.8883831Z npm error Options:
+2025-10-12T18:08:54.8884433Z npm error [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
+2025-10-12T18:08:54.8885175Z npm error [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+2025-10-12T18:08:54.8886377Z npm error [--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+2025-10-12T18:08:54.8887156Z npm error [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]
+2025-10-12T18:08:54.8887861Z npm error [--no-bin-links] [--no-fund] [--dry-run]
+2025-10-12T18:08:54.8888829Z npm error [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+2025-10-12T18:08:54.8889846Z npm error [-ws|--workspaces] [--include-workspace-root] [--install-links]
+2025-10-12T18:08:54.8890237Z npm error
+2025-10-12T18:08:54.8890643Z npm error aliases: clean-install, ic, install-clean, isntall-clean
+2025-10-12T18:08:54.8890983Z npm error
+2025-10-12T18:08:54.8891238Z npm error Run "npm help ci" for more info
+2025-10-12T18:08:54.8891911Z npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-10-12T18_08_50_699Z-debug-0.log
+2025-10-12T18:08:56.4036892Z npm warn deprecated source-map@0.8.0-beta.0: The work that was done in this beta branch won't be included in future versions
+2025-10-12T18:08:57.4468040Z 
+2025-10-12T18:08:57.4469538Z added 130 packages in 2s
+2025-10-12T18:08:57.4703730Z ##[group]Run npx tsx src/cli/summary.ts >> $GITHUB_STEP_SUMMARY
+2025-10-12T18:08:57.4704171Z [36;1mnpx tsx src/cli/summary.ts >> $GITHUB_STEP_SUMMARY[0m
+2025-10-12T18:08:57.4738313Z shell: /usr/bin/bash -e {0}
+2025-10-12T18:08:57.4738546Z env:
+2025-10-12T18:08:57.4738995Z   GITHUB_TOKEN: ***
+2025-10-12T18:08:57.4739472Z   DIRECTORY_OWNER: devpool-directory
+2025-10-12T18:08:57.4739726Z   DIRECTORY_REPO: devpool-directory
+2025-10-12T18:08:57.4739963Z   DATA_BRANCH: __STORAGE__
+2025-10-12T18:08:57.4740158Z ##[endgroup]
+2025-10-12T18:08:58.7477010Z Post job cleanup.
+2025-10-12T18:08:58.9182321Z Post job cleanup.
+2025-10-12T18:08:59.0118064Z [command]/usr/bin/git version
+2025-10-12T18:08:59.0153110Z git version 2.51.0
+2025-10-12T18:08:59.0198217Z Temporarily overriding HOME='/home/runner/work/_temp/b0e9ad82-a1f9-4549-81d5-2cd218cfaa6a' before making global git config changes
+2025-10-12T18:08:59.0200130Z Adding repository directory to the temporary git global config as a safe directory
+2025-10-12T18:08:59.0205555Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/devpool-directory/devpool-directory
+2025-10-12T18:08:59.0240754Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-10-12T18:08:59.0273672Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-10-12T18:08:59.0496667Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-10-12T18:08:59.0517137Z http.https://github.com/.extraheader
+2025-10-12T18:08:59.0529044Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2025-10-12T18:08:59.0558145Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-10-12T18:08:59.0876320Z Cleaning up orphan processes

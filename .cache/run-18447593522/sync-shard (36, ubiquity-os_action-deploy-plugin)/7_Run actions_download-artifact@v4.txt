@@ -1,0 +1,18 @@
+﻿2025-10-12T18:06:26.7326818Z ##[group]Run actions/download-artifact@v4
+2025-10-12T18:06:26.7327250Z with:
+2025-10-12T18:06:26.7327542Z   name: plan-extra
+2025-10-12T18:06:26.7327861Z   merge-multiple: false
+2025-10-12T18:06:26.7328236Z   repository: devpool-directory/devpool-directory
+2025-10-12T18:06:26.7328641Z   run-id: 18447593522
+2025-10-12T18:06:26.7328948Z ##[endgroup]
+2025-10-12T18:06:26.9291600Z Downloading single artifact
+2025-10-12T18:06:27.1594635Z Preparing to download the following artifacts:
+2025-10-12T18:06:27.1596322Z - plan-extra (ID: 4249011326, Size: 392, Expected Digest: sha256:f7ad60781ce4b98b6b6dee1977da558f4010cc58aa36e8c3327f95920d397aa9)
+2025-10-12T18:06:27.3099673Z Redirecting to blob download url: https://productionresultssa6.blob.core.windows.net/actions-results/bb15fbec-a566-4abd-9ef9-0787a90f6ceb/workflow-job-run-1e767b5b-7160-5b86-8e60-767989ac5d45/artifacts/b7eb00c313744339a069ab1524736cbe1cba2ccfdc9ff6d06e5e9375b19aadd6.zip
+2025-10-12T18:06:27.3102240Z Starting download of artifact to: /home/runner/work/devpool-directory/devpool-directory
+2025-10-12T18:06:27.5263052Z (node:2178) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+2025-10-12T18:06:27.5265126Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2025-10-12T18:06:27.5331104Z SHA256 digest of downloaded artifact is f7ad60781ce4b98b6b6dee1977da558f4010cc58aa36e8c3327f95920d397aa9
+2025-10-12T18:06:27.5332686Z Artifact download completed successfully.
+2025-10-12T18:06:27.5333516Z Total of 1 artifact(s) downloaded
+2025-10-12T18:06:27.5338819Z Download artifact has finished successfully

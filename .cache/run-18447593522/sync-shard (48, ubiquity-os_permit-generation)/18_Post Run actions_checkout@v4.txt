@@ -1,0 +1,12 @@
+﻿2025-10-12T18:07:17.9267952Z Post job cleanup.
+2025-10-12T18:07:18.0213687Z [command]/usr/bin/git version
+2025-10-12T18:07:18.0248710Z git version 2.51.0
+2025-10-12T18:07:18.0293109Z Temporarily overriding HOME='/home/runner/work/_temp/e1308c8b-d7c4-4e39-b285-6306af642e40' before making global git config changes
+2025-10-12T18:07:18.0294818Z Adding repository directory to the temporary git global config as a safe directory
+2025-10-12T18:07:18.0299863Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/devpool-directory/devpool-directory
+2025-10-12T18:07:18.0336604Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-10-12T18:07:18.0368518Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-10-12T18:07:18.0628243Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-10-12T18:07:18.0648494Z http.https://github.com/.extraheader
+2025-10-12T18:07:18.0665487Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2025-10-12T18:07:18.0697727Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"

@@ -1,0 +1,10 @@
+﻿2025-10-12T18:06:55.4015456Z ##[group]Run actions/create-github-app-token@v1
+2025-10-12T18:06:55.4015968Z with:
+2025-10-12T18:06:55.4016500Z   app-id: ***
+2025-10-12T18:06:55.4024066Z   private-key: ***
+
+2025-10-12T18:06:55.4024471Z   owner: devpool-directory
+2025-10-12T18:06:55.4024884Z   repositories: devpool-directory
+2025-10-12T18:06:55.4025333Z   github-api-url: https://api.github.com
+2025-10-12T18:06:55.4025774Z ##[endgroup]
+2025-10-12T18:06:55.4979015Z owner and repositories set, creating token for repositories "devpool-directory" owned by "devpool-directory"

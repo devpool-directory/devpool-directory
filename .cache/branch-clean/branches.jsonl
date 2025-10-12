@@ -1,0 +1,16 @@
+{"name":"add-pullrequest-scrape","protected":false}
+{"name":"chore/optimize-unauth-issue-delete","protected":false}
+{"name":"chore/restore-features","protected":false}
+{"name":"development","protected":true}
+{"name":"feat/clean-architecture-reorg","protected":false}
+{"name":"feat/delete-unauthorized-issues","protected":false}
+{"name":"feat/precompiled-results","protected":false}
+{"name":"fix/ci-checks-failing","protected":false}
+{"name":"fix/duplicates","protected":false}
+{"name":"fix/issue-61-duplicates","protected":false}
+{"name":"fix/issue-62-closed-unplanned","protected":false}
+{"name":"fix/linkbacks-in-issues","protected":false}
+{"name":"fix/runs","protected":false}
+{"name":"refactor/architecture","protected":false}
+{"name":"revert-pr-1439-1729591042954","protected":false}
+{"name":"sync-template/development","protected":false}

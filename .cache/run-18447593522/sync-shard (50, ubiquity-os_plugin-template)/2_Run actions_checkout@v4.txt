@@ -1,0 +1,69 @@
+﻿2025-10-12T18:06:38.4952876Z ##[group]Run actions/checkout@v4
+2025-10-12T18:06:38.4954684Z with:
+2025-10-12T18:06:38.4956044Z   repository: devpool-directory/devpool-directory
+2025-10-12T18:06:38.4958122Z   token: ***
+2025-10-12T18:06:38.4959342Z   ssh-strict: true
+2025-10-12T18:06:38.4960574Z   ssh-user: git
+2025-10-12T18:06:38.4961840Z   persist-credentials: true
+2025-10-12T18:06:38.4963179Z   clean: true
+2025-10-12T18:06:38.4964450Z   sparse-checkout-cone-mode: true
+2025-10-12T18:06:38.4965916Z   fetch-depth: 1
+2025-10-12T18:06:38.4967135Z   fetch-tags: false
+2025-10-12T18:06:38.4968554Z   show-progress: true
+2025-10-12T18:06:38.4969816Z   lfs: false
+2025-10-12T18:06:38.4971006Z   submodules: false
+2025-10-12T18:06:38.4972286Z   set-safe-directory: true
+2025-10-12T18:06:38.4973947Z ##[endgroup]
+2025-10-12T18:06:38.6072685Z Syncing repository: devpool-directory/devpool-directory
+2025-10-12T18:06:38.6076374Z ##[group]Getting Git version info
+2025-10-12T18:06:38.6078633Z Working directory is '/home/runner/work/devpool-directory/devpool-directory'
+2025-10-12T18:06:38.6081568Z [command]/usr/bin/git version
+2025-10-12T18:06:38.6133035Z git version 2.51.0
+2025-10-12T18:06:38.6159462Z ##[endgroup]
+2025-10-12T18:06:38.6172843Z Temporarily overriding HOME='/home/runner/work/_temp/fbca5b28-dba4-49d2-ab55-0b354042c88d' before making global git config changes
+2025-10-12T18:06:38.6176353Z Adding repository directory to the temporary git global config as a safe directory
+2025-10-12T18:06:38.6185948Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/devpool-directory/devpool-directory
+2025-10-12T18:06:38.6219893Z Deleting the contents of '/home/runner/work/devpool-directory/devpool-directory'
+2025-10-12T18:06:38.6223350Z ##[group]Initializing the repository
+2025-10-12T18:06:38.6227170Z [command]/usr/bin/git init /home/runner/work/devpool-directory/devpool-directory
+2025-10-12T18:06:38.6337803Z hint: Using 'master' as the name for the initial branch. This default branch name
+2025-10-12T18:06:38.6340567Z hint: is subject to change. To configure the initial branch name to use in all
+2025-10-12T18:06:38.6343393Z hint: of your new repositories, which will suppress this warning, call:
+2025-10-12T18:06:38.6345302Z hint:
+2025-10-12T18:06:38.6346959Z hint: 	git config --global init.defaultBranch <name>
+2025-10-12T18:06:38.6348784Z hint:
+2025-10-12T18:06:38.6350397Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2025-10-12T18:06:38.6353099Z hint: 'development'. The just-created branch can be renamed via this command:
+2025-10-12T18:06:38.6355029Z hint:
+2025-10-12T18:06:38.6356280Z hint: 	git branch -m <name>
+2025-10-12T18:06:38.6357758Z hint:
+2025-10-12T18:06:38.6359462Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2025-10-12T18:06:38.6362217Z Initialized empty Git repository in /home/runner/work/devpool-directory/devpool-directory/.git/
+2025-10-12T18:06:38.6366668Z [command]/usr/bin/git remote add origin https://github.com/devpool-directory/devpool-directory
+2025-10-12T18:06:38.6390922Z ##[endgroup]
+2025-10-12T18:06:38.6393307Z ##[group]Disabling automatic garbage collection
+2025-10-12T18:06:38.6396331Z [command]/usr/bin/git config --local gc.auto 0
+2025-10-12T18:06:38.6426628Z ##[endgroup]
+2025-10-12T18:06:38.6430352Z ##[group]Setting up auth
+2025-10-12T18:06:38.6433643Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-10-12T18:06:38.6465877Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-10-12T18:06:38.6798495Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-10-12T18:06:38.6830730Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-10-12T18:06:38.7047824Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2025-10-12T18:06:38.7081333Z ##[endgroup]
+2025-10-12T18:06:38.7083353Z ##[group]Fetching the repository
+2025-10-12T18:06:38.7098856Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +3df23a495734da13625abe8b33ad0b6f5333f8ae:refs/remotes/origin/development
+2025-10-12T18:06:39.1796586Z From https://github.com/devpool-directory/devpool-directory
+2025-10-12T18:06:39.1798653Z  * [new ref]         3df23a495734da13625abe8b33ad0b6f5333f8ae -> origin/development
+2025-10-12T18:06:39.1830070Z ##[endgroup]
+2025-10-12T18:06:39.1833208Z ##[group]Determining the checkout info
+2025-10-12T18:06:39.1836426Z ##[endgroup]
+2025-10-12T18:06:39.1838785Z [command]/usr/bin/git sparse-checkout disable
+2025-10-12T18:06:39.1877994Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2025-10-12T18:06:39.1908073Z ##[group]Checking out the ref
+2025-10-12T18:06:39.1910118Z [command]/usr/bin/git checkout --progress --force -B development refs/remotes/origin/development
+2025-10-12T18:06:39.2081365Z Switched to a new branch 'development'
+2025-10-12T18:06:39.2088154Z branch 'development' set up to track 'origin/development'.
+2025-10-12T18:06:39.2092372Z ##[endgroup]
+2025-10-12T18:06:39.2125271Z [command]/usr/bin/git log -1 --format=%H
+2025-10-12T18:06:39.2146440Z 3df23a495734da13625abe8b33ad0b6f5333f8ae

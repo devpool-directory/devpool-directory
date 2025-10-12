@@ -1,0 +1,28 @@
+﻿2025-10-12T18:06:10.5551043Z Current runner version: '2.328.0'
+2025-10-12T18:06:10.5585109Z ##[group]Runner Image Provisioner
+2025-10-12T18:06:10.5586920Z Hosted Compute Agent
+2025-10-12T18:06:10.5587891Z Version: 20250912.392
+2025-10-12T18:06:10.5589072Z Commit: d921fda672a98b64f4f82364647e2f10b2267d0b
+2025-10-12T18:06:10.5590375Z Build Date: 2025-09-12T15:23:14Z
+2025-10-12T18:06:10.5591351Z ##[endgroup]
+2025-10-12T18:06:10.5592385Z ##[group]Operating System
+2025-10-12T18:06:10.5593395Z Ubuntu
+2025-10-12T18:06:10.5594342Z 24.04.3
+2025-10-12T18:06:10.5595218Z LTS
+2025-10-12T18:06:10.5596327Z ##[endgroup]
+2025-10-12T18:06:10.5597187Z ##[group]Runner Image
+2025-10-12T18:06:10.5598282Z Image: ubuntu-24.04
+2025-10-12T18:06:10.5599230Z Version: 20250929.60.1
+2025-10-12T18:06:10.5600948Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20250929.60/images/ubuntu/Ubuntu2404-Readme.md
+2025-10-12T18:06:10.5603561Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20250929.60
+2025-10-12T18:06:10.5605615Z ##[endgroup]
+2025-10-12T18:06:10.5607814Z ##[group]GITHUB_TOKEN Permissions
+2025-10-12T18:06:10.5610465Z Actions: read
+2025-10-12T18:06:10.5611434Z Contents: write
+2025-10-12T18:06:10.5612421Z Issues: write
+2025-10-12T18:06:10.5613177Z Metadata: read
+2025-10-12T18:06:10.5614256Z ##[endgroup]
+2025-10-12T18:06:10.5617542Z Secret source: Actions
+2025-10-12T18:06:10.5618926Z Prepare workflow directory
+2025-10-12T18:06:10.6098654Z Prepare all required actions
+2025-10-12T18:06:10.6561635Z Complete job name: debug-matrix

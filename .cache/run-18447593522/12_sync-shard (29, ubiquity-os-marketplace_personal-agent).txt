@@ -1,0 +1,235 @@
+﻿2025-10-12T18:07:44.3860917Z Current runner version: '2.328.0'
+2025-10-12T18:07:44.3886211Z ##[group]Runner Image Provisioner
+2025-10-12T18:07:44.3887552Z Hosted Compute Agent
+2025-10-12T18:07:44.3888531Z Version: 20250912.392
+2025-10-12T18:07:44.3889552Z Commit: d921fda672a98b64f4f82364647e2f10b2267d0b
+2025-10-12T18:07:44.3890593Z Build Date: 2025-09-12T15:23:14Z
+2025-10-12T18:07:44.3891635Z ##[endgroup]
+2025-10-12T18:07:44.3892528Z ##[group]Operating System
+2025-10-12T18:07:44.3893411Z Ubuntu
+2025-10-12T18:07:44.3894280Z 24.04.3
+2025-10-12T18:07:44.3895504Z LTS
+2025-10-12T18:07:44.3896369Z ##[endgroup]
+2025-10-12T18:07:44.3897271Z ##[group]Runner Image
+2025-10-12T18:07:44.3898176Z Image: ubuntu-24.04
+2025-10-12T18:07:44.3899044Z Version: 20250929.60.1
+2025-10-12T18:07:44.3900611Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20250929.60/images/ubuntu/Ubuntu2404-Readme.md
+2025-10-12T18:07:44.3902666Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20250929.60
+2025-10-12T18:07:44.3904192Z ##[endgroup]
+2025-10-12T18:07:44.3906179Z ##[group]GITHUB_TOKEN Permissions
+2025-10-12T18:07:44.3908400Z Actions: read
+2025-10-12T18:07:44.3909416Z Contents: write
+2025-10-12T18:07:44.3910259Z Issues: write
+2025-10-12T18:07:44.3911158Z Metadata: read
+2025-10-12T18:07:44.3912090Z ##[endgroup]
+2025-10-12T18:07:44.3914410Z Secret source: Actions
+2025-10-12T18:07:44.3915972Z Prepare workflow directory
+2025-10-12T18:07:44.4248357Z Prepare all required actions
+2025-10-12T18:07:44.4288208Z Getting action download info
+2025-10-12T18:07:44.9686404Z Download action repository 'actions/checkout@v4' (SHA:08eba0b27e820071cde6df949e0beb9ba4906955)
+2025-10-12T18:07:45.1469891Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2025-10-12T18:07:45.2475988Z Download action repository 'actions/create-github-app-token@v1' (SHA:d72941d797fd3113feb6b93fd0dec494b13a2547)
+2025-10-12T18:07:45.8066299Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+2025-10-12T18:07:46.3822263Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2025-10-12T18:07:46.6322002Z Complete job name: sync-shard (29, ubiquity-os-marketplace/personal-agent)
+2025-10-12T18:07:46.7254397Z ##[group]Run actions/checkout@v4
+2025-10-12T18:07:46.7256337Z with:
+2025-10-12T18:07:46.7257676Z   repository: devpool-directory/devpool-directory
+2025-10-12T18:07:46.7259532Z   token: ***
+2025-10-12T18:07:46.7260738Z   ssh-strict: true
+2025-10-12T18:07:46.7261970Z   ssh-user: git
+2025-10-12T18:07:46.7263213Z   persist-credentials: true
+2025-10-12T18:07:46.7264535Z   clean: true
+2025-10-12T18:07:46.7266000Z   sparse-checkout-cone-mode: true
+2025-10-12T18:07:46.7267445Z   fetch-depth: 1
+2025-10-12T18:07:46.7268662Z   fetch-tags: false
+2025-10-12T18:07:46.7269916Z   show-progress: true
+2025-10-12T18:07:46.7271181Z   lfs: false
+2025-10-12T18:07:46.7272375Z   submodules: false
+2025-10-12T18:07:46.7273643Z   set-safe-directory: true
+2025-10-12T18:07:46.7275376Z ##[endgroup]
+2025-10-12T18:07:46.8364653Z Syncing repository: devpool-directory/devpool-directory
+2025-10-12T18:07:46.8368462Z ##[group]Getting Git version info
+2025-10-12T18:07:46.8370565Z Working directory is '/home/runner/work/devpool-directory/devpool-directory'
+2025-10-12T18:07:46.8373325Z [command]/usr/bin/git version
+2025-10-12T18:07:46.8419034Z git version 2.51.0
+2025-10-12T18:07:46.8445653Z ##[endgroup]
+2025-10-12T18:07:46.8459253Z Temporarily overriding HOME='/home/runner/work/_temp/dc9095a9-2f7e-4cca-bfae-f328ef43c2ea' before making global git config changes
+2025-10-12T18:07:46.8463005Z Adding repository directory to the temporary git global config as a safe directory
+2025-10-12T18:07:46.8471494Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/devpool-directory/devpool-directory
+2025-10-12T18:07:46.8506105Z Deleting the contents of '/home/runner/work/devpool-directory/devpool-directory'
+2025-10-12T18:07:46.8509719Z ##[group]Initializing the repository
+2025-10-12T18:07:46.8513819Z [command]/usr/bin/git init /home/runner/work/devpool-directory/devpool-directory
+2025-10-12T18:07:46.8624097Z hint: Using 'master' as the name for the initial branch. This default branch name
+2025-10-12T18:07:46.8626916Z hint: is subject to change. To configure the initial branch name to use in all
+2025-10-12T18:07:46.8630636Z hint: of your new repositories, which will suppress this warning, call:
+2025-10-12T18:07:46.8633937Z hint:
+2025-10-12T18:07:46.8636554Z hint: 	git config --global init.defaultBranch <name>
+2025-10-12T18:07:46.8639358Z hint:
+2025-10-12T18:07:46.8642195Z hint: Names commonly chosen instead of 'master' are 'main', 'trunk' and
+2025-10-12T18:07:46.8646574Z hint: 'development'. The just-created branch can be renamed via this command:
+2025-10-12T18:07:46.8649204Z hint:
+2025-10-12T18:07:46.8650415Z hint: 	git branch -m <name>
+2025-10-12T18:07:46.8651725Z hint:
+2025-10-12T18:07:46.8653810Z hint: Disable this message with "git config set advice.defaultBranchName false"
+2025-10-12T18:07:46.8658384Z Initialized empty Git repository in /home/runner/work/devpool-directory/devpool-directory/.git/
+2025-10-12T18:07:46.8662921Z [command]/usr/bin/git remote add origin https://github.com/devpool-directory/devpool-directory
+2025-10-12T18:07:46.8683290Z ##[endgroup]
+2025-10-12T18:07:46.8686400Z ##[group]Disabling automatic garbage collection
+2025-10-12T18:07:46.8688184Z [command]/usr/bin/git config --local gc.auto 0
+2025-10-12T18:07:46.8717267Z ##[endgroup]
+2025-10-12T18:07:46.8719221Z ##[group]Setting up auth
+2025-10-12T18:07:46.8723708Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-10-12T18:07:46.8757014Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-10-12T18:07:46.9072899Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-10-12T18:07:46.9104220Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-10-12T18:07:46.9322590Z [command]/usr/bin/git config --local http.https://github.com/.extraheader AUTHORIZATION: basic ***
+2025-10-12T18:07:46.9356600Z ##[endgroup]
+2025-10-12T18:07:46.9360160Z ##[group]Fetching the repository
+2025-10-12T18:07:46.9376627Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin +3df23a495734da13625abe8b33ad0b6f5333f8ae:refs/remotes/origin/development
+2025-10-12T18:07:47.3850214Z From https://github.com/devpool-directory/devpool-directory
+2025-10-12T18:07:47.3853010Z  * [new ref]         3df23a495734da13625abe8b33ad0b6f5333f8ae -> origin/development
+2025-10-12T18:07:47.3883909Z ##[endgroup]
+2025-10-12T18:07:47.3887134Z ##[group]Determining the checkout info
+2025-10-12T18:07:47.3890398Z ##[endgroup]
+2025-10-12T18:07:47.3892475Z [command]/usr/bin/git sparse-checkout disable
+2025-10-12T18:07:47.3933160Z [command]/usr/bin/git config --local --unset-all extensions.worktreeConfig
+2025-10-12T18:07:47.3964560Z ##[group]Checking out the ref
+2025-10-12T18:07:47.3967753Z [command]/usr/bin/git checkout --progress --force -B development refs/remotes/origin/development
+2025-10-12T18:07:47.4139883Z Switched to a new branch 'development'
+2025-10-12T18:07:47.4142422Z branch 'development' set up to track 'origin/development'.
+2025-10-12T18:07:47.4151517Z ##[endgroup]
+2025-10-12T18:07:47.4185542Z [command]/usr/bin/git log -1 --format=%H
+2025-10-12T18:07:47.4207635Z 3df23a495734da13625abe8b33ad0b6f5333f8ae
+2025-10-12T18:07:47.4493795Z ##[group]Run actions/setup-node@v4
+2025-10-12T18:07:47.4495281Z with:
+2025-10-12T18:07:47.4496390Z   node-version: 20
+2025-10-12T18:07:47.4497496Z   always-auth: false
+2025-10-12T18:07:47.4498630Z   check-latest: false
+2025-10-12T18:07:47.4499958Z   token: ***
+2025-10-12T18:07:47.4501287Z ##[endgroup]
+2025-10-12T18:07:47.6490642Z Found in cache @ /opt/hostedtoolcache/node/20.19.5/x64
+2025-10-12T18:07:47.6495863Z ##[group]Environment details
+2025-10-12T18:07:50.2188882Z node: v20.19.5
+2025-10-12T18:07:50.2189670Z npm: 10.8.2
+2025-10-12T18:07:50.2190169Z yarn: 1.22.22
+2025-10-12T18:07:50.2191393Z ##[endgroup]
+2025-10-12T18:07:50.2433990Z ##[group]Run actions/create-github-app-token@v1
+2025-10-12T18:07:50.2434401Z with:
+2025-10-12T18:07:50.2434931Z   app-id: ***
+2025-10-12T18:07:50.2442161Z   private-key: ***
+
+2025-10-12T18:07:50.2442487Z   owner: devpool-directory
+2025-10-12T18:07:50.2442823Z   repositories: devpool-directory
+2025-10-12T18:07:50.2443216Z   github-api-url: https://api.github.com
+2025-10-12T18:07:50.2443594Z ##[endgroup]
+2025-10-12T18:07:50.3398371Z owner and repositories set, creating token for repositories "devpool-directory" owned by "devpool-directory"
+2025-10-12T18:07:50.8380684Z ##[group]Run npm ci || npm i --no-audit --no-fund
+2025-10-12T18:07:50.8381241Z [36;1mnpm ci || npm i --no-audit --no-fund[0m
+2025-10-12T18:07:50.8497867Z shell: /usr/bin/bash -e {0}
+2025-10-12T18:07:50.8498294Z ##[endgroup]
+2025-10-12T18:07:55.2865243Z npm error code EUSAGE
+2025-10-12T18:07:55.2865876Z npm error
+2025-10-12T18:07:55.2867638Z npm error `npm ci` can only install packages when your package.json and package-lock.json or npm-shrinkwrap.json are in sync. Please update your lock file with `npm install` before continuing.
+2025-10-12T18:07:55.2868728Z npm error
+2025-10-12T18:07:55.2869219Z npm error Missing: tsx@4.20.6 from lock file
+2025-10-12T18:07:55.2869685Z npm error
+2025-10-12T18:07:55.2870098Z npm error Clean install a project
+2025-10-12T18:07:55.2870514Z npm error
+2025-10-12T18:07:55.2870848Z npm error Usage:
+2025-10-12T18:07:55.2871203Z npm error npm ci
+2025-10-12T18:07:55.2871561Z npm error
+2025-10-12T18:07:55.2871922Z npm error Options:
+2025-10-12T18:07:55.2872666Z npm error [--install-strategy <hoisted|nested|shallow|linked>] [--legacy-bundling]
+2025-10-12T18:07:55.2873626Z npm error [--global-style] [--omit <dev|optional|peer> [--omit <dev|optional|peer> ...]]
+2025-10-12T18:07:55.2874538Z npm error [--include <prod|dev|optional|peer> [--include <prod|dev|optional|peer> ...]]
+2025-10-12T18:07:55.2876091Z npm error [--strict-peer-deps] [--foreground-scripts] [--ignore-scripts] [--no-audit]
+2025-10-12T18:07:55.2877250Z npm error [--no-bin-links] [--no-fund] [--dry-run]
+2025-10-12T18:07:55.2878441Z npm error [-w|--workspace <workspace-name> [-w|--workspace <workspace-name> ...]]
+2025-10-12T18:07:55.2879802Z npm error [-ws|--workspaces] [--include-workspace-root] [--install-links]
+2025-10-12T18:07:55.2880666Z npm error
+2025-10-12T18:07:55.2881504Z npm error aliases: clean-install, ic, install-clean, isntall-clean
+2025-10-12T18:07:55.2882304Z npm error
+2025-10-12T18:07:55.2882947Z npm error Run "npm help ci" for more info
+2025-10-12T18:07:55.2884017Z npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2025-10-12T18_07_50_915Z-debug-0.log
+2025-10-12T18:07:56.7548553Z npm warn deprecated source-map@0.8.0-beta.0: The work that was done in this beta branch won't be included in future versions
+2025-10-12T18:07:57.8059878Z 
+2025-10-12T18:07:57.8061066Z added 130 packages in 2s
+2025-10-12T18:07:57.8301070Z ##[group]Run actions/download-artifact@v4
+2025-10-12T18:07:57.8301468Z with:
+2025-10-12T18:07:57.8301743Z   name: plan
+2025-10-12T18:07:57.8302043Z   merge-multiple: false
+2025-10-12T18:07:57.8302412Z   repository: devpool-directory/devpool-directory
+2025-10-12T18:07:57.8302803Z   run-id: 18447593522
+2025-10-12T18:07:57.8303103Z ##[endgroup]
+2025-10-12T18:07:58.0249244Z Downloading single artifact
+2025-10-12T18:07:58.3249520Z Preparing to download the following artifacts:
+2025-10-12T18:07:58.3251275Z - plan (ID: 4249011291, Size: 2347, Expected Digest: sha256:46522a69ffe369abb170b19bc52ec63fdd081c27e6669afc69d477b734ae89ef)
+2025-10-12T18:07:58.5130979Z Redirecting to blob download url: https://productionresultssa6.blob.core.windows.net/actions-results/bb15fbec-a566-4abd-9ef9-0787a90f6ceb/workflow-job-run-1e767b5b-7160-5b86-8e60-767989ac5d45/artifacts/64879f7d6b960a01909762d911a32d4582c20010c5641ee90278b644a9e3b525.zip
+2025-10-12T18:07:58.5134126Z Starting download of artifact to: /home/runner/work/devpool-directory/devpool-directory
+2025-10-12T18:07:58.7853892Z (node:2164) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+2025-10-12T18:07:58.7856189Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2025-10-12T18:07:58.7924399Z SHA256 digest of downloaded artifact is 46522a69ffe369abb170b19bc52ec63fdd081c27e6669afc69d477b734ae89ef
+2025-10-12T18:07:58.7925917Z Artifact download completed successfully.
+2025-10-12T18:07:58.7926758Z Total of 1 artifact(s) downloaded
+2025-10-12T18:07:58.7931935Z Download artifact has finished successfully
+2025-10-12T18:07:58.8043816Z ##[group]Run actions/download-artifact@v4
+2025-10-12T18:07:58.8044239Z with:
+2025-10-12T18:07:58.8044532Z   name: plan-extra
+2025-10-12T18:07:58.8045038Z   merge-multiple: false
+2025-10-12T18:07:58.8045416Z   repository: devpool-directory/devpool-directory
+2025-10-12T18:07:58.8045826Z   run-id: 18447593522
+2025-10-12T18:07:58.8046137Z ##[endgroup]
+2025-10-12T18:07:59.0001913Z Downloading single artifact
+2025-10-12T18:07:59.3054666Z Preparing to download the following artifacts:
+2025-10-12T18:07:59.3056539Z - plan-extra (ID: 4249011326, Size: 392, Expected Digest: sha256:f7ad60781ce4b98b6b6dee1977da558f4010cc58aa36e8c3327f95920d397aa9)
+2025-10-12T18:07:59.5098487Z Redirecting to blob download url: https://productionresultssa6.blob.core.windows.net/actions-results/bb15fbec-a566-4abd-9ef9-0787a90f6ceb/workflow-job-run-1e767b5b-7160-5b86-8e60-767989ac5d45/artifacts/b7eb00c313744339a069ab1524736cbe1cba2ccfdc9ff6d06e5e9375b19aadd6.zip
+2025-10-12T18:07:59.5100640Z Starting download of artifact to: /home/runner/work/devpool-directory/devpool-directory
+2025-10-12T18:07:59.8003881Z (node:2175) [DEP0005] DeprecationWarning: Buffer() is deprecated due to security and usability issues. Please use the Buffer.alloc(), Buffer.allocUnsafe(), or Buffer.from() methods instead.
+2025-10-12T18:07:59.8006177Z (Use `node --trace-deprecation ...` to show where the warning was created)
+2025-10-12T18:07:59.8077670Z SHA256 digest of downloaded artifact is f7ad60781ce4b98b6b6dee1977da558f4010cc58aa36e8c3327f95920d397aa9
+2025-10-12T18:07:59.8078596Z Artifact download completed successfully.
+2025-10-12T18:07:59.8079051Z Total of 1 artifact(s) downloaded
+2025-10-12T18:07:59.8085511Z Download artifact has finished successfully
+2025-10-12T18:07:59.8210740Z ##[group]Run # Gracefully abort a shard if it stalls (exit 124)
+2025-10-12T18:07:59.8211356Z [36;1m# Gracefully abort a shard if it stalls (exit 124)[0m
+2025-10-12T18:07:59.8211945Z [36;1mtimeout ${SHARD_TIMEOUT_MINUTES:-12}m npx tsx src/cli/sync-shard.ts --shard 29[0m
+2025-10-12T18:07:59.8244610Z shell: /usr/bin/bash -e {0}
+2025-10-12T18:07:59.8245102Z env:
+2025-10-12T18:07:59.8245773Z   GITHUB_TOKEN: ***
+2025-10-12T18:07:59.8246219Z   GH_TOKEN: ***
+2025-10-12T18:07:59.8246556Z   DIRECTORY_OWNER: devpool-directory
+2025-10-12T18:07:59.8246950Z   DIRECTORY_REPO: devpool-directory
+2025-10-12T18:07:59.8247384Z   WRITE_TARGET_REPO: devpool-directory/devpool-directory
+2025-10-12T18:07:59.8247813Z   FULL_RESYNC: false
+2025-10-12T18:07:59.8248120Z   USE_GRAPHQL: true
+2025-10-12T18:07:59.8248427Z   TWEET_ON_CREATE: true
+2025-10-12T18:07:59.8248758Z   DELETE_TWEET_ON_COMPLETE: true
+2025-10-12T18:07:59.8249150Z   TWITTER_API_KEY: ***
+2025-10-12T18:07:59.8249664Z   TWITTER_API_KEY_SECRET: ***
+2025-10-12T18:07:59.8250119Z   TWITTER_ACCESS_TOKEN: ***
+2025-10-12T18:07:59.8250594Z   TWITTER_ACCESS_TOKEN_SECRET: ***
+2025-10-12T18:07:59.8250951Z ##[endgroup]
+2025-10-12T18:08:00.8911111Z SyntaxError: Unexpected end of JSON input
+2025-10-12T18:08:00.8912059Z     at JSON.parse (<anonymous>)
+2025-10-12T18:08:00.8913118Z     at main (file:///home/runner/work/devpool-directory/devpool-directory/src/cli/sync-shard.ts:41:12)
+2025-10-12T18:08:00.8915156Z     at file:///home/runner/work/devpool-directory/devpool-directory/src/cli/sync-shard.ts:108:1
+2025-10-12T18:08:00.8916404Z     at ModuleJob.run (node:internal/modules/esm/module_job:325:25)
+2025-10-12T18:08:00.8917439Z     at ModuleLoader.import (node:internal/modules/esm/loader:606:24)
+2025-10-12T18:08:00.8918600Z     at asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+2025-10-12T18:08:00.9146120Z ##[error]Process completed with exit code 1.
+2025-10-12T18:08:00.9257999Z Post job cleanup.
+2025-10-12T18:08:01.2597894Z Token revoked
+2025-10-12T18:08:01.3421405Z Post job cleanup.
+2025-10-12T18:08:01.4369456Z [command]/usr/bin/git version
+2025-10-12T18:08:01.4407124Z git version 2.51.0
+2025-10-12T18:08:01.4452236Z Temporarily overriding HOME='/home/runner/work/_temp/63930129-1bff-46a6-85af-16e0a8bfa0aa' before making global git config changes
+2025-10-12T18:08:01.4454095Z Adding repository directory to the temporary git global config as a safe directory
+2025-10-12T18:08:01.4459348Z [command]/usr/bin/git config --global --add safe.directory /home/runner/work/devpool-directory/devpool-directory
+2025-10-12T18:08:01.4495900Z [command]/usr/bin/git config --local --name-only --get-regexp core\.sshCommand
+2025-10-12T18:08:01.4528606Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'core\.sshCommand' && git config --local --unset-all 'core.sshCommand' || :"
+2025-10-12T18:08:01.4752981Z [command]/usr/bin/git config --local --name-only --get-regexp http\.https\:\/\/github\.com\/\.extraheader
+2025-10-12T18:08:01.4772877Z http.https://github.com/.extraheader
+2025-10-12T18:08:01.4786551Z [command]/usr/bin/git config --local --unset-all http.https://github.com/.extraheader
+2025-10-12T18:08:01.4816643Z [command]/usr/bin/git submodule foreach --recursive sh -c "git config --local --name-only --get-regexp 'http\.https\:\/\/github\.com\/\.extraheader' && git config --local --unset-all 'http.https://github.com/.extraheader' || :"
+2025-10-12T18:08:01.5140514Z Cleaning up orphan processes

@@ -1,0 +1,34 @@
+﻿2025-10-12T18:06:46.8510262Z Current runner version: '2.328.0'
+2025-10-12T18:06:46.8536557Z ##[group]Runner Image Provisioner
+2025-10-12T18:06:46.8537808Z Hosted Compute Agent
+2025-10-12T18:06:46.8538759Z Version: 20250912.392
+2025-10-12T18:06:46.8539703Z Commit: d921fda672a98b64f4f82364647e2f10b2267d0b
+2025-10-12T18:06:46.8540793Z Build Date: 2025-09-12T15:23:14Z
+2025-10-12T18:06:46.8541953Z ##[endgroup]
+2025-10-12T18:06:46.8542758Z ##[group]Operating System
+2025-10-12T18:06:46.8543649Z Ubuntu
+2025-10-12T18:06:46.8544471Z 24.04.3
+2025-10-12T18:06:46.8545200Z LTS
+2025-10-12T18:06:46.8545989Z ##[endgroup]
+2025-10-12T18:06:46.8546831Z ##[group]Runner Image
+2025-10-12T18:06:46.8547730Z Image: ubuntu-24.04
+2025-10-12T18:06:46.8548536Z Version: 20250929.60.1
+2025-10-12T18:06:46.8549979Z Included Software: https://github.com/actions/runner-images/blob/ubuntu24/20250929.60/images/ubuntu/Ubuntu2404-Readme.md
+2025-10-12T18:06:46.8551874Z Image Release: https://github.com/actions/runner-images/releases/tag/ubuntu24%2F20250929.60
+2025-10-12T18:06:46.8553611Z ##[endgroup]
+2025-10-12T18:06:46.8555228Z ##[group]GITHUB_TOKEN Permissions
+2025-10-12T18:06:46.8557491Z Actions: read
+2025-10-12T18:06:46.8558459Z Contents: write
+2025-10-12T18:06:46.8559317Z Issues: write
+2025-10-12T18:06:46.8560128Z Metadata: read
+2025-10-12T18:06:46.8561003Z ##[endgroup]
+2025-10-12T18:06:46.8564100Z Secret source: Actions
+2025-10-12T18:06:46.8565523Z Prepare workflow directory
+2025-10-12T18:06:46.8887402Z Prepare all required actions
+2025-10-12T18:06:46.8924556Z Getting action download info
+2025-10-12T18:06:47.2003307Z Download action repository 'actions/checkout@v4' (SHA:08eba0b27e820071cde6df949e0beb9ba4906955)
+2025-10-12T18:06:47.3731225Z Download action repository 'actions/setup-node@v4' (SHA:49933ea5288caeca8642d1e84afbd3f7d6820020)
+2025-10-12T18:06:47.4748899Z Download action repository 'actions/create-github-app-token@v1' (SHA:d72941d797fd3113feb6b93fd0dec494b13a2547)
+2025-10-12T18:06:47.6630474Z Download action repository 'actions/download-artifact@v4' (SHA:d3f86a106a0bac45b974a628896c90dbdf5c8093)
+2025-10-12T18:06:47.8815720Z Download action repository 'actions/upload-artifact@v4' (SHA:ea165f8d65b6e75b540449e92b4886f43607fa02)
+2025-10-12T18:06:48.1450027Z Complete job name: sync-shard (75, ubiquity/github-labels-processor)
