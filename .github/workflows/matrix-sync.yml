@@ -49,11 +49,16 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -e
-          gh api repos/${{ github.repository }}/contents/index.json?ref=__STORAGE__ --jq '.content' | base64 -d > index.json || true
-          gh api repos/${{ github.repository }}/contents/twitter-map.json?ref=__STORAGE__ --jq '.content' | base64 -d > twitter-map.json || true
-          gh api repos/${{ github.repository }}/contents/sync-metadata.json?ref=__STORAGE__ --jq '.content' | base64 -d > sync-metadata.json || true
-          gh api repos/${{ github.repository }}/contents/issues-map.json?ref=__STORAGE__ --jq '.content' | base64 -d > issues-map.json || true
-          gh api repos/${{ github.repository }}/contents/lifetime-map.json?ref=__STORAGE__ --jq '.content' | base64 -d > lifetime-map.json || true
+          fetch_content() {
+            local path="$1"; local out="$2"; local c;
+            c=$(gh api repos/${{ github.repository }}/contents/$path?ref=__STORAGE__ --jq '.content' 2>/dev/null || true)
+            if [ -n "$c" ] && [ "$c" != "null" ]; then echo "$c" | base64 -d > "$out"; fi
+          }
+          fetch_content index.json index.json
+          fetch_content twitter-map.json twitter-map.json
+          fetch_content sync-metadata.json sync-metadata.json
+          fetch_content issues-map.json issues-map.json
+          fetch_content lifetime-map.json lifetime-map.json
       - id: out
         run: |
           echo "matrix_include=$(jq -c .matrix.include plan.json)" >> $GITHUB_OUTPUT
