@@ -175,39 +175,32 @@ async function main() {
   }
 
   // Final safety: hard-delete duplicate mirrors by partner URL (keep the oldest issue number per URL).
-  // This runs in the aggregate step (single writer) using the App token and removes any legacy or concurrent duplicates.
+  // Targeted search per URL to stay within rate budget and avoid full-repo listings.
   try {
-    const allDirIssues: any[] = await (octokit as any).paginate((octokit as any).issues.listForRepo, {
-      owner,
-      repo,
-      state: "all",
-      per_page: 100
-    });
-    const byUrl: Record<string, Array<{ number: number; node_id?: string }>> = {};
-    for (const it of allDirIssues) {
-      if ((it as any).pull_request) continue;
-      const raw = String((it as any).body || "").trim();
-      const norm = raw.replace("https://www.github.com/", "https://github.com/");
-      if (!/^https:\/\/(www\.)?github\.com\/[^\s]+\/issues\/\d+$/.test(raw)) continue;
-      (byUrl[norm] ||= []).push({ number: it.number, node_id: (it as any).node_id });
-    }
-    for (const [urlKey, list] of Object.entries(byUrl)) {
-      if (list.length <= 1) continue;
-      list.sort((a, b) => a.number - b.number);
-      const keep = list[0];
-      for (const dup of list.slice(1)) {
-        try {
-          if (dup.node_id) {
-            await (octokit as any).request("POST /graphql", {
-              query: "mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }",
-              id: dup.node_id,
-            });
-          } else {
-            await (octokit as any).issues.update({ owner, repo, issue_number: dup.number, state: "closed" });
+    const candidateUrls = Array.from(new Set(issuesOpenPricedFromMap.map((i) => String(i.url))));
+    for (const url of candidateUrls) {
+      try {
+        const urlWww = url.replace("https://github.com/", "https://www.github.com/");
+        const q = `repo:${owner}/${repo} in:body is:issue ${JSON.stringify(url)}`;
+        const res = await (octokit as any).search.issuesAndPullRequests({ q, per_page: 50 });
+        const items = (res.data.items || []).filter((it: any) => {
+          const b = String((it as any).body || "").trim();
+          return b === url || b === urlWww;
+        });
+        if (items.length > 1) {
+          const sorted = items.map((it: any) => ({ number: it.number, node_id: it.node_id })).sort((a: any, b: any) => a.number - b.number);
+          for (const dup of sorted.slice(1)) {
+            try {
+              if (dup.node_id) {
+                await (octokit as any).request("POST /graphql", { query: "mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }", id: dup.node_id });
+              } else {
+                await (octokit as any).issues.update({ owner, repo, issue_number: dup.number, state: "closed" });
+              }
+              duplicatesDeleted++;
+            } catch {}
           }
-          duplicatesDeleted++;
-        } catch {}
-      }
+        }
+      } catch {}
     }
   } catch {}
 
