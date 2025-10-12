@@ -38,12 +38,27 @@ done
 
 ensure_label() {
   local name="$1" color="$2" desc="$3"
-  # GitHub expects color without '#'
   color=${color#"#"}
-  # Create if missing; ignore conflicts
-  env -u GH_TOKEN gh api -X POST \
-    "/repos/$OWNER/$REPO/labels" \
-    -f name="$name" -f color="$color" -f description="${desc:-}" >/dev/null 2>&1 || true
+  local enc
+  enc=$(printf '%s' "$name" | jq -sRr @uri)
+  # If label exists, patch when color/description differ; else create
+  if env -u GH_TOKEN gh api "/repos/$OWNER/$REPO/labels/$enc" >/dev/null 2>&1; then
+    # Fetch and compare
+    local cur
+    cur=$(env -u GH_TOKEN gh api "/repos/$OWNER/$REPO/labels/$enc" 2>/dev/null || echo '{}')
+    local curColor curDesc
+    curColor=$(printf '%s' "$cur" | jq -r '.color // ""')
+    curDesc=$(printf '%s' "$cur" | jq -r '.description // ""')
+    if [ "$curColor" != "$color" ] || [ "${desc:-}" != "$curDesc" ]; then
+      env -u GH_TOKEN gh api -X PATCH \
+        "/repos/$OWNER/$REPO/labels/$enc" \
+        -f new_name="$name" -f color="$color" -f description="${desc:-}" >/dev/null 2>&1 || true
+    fi
+  else
+    env -u GH_TOKEN gh api -X POST \
+      "/repos/$OWNER/$REPO/labels" \
+      -f name="$name" -f color="$color" -f description="${desc:-}" >/dev/null 2>&1 || true
+  fi
 }
 
 updated=0; skipped=0; failed=0
@@ -85,4 +100,3 @@ while IFS=$'\t' read -r NUM PURL; do
 done < "$tmpdir/issues.tsv"
 
 echo "Done. labels updated=$updated skipped=$skipped failed=$failed"
-
