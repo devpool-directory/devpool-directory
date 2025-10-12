@@ -2,6 +2,8 @@
 
 This repository mirrors selected GitHub issues into a single “directory” repo and publishes derived JSON artifacts to a dedicated data branch for consumption by UIs and services. This document describes those artifacts, their shapes, and how to integrate with them reliably.
 
+For a practical, UI‑focused integration walkthrough (fetch patterns, caching, and rendering tips), see `docs/ui-integration.md`.
+
 The system is designed to be stateless at runtime: artifacts in the data branch are the source of truth for consumers.
 
 **Data Branch**
@@ -182,4 +184,3 @@ The system is designed to be stateless at runtime: artifacts in the data branch 
 - Workflow: `.github/workflows/backfill.yml` (manual dispatch).
 - Seeds `issues-map.json` and `lifetime-map.json` by fetching full issue history (`state=all`) for all included repos, then runs aggregate to publish consistent artifacts.
 - Recommended when first enabling a new owner set or after large scope changes; day‑to‑day runs rely on incremental since‑watermarks.
-
