@@ -185,6 +185,7 @@ jobs:
           DATA_BRANCH: __STORAGE__
 
   final-cleanup:
+    if: ${{ always() }}
     needs: aggregate
     runs-on: ubuntu-latest
     steps:
