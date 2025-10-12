@@ -36,6 +36,7 @@ export async function syncShard(
 
   const index: IndexMap = opts.index ?? {};
   const dryRun = process.env.DRY_RUN === "true";
+  const mirrorsInAggregate = process.env.MIRRORS_IN_AGGREGATE === "true";
 
   const poolSize = Math.max(1, Number(process.env.SHARD_CONCURRENCY ?? "4"));
   const pool = pLimit(poolSize);
@@ -107,8 +108,8 @@ export async function syncShard(
         const isOpen = it.state === "open";
         let dir: { number?: number; url?: string } | null = null;
 
-        // Create/Update mirrors only for open + priced issues
-        if (isOpen && hasPrice) {
+        // Create/Update mirrors only for open + priced issues (skip here if aggregator handles writes)
+        if (!mirrorsInAggregate && isOpen && hasPrice) {
           try {
             const res = await reconcileMirror(
               octokitWrite,
@@ -122,7 +123,7 @@ export async function syncShard(
           } catch (e) {
             console.warn(`[sync] mirror create/update failed for ${it.owner}/${it.repo}#${it.number}: ${e instanceof Error ? e.message : e}`);
           }
-        } else if (!isOpen && index[it.node_id]) {
+        } else if (!mirrorsInAggregate && !isOpen && index[it.node_id]) {
           // Close existing mirror when partner issue is closed
           try {
             const res = await reconcileMirror(

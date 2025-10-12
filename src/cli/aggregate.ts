@@ -5,6 +5,8 @@ import { mergeIssues, mergeMirrorState, mergePRs, computeStatistics } from "../a
 import { writeJson } from "../artifacts/write.js";
 import { Octokit } from "@octokit/rest";
 import { ensureBranch, commitChanges } from "../storage/git.js";
+import { computeMirrorStateEntry } from "../artifacts/state.js";
+import { reconcileMirror } from "../mirror/reconcile.js";
 
 async function main() {
   const shardsDir = path.join(process.cwd(), "shards");
@@ -37,17 +39,19 @@ async function main() {
 
   const issues = mergeIssues(issueChunks);
   const prs = mergePRs(prChunks);
-  const mirror = mergeMirrorState(mirrorChunks);
+  // Derive a mirror-like state for statistics directly from issues to decouple from shard writes
+  const mirrorForStats: Record<string, any> = {};
+  for (const it of issues) mirrorForStats[it.node_id] = computeMirrorStateEntry(it, null, undefined);
   // Restrict published issues file to open + priced items only (initial set; will recompute from issues-map below)
   const issuesOpenPriced = issues.filter(
     (i) => i.state === "open" && (i.labels || []).some((l: string) => /^Price:\s*/.test(String(l)))
   );
-  const stats = computeStatistics(issuesOpenPriced, mirror);
+  const stats = computeStatistics(issuesOpenPriced, mirrorForStats);
   // Lifetime (completed): compute over closed + priced to expose historical totals
   const issuesClosedPriced = issues.filter(
     (i) => i.state === "closed" && (i.labels || []).some((l: string) => /^Price:\s*/.test(String(l)))
   );
-  const life = computeStatistics(issuesClosedPriced, mirror);
+  const life = computeStatistics(issuesClosedPriced, mirrorForStats);
   (stats as any).lifetime = {
     rewardsCompletedUSD: life.rewards.completed,
     tasksCompletedPriced: life.tasks.completed
@@ -111,18 +115,37 @@ async function main() {
     ongoingCount: (stats as any).tasks.assigned
   };
 
-  // Merge mirror-state with prior artifact to avoid dropping entries when a shard sees no changes
+  // Single-writer reconciliation in aggregate: rebuild mirror-state and index deterministically
   let mirrorPrev: Record<string, any> = {};
   try {
     const { data } = await (octokit as any).repos.getContent({ owner, repo, path: "mirror-state.json", ref: branch });
     mirrorPrev = JSON.parse(Buffer.from((data as any).content, "base64").toString("utf8"));
   } catch {}
-  const mirrorMerged = Object.assign({}, mirrorPrev, mirror);
-
-  // Build index from merged mirror state
-  const index: Record<string, { number: number; url: string }> = {};
-  for (const [node, e] of Object.entries(mirrorMerged)) {
-    if (e.directory_issue_number && e.directory_issue_url) index[node] = { number: e.directory_issue_number, url: e.directory_issue_url };
+  const indexExisting: Record<string, { number: number; url: string }> = {};
+  for (const [node, e] of Object.entries(mirrorPrev)) {
+    if ((e as any).directory_issue_number && (e as any).directory_issue_url) indexExisting[node] = { number: (e as any).directory_issue_number, url: (e as any).directory_issue_url };
+  }
+  const indexBuilt: Record<string, { number: number; url: string }> = { ...indexExisting };
+  const mirrorStateNew: Record<string, any> = {};
+  const directory = { owner, repo } as const;
+  const dry = process.env.DRY_RUN === "true";
+  for (const it of allIssues) {
+    const isOpen = it.state === "open";
+    const hasPrice = (it.labels || []).some((l: string) => /^Price:\s*/.test(String(l)));
+    let dirRef: { number?: number; url?: string } | null = null;
+    try {
+      if (isOpen && hasPrice) {
+        const res = await reconcileMirror((octokit as any), directory as any, { node_id: it.node_id, title: it.title, html_url: it.url, state: it.state, labels: it.labels }, indexBuilt, { dryRun: dry });
+        dirRef = res;
+        indexBuilt[it.node_id] = { number: (res as any).number, url: (res as any).url } as any;
+      } else if (!isOpen && indexBuilt[it.node_id]) {
+        const res = await reconcileMirror((octokit as any), directory as any, { node_id: it.node_id, title: it.title, html_url: it.url, state: "closed", labels: it.labels }, indexBuilt, { dryRun: dry });
+        dirRef = res;
+      }
+    } catch {
+      // best-effort
+    }
+    mirrorStateNew[it.node_id] = computeMirrorStateEntry(it, dirRef, undefined);
   }
 
   // Seed twitter map from existing artifact on data branch, then merge deltas
@@ -185,11 +208,11 @@ async function main() {
   writeJson(outDir, "partner-open-proposals.json", issuesOpenUnpricedFromMap);
   writeJson(outDir, "partner-pull-requests.json", prs);
   writeJson(outDir, "owners-avatars.json", owners);
-  writeJson(outDir, "mirror-state.json", mirrorMerged);
+  writeJson(outDir, "mirror-state.json", mirrorStateNew);
   writeJson(outDir, "statistics.json", stats);
   writeJson(outDir, "sync-metadata.json", syncMeta);
   writeJson(outDir, "twitter-map.json", twitterMap);
-  writeJson(outDir, "index.json", index);
+  writeJson(outDir, "index.json", indexBuilt);
   writeJson(outDir, "issues-map.json", issuesMap);
   writeJson(outDir, "lifetime-map.json", lifetimeMap);
 

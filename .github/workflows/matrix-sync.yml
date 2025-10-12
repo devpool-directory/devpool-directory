@@ -19,7 +19,7 @@ permissions:
 # Avoid auto-cancelling manual runs; allow overlapping while we test
 concurrency:
   group: directory-sync-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
   plan:
@@ -122,6 +122,7 @@ jobs:
           WRITE_TARGET_REPO: ${{ github.repository_owner }}/${{ github.event.repository.name }}
           FULL_RESYNC: ${{ inputs.full_resync }}
           USE_GRAPHQL: "true"
+          MIRRORS_IN_AGGREGATE: "true"
           TWEET_ON_CREATE: "true"
           DELETE_TWEET_ON_COMPLETE: "true"
           TWITTER_API_KEY: ${{ secrets.TWITTER_API_KEY }}
