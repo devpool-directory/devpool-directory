@@ -6,6 +6,7 @@ import { writeJson } from "../artifacts/write.js";
 import fs from "fs";
 import { getTwitterClient } from "../twitter/client.js";
 import { postTweet, deleteTweet } from "../twitter/lifecycle.js";
+import path from "path";
 
 async function main() {
   const shardArgIndex = process.argv.indexOf("--shard");
@@ -37,19 +38,23 @@ async function main() {
   const indexPath = "index.json";
   const twitterMapPath = "twitter-map.json";
   const lastRunPath = "last-run.json";
-  const index: Record<string, { number: number; url: string }> = fs.existsSync(indexPath)
-    ? JSON.parse(fs.readFileSync(indexPath, "utf8"))
-    : {};
   const syncMetaInPath = "sync-metadata.json";
-  const syncMetaIn: { perRepo: Record<string, { lastSyncISO?: string }> } = fs.existsSync(syncMetaInPath)
-    ? JSON.parse(fs.readFileSync(syncMetaInPath, "utf8"))
-    : { perRepo: {} };
-  const twitterMap: Record<string, string> = fs.existsSync(twitterMapPath)
-    ? JSON.parse(fs.readFileSync(twitterMapPath, "utf8"))
-    : {};
-  const lastRun: { lastRunISO?: string } = fs.existsSync(lastRunPath)
-    ? JSON.parse(fs.readFileSync(lastRunPath, "utf8"))
-    : {};
+
+  function safeReadJson<T>(p: string, fallback: T): T {
+    try {
+      if (!fs.existsSync(p)) return fallback;
+      const txt = fs.readFileSync(p, "utf8");
+      if (!txt || !txt.trim()) return fallback;
+      return JSON.parse(txt) as T;
+    } catch {
+      return fallback;
+    }
+  }
+
+  const index = safeReadJson<Record<string, { number: number; url: string }>>(indexPath, {});
+  const syncMetaIn = safeReadJson<{ perRepo: Record<string, { lastSyncISO?: string }> }>(syncMetaInPath, { perRepo: {} });
+  const twitterMap = safeReadJson<Record<string, string>>(twitterMapPath, {});
+  const lastRun = safeReadJson<{ lastRunISO?: string }>(lastRunPath, {});
 
   // Cold-start guard: if the persistent issues map is absent in the workspace,
   // force a full resync to bootstrap the dataset instead of doing incremental
