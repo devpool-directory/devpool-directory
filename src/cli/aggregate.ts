@@ -69,6 +69,7 @@ async function main() {
   const branch = process.env.DATA_BRANCH ?? "__STORAGE__";
 
   const ownersMap: Record<string, { owner: string; type: "User" | "Organization"; avatar_url: string }> = {};
+  let duplicatesDeleted = 0;
   try {
     const { data } = await (octokit as any).repos.getContent({ owner, repo, path: "owners-avatars.json", ref: branch });
     const prev = JSON.parse(Buffer.from((data as any).content, "base64").toString("utf8"));
@@ -204,6 +205,7 @@ async function main() {
           } else {
             await (octokit as any).issues.update({ owner, repo, issue_number: dup.number, state: "closed" });
           }
+          duplicatesDeleted++;
         } catch {}
       }
     }
@@ -300,6 +302,7 @@ Notes:
     owners: owners.length,
     tweetsCreated,
     tweetsDeleted,
+    duplicatesDeleted,
     committedFiles: [
       "partner-open-issues.json",
       "partner-open-proposals.json",
