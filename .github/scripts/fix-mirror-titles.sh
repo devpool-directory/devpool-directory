@@ -47,7 +47,10 @@ updated=0
 skipped=0
 failed=0
 
-join -t $'\t' -1 3 -2 1 <(sort -u -k3,3 "$tmpdir/issues.tsv") <(sort -u -k1,1 "$tmpdir/map.tsv") | while IFS=$'\t' read -r URL NUM TITLE_CUR PARTNER_TITLE; do
+# Precompute join output; do not fail the script if join emits non-zero when no matches
+join -t $'\t' -1 3 -2 1 <(sort -u -k3,3 "$tmpdir/issues.tsv") <(sort -u -k1,1 "$tmpdir/map.tsv") > "$tmpdir/joined.tsv" || true
+
+while IFS=$'\t' read -r URL NUM TITLE_CUR PARTNER_TITLE; do
   # If title matches partner, skip; also skip empty partner title
   if [ -z "$PARTNER_TITLE" ] || [ "$TITLE_CUR" = "$PARTNER_TITLE" ]; then
     skipped=$((skipped+1))
@@ -64,6 +67,6 @@ join -t $'\t' -1 3 -2 1 <(sort -u -k3,3 "$tmpdir/issues.tsv") <(sort -u -k1,1 "$
     failed=$((failed+1))
   fi
   sleep 0.06
-done
+done < "$tmpdir/joined.tsv"
 
 echo "Done. updated=$updated skipped=$skipped failed=$failed"
