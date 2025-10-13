@@ -1,0 +1,40 @@
+name: Close Specific Issues (App)
+
+on:
+  workflow_dispatch:
+    inputs:
+      numbers:
+        description: Comma-separated issue numbers to close
+        required: true
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  close:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - name: Install deps
+        run: |
+          npm ci || npm i --no-audit --no-fund
+      - name: Create GitHub App token (repo)
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+      - name: Close listed issues via App token
+        run: npx tsx src/cli/close-issues.ts
+        env:
+          GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
+          DIRECTORY_OWNER: ${{ github.repository_owner }}
+          DIRECTORY_REPO: ${{ github.event.repository.name }}
+          WRITE_TARGET_REPO: ${{ github.repository_owner }}/${{ github.event.repository.name }}
+          NUMBERS: ${{ inputs.numbers }}
+
