@@ -25,8 +25,21 @@ async function main() {
       const { data } = await (okRead as any).issues.get({ owner, repo, issue_number });
       const node_id = (data as any).node_id;
       if (!node_id) { failures.push({ number: issue_number, reason: "missing node_id" }); continue; }
-      await (okWrite as any).request("POST /graphql", { query, variables: { id: node_id } });
-      deleted++;
+      const res = await (okWrite as any).request("POST /graphql", { query, variables: { id: node_id } });
+      const ok = Boolean((res as any)?.data?.deleteIssue);
+      // Verify by fetching again
+      let gone = false;
+      try {
+        await (okRead as any).issues.get({ owner, repo, issue_number });
+        gone = false;
+      } catch {
+        gone = true;
+      }
+      if (!ok || !gone) {
+        failures.push({ number: issue_number, reason: ok ? "verify-failed" : "graphql-no-deleteIssue" });
+      } else {
+        deleted++;
+      }
     } catch (e: any) {
       failures.push({ number: issue_number, reason: String(e?.message || e) });
     }
@@ -35,4 +48,3 @@ async function main() {
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });
-
