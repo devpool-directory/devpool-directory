@@ -37,4 +37,20 @@ jobs:
           DIRECTORY_REPO: ${{ github.event.repository.name }}
           WRITE_TARGET_REPO: ${{ github.repository_owner }}/${{ github.event.repository.name }}
           NUMBERS: ${{ inputs.numbers }}
-
+      - name: Verify and force delete via gh api (fallback)
+        env:
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
+          OWNER: ${{ github.repository_owner }}
+          REPO: ${{ github.event.repository.name }}
+          NUMBERS: ${{ inputs.numbers }}
+        run: |
+          set -euo pipefail
+          IFS=',' read -ra ARR <<< "$NUMBERS"
+          for n in "${ARR[@]}"; do
+            n=$(echo "$n" | xargs)
+            [ -z "$n" ] && continue
+            nid=$(gh api repos/$OWNER/$REPO/issues/$n -q .node_id 2>/dev/null || echo "")
+            if [ -n "$nid" ]; then
+              gh api graphql -f query='mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }' -F id="$nid" || true
+            fi
+          done
