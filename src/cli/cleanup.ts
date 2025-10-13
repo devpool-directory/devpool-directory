@@ -84,7 +84,7 @@ async function main() {
         break;
       }
     }
-    if (number) {
+    if (number && process.env.CLOSE_FALLBACK === "true") {
       try {
         await (okWrite as any).issues.update({ owner, repo, issue_number: number, state: "closed" });
         deleted++;
