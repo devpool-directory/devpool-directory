@@ -193,7 +193,10 @@ async function main() {
             for (const dup of sorted.slice(1)) {
               try {
                 if (dup.node_id) {
-                  await (octokit as any).request("POST /graphql", { query: "mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }", id: dup.node_id });
+                  await (octokit as any).request("POST /graphql", {
+                    query: "mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }",
+                    variables: { id: dup.node_id },
+                  });
                 } else {
                   await (octokit as any).issues.update({ owner, repo, issue_number: dup.number, state: "closed" });
                 }

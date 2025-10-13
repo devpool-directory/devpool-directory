@@ -19,10 +19,12 @@ async function main() {
   const repo = process.env.DIRECTORY_REPO || (process.env.GITHUB_REPOSITORY?.split("/")[1] ?? "");
   if (!owner || !repo) throw new Error("DIRECTORY_OWNER and DIRECTORY_REPO required");
 
+  const dry = process.env.DRY_RUN === "true";
   const okRead = getOctokitRead();
-  const okWrite = getOctokitWrite();
+  const okWrite = dry ? (null as any) : getOctokitWrite();
 
-  const dirIssues: Array<any> = await okWrite.paginate((okWrite as any).issues.listForRepo, {
+  // Read via read client (PAT/anon) to avoid requiring write token for listing
+  const dirIssues: Array<any> = await okRead.paginate((okRead as any).issues.listForRepo, {
     owner,
     repo,
     state: "all",
@@ -46,22 +48,55 @@ async function main() {
   let deleted = 0;
   let updated = 0;
   let kept = 0;
+  const plan = {
+    deletes: [] as number[],
+    closes: [] as number[],
+    updates: [] as number[],
+    invalidDeletes: [] as number[],
+  };
 
-  // Delete all issues that do not point to a partner issue URL
-  for (const it of invalid) {
-    try {
-      await (okWrite as any).issues.delete({ owner, repo, issue_number: it.number });
-      deleted++;
-    } catch {
-      // fallback to GraphQL delete
+  // Helper to hard-delete an issue by node_id (GraphQL), fallback to closing if needed
+  async function hardDeleteIssue(nodeId: string, number?: number) {
+    if (dry) {
+      if (number) plan.deletes.push(number);
+      return;
+    }
+    // Try GraphQL delete with basic backoff on rate limits
+    for (let attempt = 0; attempt < 3; attempt++) {
       try {
         await (okWrite as any).request("POST /graphql", {
           query: "mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }",
-          id: it.node_id,
+          variables: { id: nodeId },
         });
         deleted++;
+        return;
+      } catch (e: any) {
+        const status = e?.status ?? e?.response?.status;
+        if (status === 403 && attempt < 2) {
+          // Respect reset if provided, else small delay
+          const reset = Number(e?.response?.headers?.["x-ratelimit-reset"]) || 0;
+          const waitMs = reset * 1000 - Date.now();
+          const delay = waitMs > 0 && waitMs < 60_000 ? waitMs : 2_000 * (attempt + 1);
+          await new Promise((r) => setTimeout(r, delay));
+          continue;
+        }
+        // Fall through to close if delete not permitted/possible
+        break;
+      }
+    }
+    if (number) {
+      try {
+        await (okWrite as any).issues.update({ owner, repo, issue_number: number, state: "closed" });
+        deleted++;
+        return;
       } catch {}
     }
+  }
+
+  // Delete all issues that do not point to a partner issue URL
+  for (const it of invalid) {
+    if (dry) plan.invalidDeletes.push(it.number);
+    await hardDeleteIssue(it.node_id, it.number);
   }
 
   // Process each partner group: validate partner, enforce priced-only mirror, dedupe and state sync
@@ -82,7 +117,7 @@ async function main() {
     } catch {
       // Partner not found -> delete all mirrors in this group
       for (const it of list) {
-        try { await (okWrite as any).request("POST /graphql", { query: "mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }", id: it.node_id }); deleted++; } catch {}
+        await hardDeleteIssue(it.node_id, it.number);
       }
       continue;
     }
@@ -92,14 +127,14 @@ async function main() {
     if (!priced) {
       // Should not exist in directory: delete all mirrors in this group
       for (const it of list) {
-        try { await (okWrite as any).request("POST /graphql", { query: "mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }", id: it.node_id }); deleted++; } catch {}
+        await hardDeleteIssue(it.node_id, it.number);
       }
       continue;
     }
 
     // Dedupe: delete all duplicates beyond the oldest
     for (const it of dups) {
-      try { await (okWrite as any).request("POST /graphql", { query: "mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }", id: it.node_id }); deleted++; } catch {}
+      await hardDeleteIssue(it.node_id, it.number);
     }
 
     // Sync state & labels on the kept issue
@@ -109,17 +144,21 @@ async function main() {
       const needsStateUpdate = keep.state !== desiredState;
       const needsLabelUpdate = JSON.stringify(keep.labels?.map((l: any) => (typeof l === "string" ? l : l.name)).sort()) !== JSON.stringify([...partnerLabels].sort());
       if (needsStateUpdate || needsLabelUpdate) {
-        await (okWrite as any).issues.update({
-          owner,
-          repo,
-          issue_number: keep.number,
-          state: desiredState,
-          state_reason: desiredReason,
-          labels: partnerLabels,
-          title: partner.title ?? keep.title,
-          body: `https://github.com/${pOwner}/${pRepo}/issues/${pNum}`,
-        });
-        updated++;
+        if (dry) {
+          plan.updates.push(keep.number);
+        } else {
+          await (okWrite as any).issues.update({
+            owner,
+            repo,
+            issue_number: keep.number,
+            state: desiredState,
+            state_reason: desiredReason,
+            labels: partnerLabels,
+            title: partner.title ?? keep.title,
+            body: `https://github.com/${pOwner}/${pRepo}/issues/${pNum}`,
+          });
+          updated++;
+        }
       }
       kept++;
     } catch {
@@ -127,7 +166,8 @@ async function main() {
     }
   }
 
-  console.log(JSON.stringify({ deleted, updated, kept, scanned: dirIssues.length }));
+  const out = { deleted, updated, kept, scanned: dirIssues.length, planned: plan, dry };
+  console.log(JSON.stringify(out));
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });
