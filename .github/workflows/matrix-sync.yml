@@ -1,8 +1,8 @@
 name: Matrix Sync
 
 on:
-  # schedule:
-    # - cron: "*/15 * * * *"
+  schedule:
+    - cron: "*/15 * * * *"
   workflow_dispatch:
     inputs:
       full_resync:
