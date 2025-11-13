@@ -37,7 +37,7 @@ jobs:
         with: { node-version: 20 }
       - name: Install deps
         run: |
-          npm ci || npm i --no-audit --no-fund
+          bun install
       - name: Generate plan (tsx)
         run: |
           npx tsx src/cli/plan.ts > plan.json
@@ -110,7 +110,7 @@ jobs:
           repositories: ${{ github.event.repository.name }}
       - name: Install deps
         run: |
-          npm ci || npm i --no-audit --no-fund
+          bun install
       - uses: actions/download-artifact@v4
         with: { name: plan }
       - uses: actions/download-artifact@v4
@@ -153,7 +153,7 @@ jobs:
         with: { node-version: 20 }
       - name: Install deps
         run: |
-          npm ci || npm i --no-audit --no-fund
+          bun install
       - uses: actions/download-artifact@v4
         with: { path: ./shards }
       - name: Create GitHub App token (repo)
@@ -184,7 +184,7 @@ jobs:
         with: { node-version: 20 }
       - name: Install deps
         run: |
-          npm ci || npm i --no-audit --no-fund
+          bun install
       - run: npx tsx src/cli/summary.ts >> $GITHUB_STEP_SUMMARY
         env:
           GITHUB_TOKEN: ${{ github.token }}
