@@ -1,5 +1,5 @@
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 import crypto from "crypto";
 import type { Octokit } from "@octokit/rest";
 
@@ -190,4 +190,3 @@ export function installOctokitCache(octokit: Octokit, opts?: OctokitCacheOptions
     invalidateRepo,
   };
 }
-

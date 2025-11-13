@@ -1,10 +1,10 @@
 import type { Octokit } from "@octokit/rest";
 import pLimit from "p-limit";
-import type { MirrorState, PartnerIssue } from "../artifacts/types.js";
-import { fetchIssuesForRepo, fetchPRsForRepo, fetchOwnersAvatars } from "../fetch.js";
-import { fetchIssuesForRepoGQL, fetchPRsForRepoGQL } from "../fetch-graphql.js";
-import { computeMirrorStateEntry } from "../artifacts/state.js";
-import { reconcileMirror, type IndexMap } from "./reconcile.js";
+import type { MirrorState, PartnerIssue } from "../artifacts/types";
+import { fetchIssuesForRepo, fetchPRsForRepo, fetchOwnersAvatars } from "../fetch";
+import { fetchIssuesForRepoGQL, fetchPRsForRepoGQL } from "../fetch-graphql";
+import { computeMirrorStateEntry } from "../artifacts/state";
+import { reconcileMirror, type IndexMap } from "./reconcile";
 
 export type SyncResult = {
   issues: PartnerIssue[];

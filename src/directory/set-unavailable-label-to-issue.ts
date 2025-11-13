@@ -3,7 +3,7 @@ import { ensureLabelsExist } from "./label-utils";
 import { MetadataInterface } from "./update-issue";
 
 export async function setUnavailableLabelToIssue({ directoryIssue, partnerIssue, issueDelta, labelRemoved, originalLabels }: MetadataInterface) {
-  const hasUnavailableLabel = directoryIssue.labels.some((label) => (label as GitHubLabel).name === Labels.UNAVAILABLE);
+  const hasUnavailableLabel = directoryIssue.labels.some((label: GitHubLabel) => label.name === Labels.UNAVAILABLE);
   const isProjectAssigned = !!partnerIssue.assignees?.length;
   const isProjectOpen = partnerIssue.state === "open";
 

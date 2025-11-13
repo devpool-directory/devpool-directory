@@ -3,7 +3,6 @@ import { Octokit } from "octokit";
 import { throttling } from "@octokit/plugin-throttling";
 import { retry } from "@octokit/plugin-retry";
 import dotenv from "dotenv";
-import _projects from "../../projects.json";
 import { installOctokitCache } from "../utils/request-cache";
 dotenv.config();
 
@@ -28,8 +27,8 @@ async function chooseBestToken(): Promise<string | undefined> {
     const appOcto = new Octokit({ auth: APP_INSTALLATION_TOKEN });
 
     const [ghRate, appRate] = await Promise.all([
-      ghOcto.rest.rateLimit.get().then((r) => r.data.rate.remaining).catch(() => -1),
-      appOcto.rest.rateLimit.get().then((r) => r.data.rate.remaining).catch(() => -1),
+      ghOcto.rest.rateLimit.get().then((r: RestEndpointMethodTypes["rateLimit"]["get"]["response"]) => r.data.rate.remaining).catch(() => -1),
+      appOcto.rest.rateLimit.get().then((r: RestEndpointMethodTypes["rateLimit"]["get"]["response"]) => r.data.rate.remaining).catch(() => -1),
     ]);
 
     // Prefer GITHUB_TOKEN while it still has reasonable budget, else fall back to App token
@@ -88,7 +87,7 @@ function createClient(token?: string) {
 }
 
 function installRateLimitFallback(client: Octokit, getAlt: () => Octokit | undefined) {
-  client.hook.wrap("request", async (request, options) => {
+  client.hook.wrap("request", async (request: any, options: any) => {
     try {
       return await request(options);
     } catch (err: any) {
@@ -111,7 +110,7 @@ function installRateLimitFallback(client: Octokit, getAlt: () => Octokit | undef
 
 function installBudgetGuard(client: Octokit, getAlt: () => Octokit | undefined) {
   const minRemaining = Number(process.env.GH_MIN_REMAINING || 100);
-  client.hook.after("request", async (response, options) => {
+  client.hook.after("request", async (response: any, options: any) => {
     try {
       const remainingHeader = (response as any)?.headers?.["x-ratelimit-remaining"];
       const remaining = remainingHeader != null ? Number(remainingHeader) : NaN;
@@ -168,15 +167,13 @@ if (typeof DEVPOOL_OWNER_NAME !== "string" || typeof DEVPOOL_REPO_NAME !== "stri
   throw new Error("DEVPOOL_OWNER_NAME or DEVPOOL_REPO_NAME is not a string");
 }
 
-export type GitHubIssue = RestEndpointMethodTypes["issues"]["get"]["response"]["data"];
+// Use the element type returned by issues.listForRepo (matches our fetch path)
+export type GitHubIssue = RestEndpointMethodTypes["issues"]["listForRepo"]["response"]["data"][number];
 export type GitHubLabel = RestEndpointMethodTypes["issues"]["listLabelsOnIssue"]["response"]["data"][0];
 export type GitHubPullRequest = RestEndpointMethodTypes["pulls"]["get"]["response"]["data"];
 export type GitHubOrganization = RestEndpointMethodTypes["orgs"]["get"]["response"]["data"];
 
-// Extended interface for issues that includes state_reason
-export interface GitHubIssueWithStateReason extends GitHubIssue {
-  state_reason?: "completed" | "not_planned" | "reopened" | null;
-}
+// Note: The above GitHubIssue type already includes `state_reason` when present.
 
 export type OrgNameAndAvatarUrl = {
   ownerName: string;
@@ -191,10 +188,7 @@ export type StateChanges<T extends string = "open" | "closed"> = {
   };
 };
 
-export const projects = _projects as {
-  urls: string[];
-  category?: Record<string, string>;
-};
+
 
 export enum Labels {
   PRICE = "Price",

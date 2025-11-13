@@ -29,7 +29,7 @@ export async function getRepoUrls(orgOrRepo: string) {
           const res = await octokit.paginate("GET /orgs/{org}/repos", {
             org: orgOrRepo,
           });
-          repos = res.map((repo) => repo.html_url);
+          repos = res.map((repo: any) => repo.html_url);
           console.info(`Getting ${orgOrRepo} org repositories: ${repos.length}`);
         } catch (error: unknown) {
           console.warn(`Getting ${orgOrRepo} org repositories failed: ${error}`);

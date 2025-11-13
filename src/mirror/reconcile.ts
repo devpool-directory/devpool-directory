@@ -1,4 +1,5 @@
 import type { Octokit } from "@octokit/rest";
+import { getOctokitDelete } from "../github/client";
 
 export type IndexMap = Record<string, { number: number; url: string }>; // node_id -> directory issue
 
@@ -114,10 +115,11 @@ export async function reconcileMirror(
       if (candidates.length > 1) {
         candidates.sort((a, b) => a.number - b.number);
         const keep = candidates[0];
+        const okDelete = getOctokitDelete();
         for (const dup of candidates.slice(1)) {
           try {
             if (dup.node_id) {
-              await (octokit as any).request("POST /graphql", {
+              await (okDelete as any).request("POST /graphql", {
                 query: "mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }",
                 variables: { id: dup.node_id },
               });

@@ -1,12 +1,15 @@
 #!/usr/bin/env -S node --enable-source-maps
-import fs from "fs";
-import path from "path";
-import { mergeIssues, mergeMirrorState, mergePRs, computeStatistics } from "../artifacts/merge.js";
-import { writeJson } from "../artifacts/write.js";
+import fs from "node:fs";
+import path from "node:path";
+import { Buffer } from "node:buffer";
+import process from "node:process";
+import { mergeIssues, mergePRs, computeStatistics } from "../artifacts/merge";
+import { writeJson } from "../artifacts/write";
 import { Octokit } from "@octokit/rest";
-import { ensureBranch, commitChanges } from "../storage/git.js";
-import { computeMirrorStateEntry } from "../artifacts/state.js";
-import { reconcileMirror } from "../mirror/reconcile.js";
+import { ensureBranch, commitChanges } from "../storage/git";
+import { computeMirrorStateEntry } from "../artifacts/state";
+import { reconcileMirror } from "../mirror/reconcile";
+import { getOctokitDelete } from "../github/client";
 
 async function main() {
   const shardsDir = path.join(process.cwd(), "shards");
@@ -67,6 +70,11 @@ async function main() {
   const owner = process.env.DIRECTORY_OWNER ?? "";
   const repo = process.env.DIRECTORY_REPO ?? "";
   const branch = process.env.DATA_BRANCH ?? "__STORAGE__";
+  const enforced = process.env.WRITE_TARGET_REPO;
+  const target = `${owner}/${repo}`;
+  if (enforced && enforced !== target) {
+    throw new Error(`write-blocked: target ${target} != enforced ${enforced}`);
+  }
 
   const ownersMap: Record<string, { owner: string; type: "User" | "Organization"; avatar_url: string }> = {};
   let duplicatesDeleted = 0;
@@ -74,7 +82,9 @@ async function main() {
     const { data } = await (octokit as any).repos.getContent({ owner, repo, path: "owners-avatars.json", ref: branch });
     const prev = JSON.parse(Buffer.from((data as any).content, "base64").toString("utf8"));
     for (const o of prev) ownersMap[o.owner] = o;
-  } catch {}
+  } catch {
+    // noop
+  }
   for (const chunk of ownerChunks) for (const o of chunk) ownersMap[o.owner] = o;
   const owners = Object.values(ownersMap).sort((a, b) => a.owner.localeCompare(b.owner));
 
@@ -130,6 +140,7 @@ async function main() {
   const mirrorStateNew: Record<string, any> = {};
   const directory = { owner, repo } as const;
   const dry = process.env.DRY_RUN === "true";
+  const okDelete = getOctokitDelete();
   for (const it of allIssues) {
     const isOpen = it.state === "open";
     const hasPrice = (it.labels || []).some((l: string) => /^Price:\s*/.test(String(l)));
@@ -142,6 +153,34 @@ async function main() {
       } else if (!isOpen && indexBuilt[it.node_id]) {
         const res = await reconcileMirror((octokit as any), directory as any, { node_id: it.node_id, title: it.title, html_url: it.url, state: "closed", labels: it.labels }, indexBuilt, { dryRun: dry });
         dirRef = res;
+      } else if (!hasPrice && indexBuilt[it.node_id]) {
+        // Unpriced (open or closed): remove any existing mirror to preserve the
+        // invariant that the directory mirrors only open + priced partner issues.
+        try {
+          // Fetch the directory issue to obtain its node_id for hard delete
+          const dirIssueNum = indexBuilt[it.node_id].number;
+          if (!dry && Number.isFinite(dirIssueNum)) {
+            const { data: dirIssue } = await (octokit as any).issues.get({ owner, repo, issue_number: dirIssueNum });
+            const nodeId = (dirIssue as any).node_id as string | undefined;
+            if (nodeId) {
+              try {
+                await (okDelete as any).request("POST /graphql", {
+                  query: "mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }",
+                  variables: { id: nodeId },
+                });
+                // Remove from in-memory index so later iterations do not reference it
+                delete indexBuilt[it.node_id];
+              } catch {
+                // best-effort; do not fallback to close to avoid violating invariants
+              }
+            }
+          } else {
+            // Dry run: pretend it's removed from the index
+            delete indexBuilt[it.node_id];
+          }
+        } catch {
+          // ignore and continue
+        }
       }
     } catch {
       // best-effort
@@ -193,7 +232,7 @@ async function main() {
             for (const dup of sorted.slice(1)) {
               try {
                 if (dup.node_id) {
-                  await (octokit as any).request("POST /graphql", {
+                  await (okDelete as any).request("POST /graphql", {
                     query: "mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }",
                     variables: { id: dup.node_id },
                   });

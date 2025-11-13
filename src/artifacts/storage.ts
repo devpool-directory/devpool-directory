@@ -1,6 +1,6 @@
 import type { TwitterMap } from "../twitter/initialize-twitter-map";
-import fs from "fs";
-import path from "path";
+import fs from "node:fs";
+import path from "node:path";
 
 function getOwnerRepo() {
   const owner = process.env.DEVPOOL_OWNER_NAME || process.env.DIRECTORY_OWNER || process.env.GITHUB_REPOSITORY?.split("/")[0];

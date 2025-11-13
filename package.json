@@ -1,6 +1,6 @@
 {
   "name": "devpool-directory-v2",
-  "version": "0.3.1",
+  "version": "0.4.0",
   "private": true,
   "type": "module",
   "engines": {
@@ -22,8 +22,11 @@
   },
   "dependencies": {
     "@octokit/graphql": "^7.1.1",
+    "@octokit/plugin-retry": "^8.0.3",
+    "@octokit/plugin-throttling": "^11.0.3",
     "@octokit/rest": "^20.1.1",
     "dotenv": "^16.4.5",
+    "octokit": "^5.0.5",
     "p-limit": "^5.0.0",
     "twitter-api-v2": "^1.17.0",
     "zod": "^3.23.8"

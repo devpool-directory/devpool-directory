@@ -1,6 +1,6 @@
 import { Octokit } from "@octokit/rest";
 import pLimit from "p-limit";
-import type { PartnerIssue, PartnerPullRequest } from "./artifacts/types.js";
+import type { PartnerIssue, PartnerPullRequest } from "./artifacts/types";
 
 const limit = pLimit(6);
 

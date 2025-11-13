@@ -1,4 +1,4 @@
-import type { MirrorStateEntry, PartnerIssue } from "./types.js";
+import type { MirrorStateEntry, PartnerIssue } from "./types";
 
 export function computeMirrorStateEntry(issue: PartnerIssue, directory: { number?: number; url?: string } | null, category?: string): MirrorStateEntry {
   const price = issue.labels.find((l) => /^Price:/.test(l)) ?? null;

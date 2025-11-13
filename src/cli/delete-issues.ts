@@ -1,5 +1,6 @@
 #!/usr/bin/env -S node --enable-source-maps
-import { getOctokitWrite, getOctokitRead } from "../github/client.js";
+import process from "node:process";
+import { getOctokitWrite, getOctokitRead, getOctokitDelete } from "../github/client";
 
 async function main() {
   const owner = process.env.DIRECTORY_OWNER || (process.env.GITHUB_REPOSITORY?.split("/")[0] ?? "");
@@ -16,6 +17,7 @@ async function main() {
 
   const okRead = getOctokitRead();
   const okWrite = getOctokitWrite();
+  const okDelete = getOctokitDelete();
   const query = "mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }";
 
   let deleted = 0;
@@ -25,7 +27,7 @@ async function main() {
       const { data } = await (okRead as any).issues.get({ owner, repo, issue_number });
       const node_id = (data as any).node_id;
       if (!node_id) { failures.push({ number: issue_number, reason: "missing node_id" }); continue; }
-      const res = await (okWrite as any).request("POST /graphql", { query, variables: { id: node_id } });
+      const res = await (okDelete as any).request("POST /graphql", { query, variables: { id: node_id } });
       const ok = Boolean((res as any)?.data?.deleteIssue);
       // Verify by fetching again
       let gone = false;

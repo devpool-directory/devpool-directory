@@ -17,6 +17,8 @@ jobs:
       group: cleanup-dedup-${{ github.ref }}
       cancel-in-progress: true
     runs-on: ubuntu-latest
+    env:
+      GH_TOKEN: ${{ secrets.GH_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -36,5 +38,6 @@ jobs:
         run: npx tsx src/cli/cleanup.ts
         env:
           GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
           DIRECTORY_OWNER: ${{ github.repository_owner }}
           DIRECTORY_REPO: ${{ github.event.repository.name }}

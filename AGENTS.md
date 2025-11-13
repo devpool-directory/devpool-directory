@@ -1,8 +1,8 @@
 DevPool Directory — Local Agent Guidelines
 
-Critical Policy: App‑Only Writes
-- All writes (creating/updating issues and labels, committing artifacts) MUST be authenticated as the GitHub App `devpool-directory-superintendent[bot]`.
-- Never use a Personal Access Token (`GH_TOKEN`) for writes. Use the App token obtained via `actions/create-github-app-token` (`GITHUB_TOKEN`) for every write path.
+Write Auth Policy
+- Creates/updates (issues, labels, titles/bodies) and artifact commits MUST use the GitHub App `devpool-directory-superintendent[bot]` via `GITHUB_TOKEN` to ensure mirrors are authored by the App.
+- Hard deletions of directory issues MAY authenticate with `GH_TOKEN` (owner PAT with delete permission). Prefer the App token when it has delete permission; otherwise use `GH_TOKEN` for `deleteIssue` only.
 - Guard: `WRITE_TARGET_REPO` must equal the intended repo (e.g., `devpool-directory/devpool-directory`) before any write executes.
 
 Enforcement (Hard Delete, Not Close)
@@ -16,7 +16,9 @@ Status Mirror Invariant (Critical)
 
 Read vs Write Auth
 - Reads may use `GH_TOKEN` (preferred) or anonymous to maximize cross‑org access/rate limits.
-- Writes MUST use the App token. Shards and aggregate are configured accordingly.
+- Writes
+  - Create/Update: App token only.
+  - Delete: `GH_TOKEN` allowed (preferred when App lacks delete permission); fallback to App token if permitted.
 
 Operational Notes
 - Shards: read client = PAT/anon, write client = App token; mirrors created by shards will be authored by the App.
@@ -39,7 +41,8 @@ Artifacts and Labeling (UI integration)
 Do/Don’t
 - DO ensure new mirrors’ body is the exact partner issue URL (identity), and let the post‑create sweep collapse concurrent duplicates.
 - DO run the cleanup workflow after large auth/token changes to remove historical non‑App mirrors.
-- DON’T ever post or update directory issues with `GH_TOKEN` or a user PAT.
+- DON’T ever post or update directory issues with `GH_TOKEN` or a user PAT (App must author creates/updates).
+- OK to use `GH_TOKEN` for deletions only (hard delete via GraphQL `deleteIssue`).
 
 Incident: Redundant Issues During Matrix Sync (2025‑10‑12)
 - Symptom: After dispatching Matrix Sync with `full_resync=true` on branch `fix/shard-empty-json`, a large number of redundant directory issues were created.
@@ -55,7 +58,7 @@ Permanent Fixes (Implemented)
   - Before creating, `reconcileMirror` now scans the most recent repository issues (up to 300, state=all) and reuses the oldest issue whose body exactly matches the partner URL (matches both `https://github.com/...` and `https://www.github.com/...`).
   - This removes the dependency on Search API consistency and greatly reduces race‑condition windows across shards.
 - Post‑create hard‑delete of duplicates:
-  - If, despite pre‑checks, multiple mirrors exist for the same partner URL, keep the oldest and delete the rest via GraphQL `deleteIssue` (fallback to close only if deletion fails). This aligns with “Hard Delete, Not Close”.
+  - If, despite pre‑checks, multiple mirrors exist for the same partner URL, keep the oldest and delete the rest via GraphQL `deleteIssue`, authenticating with the deletion client (prefers `GH_TOKEN`, falls back to App when allowed). This aligns with “Hard Delete, Not Close”.
 - Guardrails preserved/enforced:
   - App‑only writes: `getOctokitWrite()` always uses the GitHub App token. `WRITE_TARGET_REPO` guard blocks accidental cross‑repo writes.
   - Recursion guard: Partner issues whose body is already a directory‑style GitHub issue URL are skipped.
@@ -104,9 +107,9 @@ Lessons Learned — Oct 2025
   - GitHub’s GraphQL `deleteIssue` may return without `data.deleteIssue` even when the HTTP request succeeds if the token lacks permission. Always verify by re‑fetching the issue (expect 404/not found).
   - The CLI `src/cli/delete-issues.ts` and `src/cli/cleanup.ts` now treat a missing `deleteIssue` field as a failure and surface it.
 
-- App token permissions matter
-  - The GitHub App token currently cannot delete issues in this repo. GraphQL calls are accepted but perform no deletion. Do not "close" as a substitute.
-  - If deletion is required and the App cannot do it, escalate for App permission updates (allow deleteIssue), or run an owner‑approved one‑time deletion using a local `$GITHUB_TOKEN` (see Runbook below).
+- App token vs PAT for deletions
+  - Deletions may authenticate with `GH_TOKEN` when the App lacks delete permission. Prefer the App when permitted; never “close” duplicates instead of deleting.
+  - Owner one‑time sweeps remain available, but routine deletion paths now use the deletion client automatically.
 
 - Pre‑create de‑dup beats Search under concurrency
   - Scanning recent pages (3×100) of repo issues and matching the exact body is dramatically more reliable than Search API during hot concurrency. Keep this as the primary method; only fall back to Search for older mirrors.

@@ -1,5 +1,5 @@
 #!/usr/bin/env -S node --enable-source-maps
-import { getOctokitRead } from "../github/client.js";
+import { getOctokitRead } from "../github/client";
 
 async function main() {
   const repoEnv = process.env.GITHUB_REPOSITORY ?? "";

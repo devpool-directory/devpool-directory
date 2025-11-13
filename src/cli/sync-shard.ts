@@ -1,12 +1,11 @@
 #!/usr/bin/env -S node --enable-source-maps
-import { getOctokitRead, getOctokitWrite } from "../github/client.js";
-import { Octokit } from "@octokit/rest";
-import { syncShard } from "../mirror/sync.js";
-import { writeJson } from "../artifacts/write.js";
-import fs from "fs";
-import { getTwitterClient } from "../twitter/client.js";
-import { postTweet, deleteTweet } from "../twitter/lifecycle.js";
-import path from "path";
+import { getOctokitRead, getOctokitWrite } from "../github/client";
+import { syncShard } from "../mirror/sync";
+import { writeJson } from "../artifacts/write";
+import fs from "node:fs";
+import { getTwitterClient } from "../twitter/client";
+import { postTweet, deleteTweet } from "../twitter/lifecycle";
+import process from "node:process";
 
 async function main() {
   const shardArgIndex = process.argv.indexOf("--shard");

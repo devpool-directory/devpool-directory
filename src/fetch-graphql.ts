@@ -1,6 +1,6 @@
 import { graphql } from "@octokit/graphql";
 import type { Octokit } from "@octokit/rest";
-import type { PartnerIssue, PartnerPullRequest } from "./artifacts/types.js";
+import type { PartnerIssue, PartnerPullRequest } from "./artifacts/types";
 
 async function sleep(ms: number) { return new Promise((r) => setTimeout(r, ms)); }
 
@@ -133,4 +133,3 @@ export async function fetchPRsForRepoGQL(_octokit: Octokit, full: string, sinceI
   }
   return out;
 }
-

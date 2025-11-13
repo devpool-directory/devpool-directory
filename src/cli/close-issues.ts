@@ -1,5 +1,5 @@
 #!/usr/bin/env -S node --enable-source-maps
-import { getOctokitWrite } from "../github/client.js";
+import { getOctokitWrite } from "../github/client";
 
 async function main() {
   const owner = process.env.DIRECTORY_OWNER || (process.env.GITHUB_REPOSITORY?.split("/")[0] ?? "");
@@ -28,4 +28,3 @@ async function main() {
 }
 
 main().catch((err) => { console.error(err); process.exit(1); });
-

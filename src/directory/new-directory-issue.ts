@@ -1,11 +1,12 @@
 import { commitTwitterMap } from "../git";
 import { TwitterMap } from "../twitter/initialize-twitter-map";
-import twitter from "../twitter/twitter";
+import { createTweet } from "../twitter/client";
 import { checkIfForked } from "./check-if-forked";
 import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME, GitHubIssue, GitHubLabel, Labels, octokit } from "./directory";
 import { getDirectoryIssueLabelsFromPartnerIssue } from "./get-directory-issue-labels";
 import { ensureLabelsExist } from "./label-utils";
 import { getSocialMediaText } from "./get-social-media-text";
+import { getRepoCredentials } from "./get-repo-credentials";
 
 interface GitHubError extends Error {
   status?: number;
@@ -18,12 +19,13 @@ interface GitHubError extends Error {
 }
 
 export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: string, twitterMap: TwitterMap): Promise<GitHubIssue | null> {
-  if (partnerIssue.state === "closed") return; // if issue is "closed" then skip it, no need to copy/paste already "closed" issues
+  if (partnerIssue.state === "closed") return null; // if issue is "closed" then skip it, no need to copy/paste already "closed" issues
 
   const hasPriceLabel = (partnerIssue.labels as GitHubLabel[]).some((label) => label.name.includes(Labels.PRICE)); // check if the issue is the same type as it should be
 
+  const [owner, repo] = getRepoCredentials(projectUrl);
   let body;
-  if (await checkIfForked()) {
+  if (await checkIfForked(owner, repo)) {
     body = partnerIssue.html_url.replace("https://github.com", "https://www.github.com");
   } else {
     body = partnerIssue.html_url;
@@ -76,7 +78,7 @@ export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: s
   // create a new issue
   try {
     // Ensure all labels exist before attempting to use them
-    const labelsToApply = getDirectoryIssueLabelsFromPartnerIssue(partnerIssue);
+    const labelsToApply = await getDirectoryIssueLabelsFromPartnerIssue(partnerIssue);
     try {
       await ensureLabelsExist(labelsToApply);
     } catch (err) {
@@ -101,11 +103,11 @@ export async function newDirectoryIssue(partnerIssue: GitHubIssue, projectUrl: s
     // post to social media (only if it's not a proposal)
     if (hasPriceLabel) {
       try {
-        const socialMediaText = getSocialMediaText(createdIssue.data);
-        const tweetId = await twitter.postTweet(socialMediaText);
+        const socialMediaText = getSocialMediaText(createdIssue.data as GitHubIssue);
+        const tweetData = await createTweet(socialMediaText);
 
-        if (tweetId && tweetId.id) {
-          twitterMap[createdIssue.data.node_id] = tweetId.id;
+        if (tweetData && tweetData.id) {
+          twitterMap[createdIssue.data.node_id] = tweetData.id;
           await commitTwitterMap(twitterMap);
         }
       } catch (err) {

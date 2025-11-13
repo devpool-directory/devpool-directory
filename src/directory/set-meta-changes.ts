@@ -2,13 +2,15 @@ import { checkIfForked } from "./check-if-forked";
 import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME, octokit } from "./directory";
 import { ensureLabelsExist } from "./label-utils";
 import { MetadataInterface } from "./update-issue";
+import { getRepoCredentials } from "./get-repo-credentials";
 
 export async function setMetaChanges({ issueDelta: metaChanges, partnerIssue, directoryIssue, labelRemoved, originalLabels }: MetadataInterface) {
   const shouldUpdate = metaChanges.title || metaChanges.body || metaChanges.labels;
 
   if (shouldUpdate) {
     let directoryIssueBody = partnerIssue.html_url;
-    const isFork = await checkIfForked();
+    const [owner, repo] = getRepoCredentials(partnerIssue.html_url);
+    const isFork = await checkIfForked(owner, repo);
     if (isFork) {
       directoryIssueBody = partnerIssue.html_url.replace("https://github.com", "https://www.github.com");
     }

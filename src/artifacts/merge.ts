@@ -1,4 +1,4 @@
-import type { MirrorState, PartnerIssue, PartnerPullRequest, Statistics } from "./types.js";
+import type { MirrorState, PartnerIssue, PartnerPullRequest, Statistics } from "./types";
 
 export function mergeIssues(chunks: PartnerIssue[][]): PartnerIssue[] {
   const map = new Map<string, PartnerIssue>();
@@ -50,4 +50,3 @@ export function computeStatistics(issues: PartnerIssue[], mirror: MirrorState): 
 
   return { rewards, tasks };
 }
-

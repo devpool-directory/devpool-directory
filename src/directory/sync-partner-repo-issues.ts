@@ -1,5 +1,5 @@
 import { TwitterMap } from "../twitter/initialize-twitter-map";
-import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME, GitHubIssue, GitHubIssueWithStateReason } from "./directory";
+import { DEVPOOL_OWNER_NAME, DEVPOOL_REPO_NAME, GitHubIssue } from "./directory";
 import { getIssueByLabel } from "./get-issue-by-label";
 import { getRepoCredentials } from "./get-repo-credentials";
 import { getRepositoryIssues } from "./get-repository-issues";
@@ -26,11 +26,8 @@ export async function syncPartnerRepoIssues({
   });
   const buffer: (GitHubIssue | null)[] = [];
   for (const partnerIssue of partnerRepoIssues) {
-    // Cast to extended interface to access state_reason
-    const issueWithReason = partnerIssue as GitHubIssueWithStateReason;
-    
     // Skip issues that are closed as "not_planned" (unplanned)
-    if (issueWithReason.state === "closed" && issueWithReason.state_reason === "not_planned") {
+    if (partnerIssue.state === "closed" && partnerIssue.state_reason === "not_planned") {
       continue;
     }
     

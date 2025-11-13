@@ -1,5 +1,6 @@
 import type { Octokit as RestOctokit } from "@octokit/rest";
 import { Octokit } from "@octokit/rest";
+import { Statistics } from "./directory/statistics";
 let gitChanges: Array<{ path: string; content: string }> = [];
 
 async function gitCommit(data: unknown, fileName: string) {

@@ -1,5 +1,5 @@
 import { Octokit } from "@octokit/rest";
-import { info } from "../util/log.js";
+import { info } from "../util/log";
 
 export type Change = { path: string; content: string };
 

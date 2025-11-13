@@ -1,6 +1,7 @@
 #!/usr/bin/env -S node --enable-source-maps
-import { Octokit } from "@octokit/rest";
-import { getOctokitRead, getOctokitWrite } from "../github/client.js";
+import process from "node:process";
+import type { Endpoints } from "@octokit/types";
+import { getOctokitRead, getOctokitWrite, getOctokitDelete } from "../github/client";
 
 function parsePartnerUrl(text: string): { owner: string; repo: string; number: number } | null {
   if (!text) return null;
@@ -18,13 +19,17 @@ async function main() {
   const owner = process.env.DIRECTORY_OWNER || (process.env.GITHUB_REPOSITORY?.split("/")[0] ?? "");
   const repo = process.env.DIRECTORY_REPO || (process.env.GITHUB_REPOSITORY?.split("/")[1] ?? "");
   if (!owner || !repo) throw new Error("DIRECTORY_OWNER and DIRECTORY_REPO required");
+  const target = `${owner}/${repo}`;
+  const guard = process.env.WRITE_TARGET_REPO;
+  if (guard && guard !== target) throw new Error(`write-blocked: target ${target} != enforced ${guard}`);
 
   const dry = process.env.DRY_RUN === "true";
   const okRead = getOctokitRead();
   const okWrite = dry ? (null as any) : getOctokitWrite();
+  const okDelete = dry ? (null as any) : getOctokitDelete();
 
   // Read via read client (PAT/anon) to avoid requiring write token for listing
-  const dirIssues: Array<any> = await okRead.paginate((okRead as any).issues.listForRepo, {
+  const dirIssues: Endpoints["GET /repos/{owner}/{repo}/issues"]["response"]["data"] = await okRead.paginate((okRead as any).issues.listForRepo, {
     owner,
     repo,
     state: "all",
@@ -64,7 +69,7 @@ async function main() {
     // Try GraphQL delete with basic backoff on rate limits
     for (let attempt = 0; attempt < 3; attempt++) {
       try {
-        await (okWrite as any).request("POST /graphql", {
+        await (okDelete as any).request("POST /graphql", {
           query: "mutation($id:ID!){ deleteIssue(input:{issueId:$id}){ clientMutationId } }",
           variables: { id: nodeId },
         });
@@ -89,7 +94,9 @@ async function main() {
         await (okWrite as any).issues.update({ owner, repo, issue_number: number, state: "closed" });
         deleted++;
         return;
-      } catch {}
+      } catch {
+        // noop
+      }
     }
   }
 
@@ -110,7 +117,7 @@ async function main() {
     const pNum = Number(numStr);
 
     // Fetch partner issue
-    let partner: any | null = null;
+    let partner: Endpoints["GET /repos/{owner}/{repo}/issues/{issue_number}"]["response"]["data"] | null = null;
     try {
       const { data } = await okRead.issues.get({ owner: pOwner, repo: pRepo, issue_number: pNum });
       partner = data;

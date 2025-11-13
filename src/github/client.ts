@@ -1,5 +1,5 @@
 import { Octokit } from "@octokit/rest";
-import { env } from "../config/load.js";
+import { env } from "../config/load";
 
 // Read client: prefer PAT (GH_TOKEN) to maximize cross-org read access;
 // fallback to Actions/App token; finally anonymous for public data.
@@ -20,6 +20,14 @@ export function getOctokitWrite(): Octokit {
 
 // Backwards-compat alias: treat getOctokit() as read client.
 export const getOctokit = getOctokitRead;
+
+// Delete client: prefer GH_TOKEN (owner PAT with delete permissions) when present;
+// fall back to the App token. This is limited to hard-deletion operations.
+export function getOctokitDelete(): Octokit {
+  const pat = process.env.GH_TOKEN || env("GH_TOKEN", false);
+  if (pat) return new Octokit({ auth: pat as string, request: { retries: 0 } });
+  return getOctokitWrite();
+}
 
 export async function getRateRemaining(octokit: Octokit): Promise<number> {
   const { data } = await octokit.rateLimit.get();
