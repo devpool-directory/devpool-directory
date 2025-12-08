@@ -35,6 +35,59 @@ function getRepoContext(): { owner: string; repo: string } | null {
   return { owner, repo };
 }
 
+function getWorkflowFileFromEnv(): string | null {
+  const ref = process.env.GITHUB_WORKFLOW_REF; // <owner>/<repo>/.github/workflows/<file>@ref
+  if (!ref) return null;
+  const pathPart = ref.split("@")[0] ?? "";
+  const marker = "/.github/workflows/";
+  const idx = pathPart.indexOf(marker);
+  if (idx === -1) return pathPart.split("/").pop() || null;
+  return pathPart.slice(idx + marker.length) || null;
+}
+
+async function getLatestSuccessfulRun(octokit: any, owner: string, repo: string) {
+  const branch = process.env.GITHUB_REF_NAME;
+  const workflowFile = getWorkflowFileFromEnv();
+
+  async function pickRun(runs: any[] | undefined | null) {
+    const run = Array.isArray(runs) && runs.length ? runs[0] : null;
+    if (!run) return null;
+    const lastRunISO = run.run_started_at || run.created_at || run.updated_at;
+    if (!lastRunISO) return null;
+    return { lastRunISO, runId: run.id, sha: run.head_sha };
+  }
+
+  if (workflowFile) {
+    try {
+      const { data } = await octokit.actions.listWorkflowRuns({
+        owner,
+        repo,
+        workflow_id: workflowFile,
+        status: "success",
+        per_page: 1,
+        ...(branch ? { branch } : {})
+      });
+      const found = await pickRun(data?.workflow_runs);
+      if (found) return found;
+    } catch {
+      // fallback to repo-level query below
+    }
+  }
+
+  try {
+    const { data } = await octokit.actions.listWorkflowRunsForRepo({
+      owner,
+      repo,
+      status: "success",
+      per_page: 1,
+      ...(branch ? { branch } : {})
+    });
+    return await pickRun(data?.workflow_runs);
+  } catch {
+    return null;
+  }
+}
+
 function greedyBalanceShards(repos: Repo[], weights: Map<Repo, number>, K: number) {
   const items = repos.map((r) => ({ repo: r, w: weights.get(r) ?? 1 })).sort((a, b) => b.w - a.w);
   const shards: Array<{ shard_id: number; repos: string[]; sum: number }> = Array.from({ length: K }, (_, i) => ({ shard_id: i, repos: [], sum: 0 }));
@@ -109,10 +162,9 @@ async function main() {
 
   process.stdout.write(JSON.stringify(plan, null, 2));
 
-  // Also fetch last-run.json from data branch for shards to use as a global watermark
+  // Also fetch last-run watermark from the latest successful Actions run
   if (ctx) {
-    const branch = cfg.data_branch || "__STORAGE__";
-    const lastRun = await tryLoadJsonFromStorage<any>(octokit, ctx.owner, ctx.repo, "last-run.json", branch);
+    const lastRun = await getLatestSuccessfulRun(octokit, ctx.owner, ctx.repo);
     if (lastRun) {
       try { fs.writeFileSync(path.join(process.cwd(), "last-run.json"), JSON.stringify(lastRun)); } catch {}
     }

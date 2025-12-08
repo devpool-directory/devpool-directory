@@ -24,7 +24,7 @@ export async function syncShard(
     index?: IndexMap;
     prevSyncMeta?: Record<string, { lastSyncISO?: string }>;
     octokitRead?: Octokit;
-    globalSinceISO?: string; // fallback watermark from last-run.json
+    globalSinceISO?: string; // fallback watermark supplied by plan (latest successful Actions run)
   }
 ): Promise<SyncResult> {
   const issues: PartnerIssue[] = [];

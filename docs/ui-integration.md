@@ -21,7 +21,7 @@ This guide explains how a UI can consume the directory’s analytics artifacts p
 - `issues-map.json` — persistent map of all known issues (state=all) across runs.
 - `lifetime-map.json` — `node_id -> amountUSD` for closed (priced) rollups.
 - `sync-metadata.json` — per‑repo sync metadata (observability, incremental since markers).
-- `last-run.json` — latest run watermark and commit SHA.
+- Run watermark: derived from the latest successful Actions run for the workflow (queried via the Actions API), not stored as a JSON artifact.
 
 ## Fetch Strategy (Recommended)
 1) Request `summary.json` with `If-None-Match` using the last known `ETag`.

@@ -148,14 +148,6 @@ export async function commitTwitterMap(twitterMap: TwitterMap) {
   }
 }
 
-export async function commitLastRun(lastRun: Record<string, string>) {
-  try {
-    await gitCommit(lastRun, "last-run.json");
-  } catch (error) {
-    console.error(`Error preparing last-run map for github file: ${error}`);
-  }
-}
-
 // Generic artifact writer for __STORAGE__ branch JSON files.
 // Use this to stage arbitrary JSON artifacts (plan/current/delta/summary).
 export async function commitArtifact(fileName: string, data: unknown) {

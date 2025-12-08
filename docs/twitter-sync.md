@@ -54,7 +54,7 @@
   - `src/twitter/apply.ts`
     - `applyPlan({ creates, deletes, budgets, client, twitterMap }) => { created: Record<node_id, tweet_id>, deleted: string[] }`.
   - `src/artifacts/storage.ts`
-    - `readJson(path: string, ref = "__STORAGE__")` via raw GH HTTP fetch (consistent with `src/utils/last-run.ts`).
+    - `readJson(path: string, ref = "__STORAGE__")` via raw GH HTTP fetch.
     - `writeJsonBatch(changes[])` by reusing `gitCommit`/`gitPush` in `src/git.ts` (file paths are root-level JSON in `__STORAGE__`).
   - `src/cli/twitter-plan.ts`
     - Loads artifacts + scans tweets + computes plan; writes `twitter-plan.json` and `twitter-current.json`.

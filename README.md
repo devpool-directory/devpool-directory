@@ -151,7 +151,7 @@ The system is designed to be stateless at runtime: artifacts in the data branch 
   - Downloads prior artifacts (`index.json`, `twitter-map.json`, `sync-metadata.json`, and persistent maps) for shard reuse.
 - Sync Shard
   - Processes its repo list with a per‑shard concurrency pool (`SHARD_CONCURRENCY`, default 4).
-  - Incremental fetch: uses per‑repo `lastSyncISO` or a global watermark from `last-run.json`, minus a safety fudge (`SYNC_SINCE_FUDGE_MINUTES`, default 5) to avoid boundary misses.
+  - Incremental fetch: uses per‑repo `lastSyncISO` or a global watermark from the latest successful Actions run (queried via API at plan time), minus a safety fudge (`SYNC_SINCE_FUDGE_MINUTES`, default 5) to avoid boundary misses.
   - Fetcher: GraphQL (ordered by `UPDATED_AT`, early stop) with automatic REST fallback; both paths exclude PRs and `state_reason: not_planned`.
   - Timeouts: each repo call is bounded by `REPO_TIMEOUT_MS` (default 180s). Shard steps are wrapped in an OS timeout (`SHARD_TIMEOUT_MINUTES`, default 12 in the workflow).
   - Mirrors: create/update only for open+priced issues; close mirrors when partner closes. Recursion guard skips mirrors that are just directory URLs.
@@ -160,7 +160,7 @@ The system is designed to be stateless at runtime: artifacts in the data branch 
   - Downloads all shard artifacts, merges them with prior data from the data branch (`DATA_BRANCH`, default `__STORAGE__`).
   - Union semantics: never drops entries for repos whose shard failed; previously published data persists.
   - Recomputes `partner-open-issues.json` (open+priced), `statistics.json` (open+priced; plus lifetime fields), merges `mirror-state.json`, rebuilds `index.json`, and commits in one shot.
-  - Publishes `last-run.json` (watermark for the next plan/sync) and a human‑readable `summary.json`.
+  - Publishes a human‑readable `summary.json`; the watermark for the next plan/sync comes from the latest successful Actions run instead of a stored file.
 
 **Operational Knobs (Env)**
 - Reads & Writes
