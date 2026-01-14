@@ -26,7 +26,7 @@ jobs:
         run: |
           mkdir -p config
           cat > config/e2e.config.json <<'JSON'
-          {"include":["devpool-directory/devpool-directory-tasks"],"exclude":[],"explicit_urls":[],"categories":{},"official_owners":["devpool-directory"],"data_branch":"__STORAGE__","max_shards":1}
+          {"include":["devpool-directory/devpool-directory-tasks"],"exclude":[],"explicit_urls":[],"data_branch":"__STORAGE__","max_shards":1}
           JSON
         env:
           CONFIG_PATH: config/e2e.config.json

@@ -13,10 +13,7 @@ Config file (example `config/devpool.config.json`):
   "include": ["owner1", "org2", "owner3/repoA"],
   "exclude": ["orgToSkip", "ownerX/repoY"],
   "explicit_urls": ["https://github.com/ownerZ/repoQ"],
-  "categories": {"https://github.com/owner3/repoA/issues/123": "Category: Payments"},
-  "official_owners": ["exampleOrg", "exampleTeam"],
   "data_branch": "__STORAGE__",
   "max_shards": 12
 }
 ```
-

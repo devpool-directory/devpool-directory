@@ -126,7 +126,7 @@ The system is designed to be stateless at runtime: artifacts in the data branch 
 
 **Configuration**
 - Config file default: `config/devpool.config.json`
-  - Keys: `include`, `exclude`, `explicit_urls`, `official_owners`, `data_branch`, `max_shards`
+  - Keys: `include`, `exclude`, `explicit_urls`, `data_branch`, `max_shards`
 - Override path via env `CONFIG_PATH`.
 
 **CLI & Workflows**
