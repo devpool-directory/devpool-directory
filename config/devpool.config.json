@@ -24,7 +24,8 @@
     "ubiquity",
     "ubiquity-os",
     "ubiquity-os-marketplace",
-    "ondecentral"
+    "ondecentral",
+    "askmiguel"
   ],
   "data_branch": "__STORAGE__",
   "max_shards": 256
