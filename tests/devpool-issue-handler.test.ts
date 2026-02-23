@@ -821,6 +821,7 @@ describe("calculateStatistics", () => {
       notAssigned: 0,
       assigned: 0,
       completed: 0,
+      reopened: 0,
       total: 0,
     });
 
@@ -828,6 +829,7 @@ describe("calculateStatistics", () => {
       notAssigned: 0,
       assigned: 0,
       completed: 0,
+      reopened: 0,
       total: 0,
     });
   });
@@ -965,6 +967,7 @@ describe("calculateStatistics", () => {
       notAssigned: 1000, // issue 2
       completed: 200, // issue 1
       assigned: 500, // issue 3
+      reopened: 0,
       total: 1700, // 1000 + 500 + 200
     });
 
@@ -972,6 +975,7 @@ describe("calculateStatistics", () => {
       notAssigned: 1,
       assigned: 1,
       completed: 1,
+      reopened: 0,
       total: 3,
     });
   });
@@ -1026,6 +1030,7 @@ describe("calculateStatistics", () => {
       notAssigned: 0,
       assigned: 0,
       completed: 0,
+      reopened: 0,
       total: 0,
     });
 
@@ -1033,6 +1038,7 @@ describe("calculateStatistics", () => {
       notAssigned: 0,
       assigned: 0,
       completed: 1,
+      reopened: 0,
       total: 1,
     });
 

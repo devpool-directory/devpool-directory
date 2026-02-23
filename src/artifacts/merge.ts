@@ -21,8 +21,8 @@ export function mergeMirrorState(chunks: MirrorState[]): MirrorState {
 }
 
 export function computeStatistics(issues: PartnerIssue[], mirror: MirrorState): Statistics {
-  const rewards = { notAssigned: 0, assigned: 0, completed: 0, total: 0 };
-  const tasks = { notAssigned: 0, assigned: 0, completed: 0, total: 0 };
+  const rewards = { notAssigned: 0, assigned: 0, completed: 0, reopened: 0, total: 0 };
+  const tasks = { notAssigned: 0, assigned: 0, completed: 0, reopened: 0, total: 0 };
 
   for (const issue of issues) {
     const m = mirror[issue.node_id];
@@ -31,15 +31,21 @@ export function computeStatistics(issues: PartnerIssue[], mirror: MirrorState): 
     const amount = Number.isFinite(price) ? price : 0;
 
     if (issue.state === "open") {
-      if (m?.assigned) {
+      if (m?.previously_completed) {
+        const reopenedAmount = Math.floor(amount / 2);
+        rewards.reopened += reopenedAmount;
+        tasks.reopened++;
+        rewards.total += reopenedAmount;
+      } else if (m?.assigned) {
         rewards.assigned += amount;
         tasks.assigned++;
+        rewards.total += amount;
       } else {
         rewards.notAssigned += amount;
         tasks.notAssigned++;
+        rewards.total += amount;
       }
       tasks.total++;
-      rewards.total += amount;
     } else {
       rewards.completed += amount;
       tasks.completed++;

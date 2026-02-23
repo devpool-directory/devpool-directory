@@ -35,12 +35,13 @@ export type MirrorStateEntry = {
   price_label?: string | null;
   time_label?: string | null;
   category?: string;
+  previously_completed?: boolean;
 };
 
 export type MirrorState = Record<string, MirrorStateEntry>; // key = partner node_id
 
 export type Statistics = {
-  rewards: { notAssigned: number; assigned: number; completed: number; total: number };
-  tasks: { notAssigned: number; assigned: number; completed: number; total: number };
+  rewards: { notAssigned: number; assigned: number; completed: number; reopened: number; total: number };
+  tasks: { notAssigned: number; assigned: number; completed: number; reopened: number; total: number };
   lifetime?: { rewardsCompletedUSD: number; tasksCompletedPriced: number };
 };

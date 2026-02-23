@@ -132,6 +132,13 @@ async function main() {
     const { data } = await (octokit as any).repos.getContent({ owner, repo, path: "mirror-state.json", ref: branch });
     mirrorPrev = JSON.parse(Buffer.from((data as any).content, "base64").toString("utf8"));
   } catch {}
+  let lifetimeMapPrev: Record<string, number> = {};
+  try {
+    const { data } = await (octokit as any).repos.getContent({ owner, repo, path: "lifetime-map.json", ref: branch });
+    lifetimeMapPrev = JSON.parse(Buffer.from((data as any).content, "base64").toString("utf8") || "{}");
+  } catch {
+    lifetimeMapPrev = {};
+  }
   const indexExisting: Record<string, { number: number; url: string }> = {};
   for (const [node, e] of Object.entries(mirrorPrev)) {
     if ((e as any).directory_issue_number && (e as any).directory_issue_url) indexExisting[node] = { number: (e as any).directory_issue_number, url: (e as any).directory_issue_url };
@@ -185,7 +192,8 @@ async function main() {
     } catch {
       // best-effort
     }
-    mirrorStateNew[it.node_id] = computeMirrorStateEntry(it, dirRef, undefined);
+    const wasCompleted = it.state === "open" && (lifetimeMapPrev[it.node_id] ?? 0) > 0;
+    mirrorStateNew[it.node_id] = computeMirrorStateEntry(it, dirRef, undefined, wasCompleted || undefined);
   }
 
   // Seed twitter map from existing artifact on data branch, then merge deltas

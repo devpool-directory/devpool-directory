@@ -1,6 +1,6 @@
 import type { MirrorStateEntry, PartnerIssue } from "./types";
 
-export function computeMirrorStateEntry(issue: PartnerIssue, directory: { number?: number; url?: string } | null, category?: string): MirrorStateEntry {
+export function computeMirrorStateEntry(issue: PartnerIssue, directory: { number?: number; url?: string } | null, category?: string, previouslyCompleted?: boolean): MirrorStateEntry {
   const price = issue.labels.find((l) => /^Price:/.test(l)) ?? null;
   const time = issue.labels.find((l) => l.startsWith("Time:")) ?? null;
   return {
@@ -10,6 +10,7 @@ export function computeMirrorStateEntry(issue: PartnerIssue, directory: { number
     assignees: issue.assignees,
     price_label: price,
     time_label: time,
-    category
+    category,
+    ...(previouslyCompleted ? { previously_completed: true } : {}),
   };
 }
