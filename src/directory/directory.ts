@@ -34,10 +34,8 @@ async function chooseBestToken(): Promise<string | undefined> {
     // Prefer GITHUB_TOKEN while it still has reasonable budget, else fall back to App token
     const MIN_REMAINING = 50; // threshold to avoid immediate exhaustion
     if (ghRate >= MIN_REMAINING || appRate < 0) {
-      console.log(`Using GITHUB_TOKEN (remaining: ${ghRate}, app remaining: ${appRate})`);
       return ACTIONS_GITHUB_TOKEN;
     }
-    console.log(`Using GitHub App token (remaining: ${appRate}, github_token remaining: ${ghRate})`);
     return APP_INSTALLATION_TOKEN;
   } catch (e) {
     // Fallback to GITHUB_TOKEN first, then app token
