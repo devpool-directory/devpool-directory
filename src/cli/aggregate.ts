@@ -5,6 +5,7 @@ import { Buffer } from "node:buffer";
 import process from "node:process";
 import { mergeIssues, mergePRs, computeStatistics } from "../artifacts/merge";
 import { writeJson } from "../artifacts/write";
+import { computeDifferentialReward, buildRewardHistoryEntry, differentialToComment } from "../artifacts/differential";
 import { Octokit } from "@octokit/rest";
 import { ensureBranch, commitChanges } from "../storage/git";
 import { computeMirrorStateEntry } from "../artifacts/state";
@@ -277,6 +278,69 @@ async function main() {
   const prevLifetime = (stats as any).lifetime || {};
   (stats as any).lifetime = { ...prevLifetime, rewardsCompletedUSD, tasksCompletedPriced };
 
+  // ── Differential Reward Distribution ────────────────────────────────────────
+  // Load prior reward history (node_id -> RewardHistoryEntry[]) for differential calc
+  let rewardHistoryMap: Record<string, import("../artifacts/types").RewardHistoryEntry[]> = {};
+  try {
+    const { data } = await (octokit as any).repos.getContent({ owner, repo, path: "reward-history-map.json", ref: branch });
+    const content = Buffer.from((data as any).content, "base64").toString("utf8");
+    rewardHistoryMap = JSON.parse(content || "{}");
+  } catch {
+    rewardHistoryMap = {};
+  }
+
+  // Load prior differential map (node_id -> DifferentialResult) for audit
+  let differentialMap: Record<string, import("../artifacts/types").DifferentialResult> = {};
+  try {
+    const { data } = await (octokit as any).repos.getContent({ owner, repo, path: "differential-map.json", ref: branch });
+    const content = Buffer.from((data as any).content, "base64").toString("utf8");
+    differentialMap = JSON.parse(content || "{}");
+  } catch {
+    differentialMap = {};
+  }
+
+  // Per-issue new reward map derived from price label + assignees
+  const getNewRewards = (it: any): Record<string, number> => {
+    const price = parsePrice(it.labels);
+    if (!price || !it.assignees || it.assignees.length === 0) return {};
+    const share = Math.round((price / it.assignees.length) * 100) / 100;
+    const rewards: Record<string, number> = {};
+    for (const assignee of it.assignees) rewards[assignee] = share;
+    return rewards;
+  };
+
+  const reopenEvents: string[] = [];
+  for (const it of allIssues) {
+    const history = rewardHistoryMap[it.node_id] ?? [];
+    const newRewards = getNewRewards(it);
+
+    if (it.state === "open" && history.length > 0) {
+      // Potentially reopened: compute differential
+      const result = computeDifferentialReward(it.node_id, newRewards, history);
+      if (result.is_reopened) {
+        differentialMap[it.node_id] = result;
+        reopenEvents.push(it.node_id);
+      }
+    } else if (it.state === "closed" && Object.keys(newRewards).length > 0) {
+      // Closed for the first time or again: append history entry (no differential needed)
+      const entry = buildRewardHistoryEntry(newRewards);
+      if (!rewardHistoryMap[it.node_id]) rewardHistoryMap[it.node_id] = [];
+      rewardHistoryMap[it.node_id].push(entry);
+      // Clear any stale differential for this issue
+      delete differentialMap[it.node_id];
+    }
+  }
+
+  // Log differential reopen events for observability
+  if (reopenEvents.length > 0) {
+    console.log(`[aggregate] Differential reward events detected for ${reopenEvents.length} reopened issues:`,
+      reopenEvents.map((nid) => {
+        const r = differentialMap[nid];
+        return r ? `${nid} → ${JSON.stringify(r.positive_differences)}` : nid;
+      })
+    );
+  }
+
   // Write local build outputs for debugging
   const outDir = path.join(process.cwd(), "out-agg");
   writeJson(outDir, "partner-open-issues.json", issuesOpenPricedFromMap);
@@ -290,6 +354,8 @@ async function main() {
   writeJson(outDir, "index.json", indexBuilt);
   writeJson(outDir, "issues-map.json", issuesMap);
   writeJson(outDir, "lifetime-map.json", lifetimeMap);
+  writeJson(outDir, "differential-map.json", differentialMap);
+  writeJson(outDir, "reward-history-map.json", rewardHistoryMap);
 
   // Generate a concise README for the data branch (__STORAGE__) to help integrators
   const storageReadme = `# DevPool Directory — Data Branch (__STORAGE__)
@@ -312,6 +378,8 @@ Primary artifacts:
 - twitter-map.json — node_id -> tweetId.
 - issues-map.json — Persistent map of all known issues (state=all). Large.
 - lifetime-map.json — node_id -> closed priced amount (for totals).
+- differential-map.json — node_id -> DifferentialResult for reopened issues (positive differences only).
+- reward-history-map.json — node_id -> RewardHistoryEntry[] chronologies for audit.
 - sync-metadata.json — Per-repo since/etag hints.
 - summary.json — Run summary and list of committed files.
 
@@ -351,7 +419,9 @@ Notes:
       "twitter-map.json",
       "index.json",
       "summary.json",
-      "README.md"
+      "README.md",
+      "differential-map.json",
+      "reward-history-map.json"
     ]
   };
   writeJson(outDir, "summary.json", summary);
@@ -372,6 +442,8 @@ Notes:
     { path: "summary.json", content: JSON.stringify(summary) },
     { path: "lifetime-map.json", content: JSON.stringify(lifetimeMap) },
     { path: "issues-map.json", content: JSON.stringify(issuesMap) },
+    { path: "differential-map.json", content: JSON.stringify(differentialMap) },
+    { path: "reward-history-map.json", content: JSON.stringify(rewardHistoryMap) },
     { path: "README.md", content: storageReadme }
   ]);
 }
