@@ -2,6 +2,8 @@
 import process from "node:process";
 import type { Endpoints } from "@octokit/types";
 import { getOctokitRead, getOctokitWrite, getOctokitDelete } from "../github/client";
+import { loadConfig } from "../config/load";
+import { parsePriceFromLabels, invokePermitGeneration, buildPermitDescriptor } from "../permit-generation";
 
 function parsePartnerUrl(text: string): { owner: string; repo: string; number: number } | null {
   if (!text) return null;
@@ -27,6 +29,24 @@ async function main() {
   const okRead = getOctokitRead();
   const okWrite = dry ? (null as any) : getOctokitWrite();
   const okDelete = dry ? (null as any) : getOctokitDelete();
+
+  // Load permit generation config (for automatic transfers)
+  let permitConfig: { transfer: boolean; permit_url: string; evm_private_key_env: string } | null = null;
+  try {
+    const cfg = loadConfig();
+    if (cfg.permit_generation?.transfer) {
+      permitConfig = {
+        transfer: true,
+        permit_url: cfg.permit_generation.permit_url || "https://pay.ubq.fi",
+        evm_private_key_env: cfg.permit_generation.evm_private_key_env || "EVT_PRIVATE_KEY",
+      };
+    }
+  } catch {
+    // Config file may not exist or be incomplete; skip permit generation
+  }
+
+  const evmPrivateKey = process.env[permitConfig?.evm_private_key_env || "EVT_PRIVATE_KEY"] || "";
+  const permitUrl = process.env.PERMIT_URL || permitConfig?.permit_url || "https://pay.ubq.fi";
 
   // Read via read client (PAT/anon) to avoid requiring write token for listing
   const dirIssues: Endpoints["GET /repos/{owner}/{repo}/issues"]["response"]["data"] = await okRead.paginate((okRead as any).issues.listForRepo, {
@@ -168,6 +188,57 @@ async function main() {
         }
       }
       kept++;
+
+      // Automatic Transfer: when an issue is closed as "completed" with a price label
+      // and permit_generation.transfer is enabled, invoke the permit generation service
+      if (permitConfig?.transfer && desiredReason === "completed" && !dry) {
+        const assignee = keep.assignee?.login;
+        const priceStr = parsePriceFromLabels(partnerLabels);
+        if (assignee && priceStr) {
+          // Check if already transferred (has Transfer: label)
+          const currentLabels = (keep.labels || []).map((l: any) => (typeof l === "string" ? l : l.name));
+          const alreadyTransferred = currentLabels.some((l: string) => l.toLowerCase().startsWith("transfer:"));
+          if (!alreadyTransferred) {
+            console.log(`Triggering automatic transfer for #${keep.number} (${assignee}, $${priceStr})...`);
+            const permit = buildPermitDescriptor({
+              username: assignee,
+              amount: priceStr,
+              evmPrivateKeyEncrypted: evmPrivateKey,
+              nodeId: keep.node_id,
+              issueNumber: keep.number,
+              issueUrl: keep.html_url,
+            });
+            const result = await invokePermitGeneration(permitUrl, [permit], false);
+            if (result.success) {
+              console.log(`  Transfer successful: ${assignee} $${priceStr}${result.tx_hash ? ` (tx: ${result.tx_hash})` : ""}`);
+              // Add "Transfer: Completed" label
+              try {
+                await (okWrite as any).issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: keep.number,
+                  labels: ["Transfer: Completed"],
+                });
+              } catch (labelErr) {
+                console.warn(`  Failed to add transfer label:`, labelErr);
+              }
+            } else {
+              console.error(`  Transfer failed for #${keep.number}: ${result.error}`);
+              // Add "Transfer: Failed" label for visibility
+              try {
+                await (okWrite as any).issues.addLabels({
+                  owner,
+                  repo,
+                  issue_number: keep.number,
+                  labels: ["Transfer: Failed"],
+                });
+              } catch (labelErr) {
+                // ignore
+              }
+            }
+          }
+        }
+      }
     } catch {
       // best-effort; continue
     }
