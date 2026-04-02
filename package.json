@@ -18,7 +18,9 @@
     "bundle:all": "tsup --config tsup.config.ts",
     "twitter:plan": "tsx src/cli/twitter-plan.ts",
     "twitter:apply": "tsx src/cli/twitter-apply.ts",
-    "twitter:audit": "tsx src/cli/twitter-audit.ts"
+    "twitter:audit": "tsx src/cli/twitter-audit.ts",
+    "test": "vitest",
+    "cta:deliver": "npm run build && node dist/cli/cta-delivery.js"
   },
   "dependencies": {
     "@octokit/graphql": "^7.1.1",
@@ -33,9 +35,10 @@
   },
   "devDependencies": {
     "@types/node": "^20.11.30",
-    "typescript": "^5.6.2",
-    "tsup": "^8.1.0",
     "esbuild": "^0.23.0",
-    "tsx": "^3.12.3"
+    "tsup": "^8.1.0",
+    "tsx": "^3.12.3",
+    "typescript": "^5.6.2",
+    "vitest": "^4.1.2"
   }
 }
