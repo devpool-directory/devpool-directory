@@ -30,21 +30,34 @@ export function computeStatistics(issues: PartnerIssue[], mirror: MirrorState): 
     const price = priceLabel ? parseInt(priceLabel.replace(/[^0-9]/g, ""), 10) : NaN;
     const amount = Number.isFinite(price) ? price : 0;
 
+    if (amount < 0) {
+      throw new Error(`Invalid reward amount: ${amount} for issue ${issue.node_id}`);
+    }
+
+    if (amount > 0) {
+      if (issue.state === "open") {
+        if (m?.assigned) {
+          rewards.assigned += amount;
+        } else {
+          rewards.notAssigned += amount;
+        }
+        rewards.total += amount;
+      } else {
+        rewards.completed += amount;
+        rewards.total += amount;
+      }
+    }
+
     if (issue.state === "open") {
       if (m?.assigned) {
-        rewards.assigned += amount;
         tasks.assigned++;
       } else {
-        rewards.notAssigned += amount;
         tasks.notAssigned++;
       }
       tasks.total++;
-      rewards.total += amount;
     } else {
-      rewards.completed += amount;
       tasks.completed++;
       tasks.total++;
-      rewards.total += amount;
     }
   }
 
