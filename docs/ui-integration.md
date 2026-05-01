@@ -119,7 +119,26 @@ function parsePriceUSD(labels: string[]): number | null {
   - `owners-avatars.json` for owner badge.
   - `twitter-map.json[node_id]` to link the lifecycle tweet.
 - Repo/owner grouping: group by `owner/repo` or owner for collections.
-- Sorting: by price (parsed), updated date, or assigned state.
+- Sorting: by price (parsed), updated date, assigned state, or developer relevance.
+
+### Developer Matchmaking Sort
+
+For the signed-in developer experience, fetch the user's completed GitHub issues server-side, then rank `partner-open-issues.json` with `buildMatchmakingCandidates`. The helper keeps assigned tasks out of the default list, extracts task terms from title/body/repo/labels, extracts developer terms from completed issues, and returns a relevance-first list with price as the tie-breaker.
+
+```ts
+import { buildMatchmakingCandidates } from '../src/matchmaking/rank';
+
+const candidates = buildMatchmakingCandidates(partnerOpenIssues, completedIssuesFromGithub);
+
+for (const candidate of candidates) {
+  renderTaskCard({
+    issue: candidate.issue,
+    matchScore: candidate.matchScore,
+    matchedTerms: candidate.matchedTerms,
+    priceUsd: candidate.priceUsd,
+  });
+}
+```
 
 ## Update Cadence & Resilience
 - Poll `summary.json` every 1–5 minutes; skip downstream fetches if unchanged.
