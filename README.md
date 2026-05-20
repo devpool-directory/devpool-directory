@@ -4,6 +4,8 @@ This repository mirrors selected GitHub issues into a single “directory” rep
 
 For a practical, UI‑focused integration walkthrough (fetch patterns, caching, and rendering tips), see `docs/ui-integration.md`.
 
+For a GitHub-first bounty marketing workflow and lead-list format, see `docs/marketing/github-bounty-marketing-playbook.md` and `data/marketing/github-bounty-marketing-leads.csv`.
+
 The system is designed to be stateless at runtime: artifacts in the data branch are the source of truth for consumers.
 
 **Data Branch**
