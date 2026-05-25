@@ -8,6 +8,8 @@
   },
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "test": "node --test --import tsx tests/old-proposals.test.ts",
+    "old-proposals": "tsx src/cli/old-proposals.ts",
     "plan": "npm run build && node dist/cli/plan.js",
     "sync:shard": "npm run build && node dist/cli/sync-shard.js",
     "aggregate": "npm run build && node dist/cli/aggregate.js",
