@@ -1,0 +1,54 @@
+name: Handle Old Proposals
+
+on:
+  schedule:
+    - cron: "30 2 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Report actions without writing to GitHub"
+        type: boolean
+        default: true
+      stale_after_days:
+        description: "Days without updates before asking for a proposal update"
+        type: number
+        default: 30
+      response_window_days:
+        description: "Days to wait after the update request before closing"
+        type: number
+        default: 7
+      admin_mention:
+        description: "Optional GitHub mention to include in update requests"
+        type: string
+        required: false
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  handle-old-proposals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+      - name: Install deps
+        run: bun install
+      - name: Create GitHub App token
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+      - name: Handle old proposals
+        run: bun src/cli/old-proposals.ts
+        env:
+          GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
+          GH_TOKEN: ${{ secrets.GH_TOKEN }}
+          DIRECTORY_OWNER: ${{ github.repository_owner }}
+          DIRECTORY_REPO: ${{ github.event.repository.name }}
+          OLD_PROPOSAL_DRY_RUN: ${{ inputs.dry_run || 'false' }}
+          OLD_PROPOSAL_STALE_AFTER_DAYS: ${{ inputs.stale_after_days || '30' }}
+          OLD_PROPOSAL_RESPONSE_WINDOW_DAYS: ${{ inputs.response_window_days || '7' }}
+          OLD_PROPOSAL_ADMIN_MENTION: ${{ inputs.admin_mention }}
