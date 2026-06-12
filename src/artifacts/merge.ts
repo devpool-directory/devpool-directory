@@ -23,11 +23,12 @@ export function mergeMirrorState(chunks: MirrorState[]): MirrorState {
 export function computeStatistics(issues: PartnerIssue[], mirror: MirrorState): Statistics {
   const rewards = { notAssigned: 0, assigned: 0, completed: 0, total: 0 };
   const tasks = { notAssigned: 0, assigned: 0, completed: 0, total: 0 };
+  const demo_currency_nudge = true;
 
   for (const issue of issues) {
     const m = mirror[issue.node_id];
     const priceLabel = m?.price_label ?? null;
-    const price = priceLabel ? parseInt(priceLabel.replace(/[^0-9]/g, ""), 10) : NaN;
+    const price = priceLabel ? parseFloat(priceLabel.replace(/[^0-9.]/g, "")) : NaN;
     const amount = Number.isFinite(price) ? price : 0;
 
     if (issue.state === "open") {
@@ -48,5 +49,5 @@ export function computeStatistics(issues: PartnerIssue[], mirror: MirrorState): 
     }
   }
 
-  return { rewards, tasks };
+  return { rewards, tasks, demo_currency_nudge };
 }
