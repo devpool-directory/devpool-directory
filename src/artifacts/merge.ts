@@ -27,7 +27,7 @@ export function computeStatistics(issues: PartnerIssue[], mirror: MirrorState): 
   for (const issue of issues) {
     const m = mirror[issue.node_id];
     const priceLabel = m?.price_label ?? null;
-    const price = priceLabel ? parseInt(priceLabel.replace(/[^0-9]/g, ""), 10) : NaN;
+    const price = priceLabel ? parseFloat(priceLabel.replace(/[^0-9.]/g, "")) : NaN;
     const amount = Number.isFinite(price) ? price : 0;
 
     if (issue.state === "open") {
