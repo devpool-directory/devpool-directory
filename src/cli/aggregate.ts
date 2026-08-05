@@ -3,13 +3,13 @@ import fs from "node:fs";
 import path from "node:path";
 import { Buffer } from "node:buffer";
 import process from "node:process";
-import { mergeIssues, mergePRs, computeStatistics } from "../artifacts/merge";
-import { writeJson } from "../artifacts/write";
+import { mergeIssues, mergePRs, computeStatistics } from "../artifacts/merge.js";
+import { writeJson } from "../artifacts/write.js";
 import { Octokit } from "@octokit/rest";
-import { ensureBranch, commitChanges } from "../storage/git";
-import { computeMirrorStateEntry } from "../artifacts/state";
-import { reconcileMirror } from "../mirror/reconcile";
-import { getOctokitDelete } from "../github/client";
+import { ensureBranch, commitChanges } from "../storage/git.js";
+import { computeMirrorStateEntry } from "../artifacts/state.js";
+import { reconcileMirror } from "../mirror/reconcile.js";
+import { getOctokitDelete } from "../github/client.js";
 
 async function main() {
   const shardsDir = path.join(process.cwd(), "shards");
