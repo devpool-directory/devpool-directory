@@ -1,4 +1,4 @@
-import { octokit } from "./directory";
+import { octokit } from "./directory.js";
 
 const avatarMemo = new Map<string, { ownerName: string; avatar_url?: string }>();
 
