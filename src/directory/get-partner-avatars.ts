@@ -1,11 +1,12 @@
-import { octokit } from "./directory.js";
+import { getOctokitRead } from "../github/client.js";
 
 const avatarMemo = new Map<string, { ownerName: string; avatar_url?: string }>();
 
 export async function getPartnerAvatars(ownerName: string): Promise<{ ownerName: string; avatar_url?: string }> {
   if (avatarMemo.has(ownerName)) return avatarMemo.get(ownerName)!;
   try {
-    const { data: user } = await octokit.request("GET /users/{username}", {
+    const octokit = getOctokitRead();
+    const { data: user } = await (octokit as any).request("GET /users/{username}", {
       username: ownerName,
     });
 
