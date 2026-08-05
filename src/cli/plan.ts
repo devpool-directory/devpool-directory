@@ -1,7 +1,7 @@
 #!/usr/bin/env -S node --enable-source-maps
-import { getOctokitRead, getRateRemaining } from "../github/client";
-import { loadConfig } from "../config/load";
-import { discoverRepos } from "../discovery";
+import { getOctokitRead, getRateRemaining } from "../github/client.js";
+import { loadConfig } from "../config/load.js";
+import { discoverRepos } from "../discovery.js";
 import fs from "node:fs";
 import path from "node:path";
 import process from "node:process";
