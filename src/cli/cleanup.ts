@@ -1,7 +1,7 @@
 #!/usr/bin/env -S node --enable-source-maps
 import process from "node:process";
 import type { Endpoints } from "@octokit/types";
-import { getOctokitRead, getOctokitWrite, getOctokitDelete } from "../github/client";
+import { getOctokitRead, getOctokitWrite, getOctokitDelete } from "../github/client.js";
 
 function parsePartnerUrl(text: string): { owner: string; repo: string; number: number } | null {
   if (!text) return null;
