@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import dotenv from "dotenv";
-import { ConfigSchema, type AppConfig } from "./schema";
+import { ConfigSchema, type AppConfig } from "./schema.js";
 
 dotenv.config();
 
