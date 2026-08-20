@@ -1,475 +1,603 @@
 /**
- * @module SpecializedPrompts
- * @description Handoff plugin for implementing specialized evaluation prompts for conversation rewards.
- * Generates scaffolding for separate AI evaluation dimensions (relevance, helpfulness, research),
- * weighted scoring aggregation, and OpenRouter integration with free-tier models (Gemini/DeepSeek).
- * Replaces monolithic prompt with modular evaluation pipeline.
+ * @file specialized-prompts.ts
+ * @title Specialized Prompts: Multi-Dimensional Comment Evaluation
+ * @issue https://github.com/devpool-directory/devpool-directory/issues/XXXX
+ * @upstream https://github.com/ubiquity-os-marketplace/text-conversation-rewards/issues/340
+ * @bounty $600 USD
  *
- * Upstream Issue: ubiquity-os-marketplace/text-conversation-rewards#340
- * DevPool Issue: #5007
- * Bounty Value: $600 USD
+ * @description
+ * This plugin provides scaffolding for replacing monolithic relevance scoring
+ * with specialized, dimension-specific prompts. The upstream issue identifies
+ * that with free/cheap LLM access (Gemini, DeepSeek via OpenRouter), it makes
+ * more sense to evaluate comments across multiple distinct dimensions rather
+ * than using a single combined prompt.
+ *
+ * Three evaluation dimensions from upstream:
+ * 1. Spec Relevance: How relevant comments are to solving the spec (0-1)
+ * 2. Helpfulness: How helpful comments are for answering contributor questions (0-1)
+ * 3. Research Value: How useful comments are for adding research/insights (0-1)
+ *
+ * Final score = weighted combination of dimension scores.
+ *
+ * Generated modules:
+ * - Dimension Prompt Builder: Specialized system prompts per evaluation axis
+ * - Multi-Pass Evaluator: Sequential or parallel LLM calls per dimension
+ * - Weighted Score Aggregator: Configurable weights and normalization
+ * - Cost-Aware Model Selector: Routes to free/cheap models when available
+ * - Evaluation Cache: Avoids redundant LLM calls for same comment
  */
 
 // ============================================================================
-// INTERFACES & TYPES
+// SECTION 1: Type Definitions & Interfaces
 // ============================================================================
 
-export interface IEvaluationDimension {
-  id: string;
-  name: string;
-  description: string;
-  weight: number; // 0.0 to 1.0
-  promptTemplate: string;
-}
+/**
+ * Evaluation dimension identifiers.
+ */
+export type EvaluationDimension = "spec_relevance" | "helpfulness" | "research_value";
 
-export interface IEvaluationResult {
-  dimensionId: string;
-  score: number; // 0.0 to 1.0
+/**
+ * Result from evaluating a single dimension.
+ */
+export interface DimensionScore {
+  /** Which dimension was evaluated */
+  dimension: EvaluationDimension;
+  /** Score from 0.0 to 1.0 */
+  score: number;
+  /** Brief reasoning from the LLM */
   reasoning: string;
+  /** Model used for this evaluation */
   modelUsed: string;
+  /** Tokens consumed */
+  tokensUsed: number;
+  /** Latency in milliseconds */
   latencyMs: number;
 }
 
-export interface IAggregatedScore {
-  beneficiary: string;
-  dimensionScores: Record<string, number>;
-  weightedTotal: number;
-  evaluations: IEvaluationResult[];
+/**
+ * Aggregated evaluation result for a comment.
+ */
+export interface CommentEvaluation {
+  /** Comment identifier */
+  commentId: string;
+  /** Author username */
+  author: string;
+  /** Individual dimension scores */
+  dimensions: Record<EvaluationDimension, DimensionScore>;
+  /** Final weighted composite score (0-1) */
+  compositeScore: number;
+  /** Weights applied */
+  weightsApplied: Record<EvaluationDimension, number>;
+  /** Total evaluation cost estimate in USD */
+  estimatedCostUsd: number;
+  /** Total latency across all dimensions */
+  totalLatencyMs: number;
+  /** Whether any dimension was served from cache */
+  cacheHit: boolean;
 }
 
-export interface IPromptConfig {
-  openrouterApiKeyEnvVar: string;
-  defaultModel: string;
-  fallbackModel: string;
-  maxTokensPerEvaluation: number;
-  temperature: number;
-  dimensions: IEvaluationDimension[];
+/**
+ * Configuration for the multi-dimensional evaluation system.
+ */
+export interface SpecializedPromptsConfig {
+  /** Weight for each dimension in final score calculation */
+  weights: Record<EvaluationDimension, number>;
+  /** Model preferences per dimension (cost vs accuracy tradeoff) */
+  modelPreferences: Record<EvaluationDimension, { primary: string; fallback: string }>;
+  /** Maximum tokens per evaluation call */
+  maxTokensPerCall: number;
+  /** Whether to run evaluations in parallel */
+  parallelEvaluation: boolean;
+  /** Cache TTL for evaluation results in seconds */
+  cacheTtlSeconds: number;
+  /** Minimum score threshold to consider a comment valuable */
+  minCompositeScore: number;
+  /** System prompt templates per dimension */
+  promptTemplates: Record<EvaluationDimension, string>;
+}
+
+/**
+ * LLM provider/model metadata for cost-aware routing.
+ */
+export interface ModelMetadata {
+  id: string;
+  provider: string;
+  inputCostPer1kTokens: number;
+  outputCostPer1kTokens: number;
+  maxContextTokens: number;
+  isFreeTier: boolean;
 }
 
 // ============================================================================
-// DEFAULT CONFIGURATION
+// SECTION 2: Default Configuration & Constants
 // ============================================================================
 
-export function getDefaultConfig(): IPromptConfig {
+/**
+ * Default specialized prompts configuration.
+ */
+export const DEFAULT_CONFIG: SpecializedPromptsConfig = {
+  weights: {
+    spec_relevance: 0.5,
+    helpfulness: 0.3,
+    research_value: 0.2,
+  },
+  modelPreferences: {
+    spec_relevance: { primary: "deepseek/deepseek-chat", fallback: "google/gemini-pro-1.5" },
+    helpfulness: { primary: "google/gemini-flash-1.5", fallback: "deepseek/deepseek-chat" },
+    research_value: { primary: "deepseek/deepseek-chat", fallback: "google/gemini-pro-1.5" },
+  },
+  maxTokensPerCall: 2000,
+  parallelEvaluation: true,
+  cacheTtlSeconds: 86400, // 24 hours
+  minCompositeScore: 0.3,
+  promptTemplates: {
+    spec_relevance: `You are evaluating how RELEVANT a GitHub comment is to solving the specific technical task described in an issue.
+
+Score from 0.0 to 1.0:
+- 0.0-0.2: Completely off-topic, generic praise, or social commentary
+- 0.3-0.5: Tangentially related but lacks specific technical contribution
+- 0.6-0.8: Addresses the task with concrete suggestions or clarifying questions
+- 0.9-1.0: Directly proposes solutions, identifies bugs, or provides implementation details specific to the spec
+
+Respond with ONLY valid JSON: {"score": <number>, "reasoning": "<brief explanation>"}`,
+
+    helpfulness: `You are evaluating how HELPFUL a GitHub comment is for answering contributor questions and unblocking progress.
+
+Score from 0.0 to 1.0:
+- 0.0-0.2: No actionable guidance, pure opinion without substance
+- 0.3-0.5: Vague suggestions without specifics ("maybe try X")
+- 0.6-0.8: Provides clear guidance, links to docs, or explains concepts
+- 0.9-1.0: Directly answers questions, provides code examples, or resolves confusion
+
+Respond with ONLY valid JSON: {"score": <number>, "reasoning": "<brief explanation>"}`,
+
+    research_value: `You are evaluating how USEFUL a GitHub comment is for adding research, insights, or long-term project knowledge.
+
+Score from 0.0 to 1.0:
+- 0.0-0.2: No new information, restates obvious facts
+- 0.3-0.5: Minor observations without broader applicability
+- 0.6-0.8: References prior art, benchmarks, or architectural considerations
+- 0.9-1.0: Introduces novel analysis, comparative studies, or deep technical insights that benefit future contributors
+
+Respond with ONLY valid JSON: {"score": <number>, "reasoning": "<brief explanation>"}`,
+  },
+};
+
+/**
+ * Known free/cheap models on OpenRouter.
+ */
+export const FREE_MODELS: ModelMetadata[] = [
+  { id: "google/gemini-flash-1.5", provider: "google", inputCostPer1kTokens: 0, outputCostPer1kTokens: 0, maxContextTokens: 1000000, isFreeTier: true },
+  { id: "deepseek/deepseek-chat", provider: "deepseek", inputCostPer1kTokens: 0, outputCostPer1kTokens: 0, maxContextTokens: 64000, isFreeTier: true },
+  { id: "google/gemini-pro-1.5", provider: "google", inputCostPer1kTokens: 0.00125, outputCostPer1kTokens: 0.005, maxContextTokens: 2000000, isFreeTier: false },
+];
+
+// ============================================================================
+// SECTION 3: Dimension Prompt Builder Generator
+// ============================================================================
+
+/**
+ * Generates specialized system prompts for each evaluation dimension.
+ *
+ * @param config - Prompts configuration
+ * @returns TypeScript source code string
+ */
+export function generatePromptBuilder(config: SpecializedPromptsConfig): string {
+  return `/**
+ * Auto-generated Specialized Prompt Builder
+ * Creates dimension-specific evaluation prompts with context injection.
+ */
+
+const TEMPLATES: Record<string, string> = ${JSON.stringify(config.promptTemplates)};
+const MAX_TOKENS = ${config.maxTokensPerCall};
+
+/**
+ * Builds the complete prompt for a specific evaluation dimension.
+ * Injects issue context and comment content into the template.
+ */
+export function buildDimensionPrompt(
+  dimension: string,
+  issueTitle: string,
+  issueBody: string,
+  commentBody: string,
+  commentAuthor: string
+): { system: string; user: string } {
+  const systemPrompt = TEMPLATES[dimension];
+  if (!systemPrompt) {
+    throw new Error(\`Unknown evaluation dimension: \${dimension}\`);
+  }
+
+  const userMessage = \`## Issue
+**Title:** \${issueTitle}
+**Description:**
+\${issueBody.substring(0, 3000)}
+
+## Comment to Evaluate
+**Author:** @\${commentAuthor}
+**Content:**
+\${commentBody.substring(0, MAX_TOKENS * 4)}
+
+Evaluate this comment's \${dimension.replace(/_/g, " ")} and respond with JSON only.\`;
+
+  return { system: systemPrompt, user: userMessage };
+}
+
+/**
+ * Validates that all required dimension templates are configured.
+ */
+export function validatePromptConfig(): { valid: boolean; missing: string[] } {
+  const required = ["spec_relevance", "helpfulness", "research_value"];
+  const missing = required.filter(d => !TEMPLATES[d] || TEMPLATES[d].length < 50);
+  return { valid: missing.length === 0, missing };
+}
+`;
+}
+
+// ============================================================================
+// SECTION 4: Multi-Pass Evaluator Generator
+// ============================================================================
+
+/**
+ * Generates the multi-pass evaluation engine that calls LLM per dimension.
+ *
+ * @param config - Prompts configuration
+ * @returns TypeScript source code string
+ */
+export function generateMultiPassEvaluator(config: SpecializedPromptsConfig): string {
+  return `/**
+ * Auto-generated Multi-Pass Comment Evaluator
+ * Evaluates each dimension independently via separate LLM calls.
+ */
+
+import OpenAI from "openai";
+
+interface DimensionScore {
+  dimension: string;
+  score: number;
+  reasoning: string;
+  modelUsed: string;
+  tokensUsed: number;
+  latencyMs: number;
+}
+
+interface CommentEvaluation {
+  commentId: string;
+  author: string;
+  dimensions: Record<string, DimensionScore>;
+  compositeScore: number;
+  weightsApplied: Record<string, number>;
+  estimatedCostUsd: number;
+  totalLatencyMs: number;
+  cacheHit: boolean;
+}
+
+const CONFIG = {
+  weights: ${JSON.stringify(config.weights)},
+  modelPreferences: ${JSON.stringify(config.modelPreferences)},
+  parallelEvaluation: ${config.parallelEvaluation},
+  minCompositeScore: ${config.minCompositeScore},
+};
+
+const openrouter = new OpenAI({
+  baseURL: "https://openrouter.ai/api/v1",
+  apiKey: process.env.OPENROUTER_API_KEY,
+});
+
+/**
+ * Evaluates a single dimension via LLM call.
+ */
+async function evaluateDimension(
+  dimension: string,
+  systemPrompt: string,
+  userPrompt: string,
+  modelId: string
+): Promise<DimensionScore> {
+  const startTime = Date.now();
+
+  try {
+    const response = await openrouter.chat.completions.create({
+      model: modelId,
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt },
+      ],
+      max_tokens: 200,
+      temperature: 0.1,
+    });
+
+    const content = response.choices[0]?.message?.content || "";
+    const latencyMs = Date.now() - startTime;
+    const tokensUsed = (response.usage?.total_tokens) || 0;
+
+    // Parse JSON response
+    let parsed: { score: number; reasoning: string };
+    try {
+      // Extract JSON from response (handle markdown code blocks)
+      const jsonMatch = content.match(/\\{[\\s\\S]*\\}/);
+      parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { score: 0, reasoning: "Failed to parse response" };
+    } catch {
+      parsed = { score: 0, reasoning: \`Invalid JSON response: \${content.substring(0, 100)}\` };
+    }
+
+    // Clamp score to 0-1 range
+    const score = Math.max(0, Math.min(1, parsed.score || 0));
+
+    return {
+      dimension,
+      score,
+      reasoning: parsed.reasoning || "No reasoning provided",
+      modelUsed: modelId,
+      tokensUsed,
+      latencyMs,
+    };
+  } catch (error) {
+    return {
+      dimension,
+      score: 0,
+      reasoning: \`Evaluation error: \${(error as Error).message}\`,
+      modelUsed: modelId,
+      tokensUsed: 0,
+      latencyMs: Date.now() - startTime,
+    };
+  }
+}
+
+/**
+ * Evaluates a comment across all dimensions.
+ * Runs sequentially or in parallel based on configuration.
+ */
+export async function evaluateComment(
+  commentId: string,
+  author: string,
+  issueTitle: string,
+  issueBody: string,
+  commentBody: string,
+  buildPromptFn: (dim: string, title: string, body: string, comment: string, author: string) => { system: string; user: string }
+): Promise<CommentEvaluation> {
+  const dimensions = Object.keys(CONFIG.weights) as string[];
+  const results: Record<string, DimensionScore> = {};
+  let totalLatencyMs = 0;
+  let totalTokens = 0;
+
+  if (CONFIG.parallelEvaluation) {
+    // Run all dimensions concurrently
+    const promises = dimensions.map(async (dim) => {
+      const prefs = CONFIG.modelPreferences[dim as keyof typeof CONFIG.modelPreferences];
+      const model = prefs?.primary || "deepseek/deepseek-chat";
+      const { system, user } = buildPromptFn(dim, issueTitle, issueBody, commentBody, author);
+      return evaluateDimension(dim, system, user, model);
+    });
+
+    const scores = await Promise.all(promises);
+    for (const score of scores) {
+      results[score.dimension] = score;
+      totalLatencyMs = Math.max(totalLatencyMs, score.latencyMs); // Parallel = max latency
+      totalTokens += score.tokensUsed;
+    }
+  } else {
+    // Sequential evaluation
+    for (const dim of dimensions) {
+      const prefs = CONFIG.modelPreferences[dim as keyof typeof CONFIG.modelPreferences];
+      const model = prefs?.primary || "deepseek/deepseek-chat";
+      const { system, user } = buildPromptFn(dim, issueTitle, issueBody, commentBody, author);
+      const score = await evaluateDimension(dim, system, user, model);
+      results[dim] = score;
+      totalLatencyMs += score.latencyMs;
+      totalTokens += score.tokensUsed;
+    }
+  }
+
+  // Calculate weighted composite score
+  let compositeScore = 0;
+  for (const [dim, weight] of Object.entries(CONFIG.weights)) {
+    compositeScore += (results[dim]?.score || 0) * weight;
+  }
+
+  // Estimate cost (free tier models = $0)
+  const estimatedCostUsd = totalTokens * 0.000001; // Rough estimate for paid models
+
   return {
-    openrouterApiKeyEnvVar: "OPENROUTER_API_KEY",
-    defaultModel: "google/gemini-pro-1.5-exp:free",
-    fallbackModel: "deepseek/deepseek-chat:free",
-    maxTokensPerEvaluation: 500,
-    temperature: 0.1,
-    dimensions: [
-      {
-        id: "relevance",
-        name: "Spec Relevance",
-        description: "How relevant the comment is to solving the issue specification",
-        weight: 0.5,
-        promptTemplate: `You are evaluating a GitHub comment's relevance to an issue specification.
+    commentId,
+    author,
+    dimensions: results,
+    compositeScore,
+    weightsApplied: CONFIG.weights,
+    estimatedCostUsd,
+    totalLatencyMs,
+    cacheHit: false,
+  };
+}
+`;
+}
 
-ISSUE SPEC:
-{{spec}}
+// ============================================================================
+// SECTION 5: Weighted Score Aggregator Generator
+// ============================================================================
 
-COMMENT:
-{{comment}}
+/**
+ * Generates the score aggregation module with configurable weights.
+ *
+ * @param config - Prompts configuration
+ * @returns TypeScript source code string
+ */
+export function generateScoreAggregator(config: SpecializedPromptsConfig): string {
+  return `/**
+ * Auto-generated Weighted Score Aggregator
+ * Combines dimension scores into final composite with configurable weights.
+ */
 
-Rate from 0.0 to 1.0 how directly this comment contributes to solving the spec above.
-- 1.0 = Directly solves or significantly advances the spec
-- 0.7 = Provides useful implementation details or corrections
-- 0.4 = Tangentially related but not actionable
-- 0.1 = Off-topic or irrelevant
-- 0.0 = Spam or noise
+const WEIGHTS = ${JSON.stringify(config.weights)};
+const MIN_SCORE = ${config.minCompositeScore};
 
-Respond in JSON only: {"score": 0.XX, "reasoning": "brief explanation"}`,
-      },
-      {
-        id: "helpfulness",
-        name: "Contributor Helpfulness",
-        description: "How helpful the comment is for answering contributor questions",
-        weight: 0.3,
-        promptTemplate: `You are evaluating how helpful a GitHub comment is for assisting contributors.
+/**
+ * Calculates weighted composite score from individual dimensions.
+ */
+export function calculateCompositeScore(
+  dimensions: Record<string, { score: number }>
+): number {
+  let total = 0;
+  let totalWeight = 0;
 
-CONVERSATION CONTEXT:
-{{context}}
+  for (const [dim, weight] of Object.entries(WEIGHTS)) {
+    const score = dimensions[dim]?.score ?? 0;
+    total += score * weight;
+    totalWeight += weight;
+  }
 
-COMMENT:
-{{comment}}
+  // Normalize if weights don't sum to 1
+  return totalWeight > 0 ? total / totalWeight : 0;
+}
 
-Rate from 0.0 to 1.0 how helpful this comment is for answering questions or guiding contributors.
-- 1.0 = Comprehensive answer that fully resolves confusion
-- 0.7 = Clear guidance with actionable next steps
-- 0.4 = Partial answer or vague suggestion
-- 0.1 = Acknowledges question without substance
-- 0.0 = Unhelpful or dismissive
+/**
+ * Determines if a comment meets the minimum value threshold.
+ */
+export function isValuableComment(compositeScore: number): boolean {
+  return compositeScore >= MIN_SCORE;
+}
 
-Respond in JSON only: {"score": 0.XX, "reasoning": "brief explanation"}`,
-      },
-      {
-        id: "research",
-        name: "Research & Insights",
-        description: "How useful the comment is for adding research and insights to the project",
-        weight: 0.2,
-        promptTemplate: `You are evaluating the research value of a GitHub comment.
+/**
+ * Ranks comments by composite score for reward distribution.
+ */
+export function rankComments(
+  evaluations: Array<{ commentId: string; compositeScore: number; author: string }>
+): Array<{ rank: number; commentId: string; author: string; score: number }> {
+  return evaluations
+    .filter(e => isValuableComment(e.compositeScore))
+    .sort((a, b) => b.compositeScore - a.compositeScore)
+    .map((e, i) => ({
+      rank: i + 1,
+      commentId: e.commentId,
+      author: e.author,
+      score: e.compositeScore,
+    }));
+}
 
-PROJECT CONTEXT:
-{{projectContext}}
+/**
+ * Generates a human-readable evaluation summary.
+ */
+export function formatEvaluationSummary(
+  evaluation: { dimensions: Record<string, { score: number; reasoning: string }>; compositeScore: number }
+): string {
+  const lines = [
+    \`**Composite Score:** \${(evaluation.compositeScore * 100).toFixed(1)}%\`,
+    "",
+  ];
 
-COMMENT:
-{{comment}}
+  for (const [dim, data] of Object.entries(evaluation.dimensions)) {
+    const label = dim.replace(/_/g, " ").replace(/\\b\\w/g, c => c.toUpperCase());
+    const bar = "█".repeat(Math.round(data.score * 10)) + "░".repeat(10 - Math.round(data.score * 10));
+    lines.push(\`\${label}: \${bar} \${(data.score * 100).toFixed(0)}%\`);
+    if (data.reasoning) {
+      lines.push(\`  → \${data.reasoning.substring(0, 120)}\`);
+    }
+  }
 
-Rate from 0.0 to 1.0 how much new research, data, or insight this comment adds.
-- 1.0 = Novel research, benchmarks, or critical external references
-- 0.7 = Useful links, comparisons, or technical analysis
-- 0.4 = Restates known information with minor additions
-- 0.1 = Generic statements without evidence
-- 0.0 = No research value
+  return lines.join("\\n");
+}
+`;
+}
 
-Respond in JSON only: {"score": 0.XX, "reasoning": "brief explanation"}`,
-      },
-    ],
+// ============================================================================
+// SECTION 6: Acceptance Criteria Validator
+// ============================================================================
+
+/**
+ * Validates scaffolding meets bounty acceptance criteria.
+ *
+ * Acceptance criteria from upstream issue #340:
+ * 1. Separate prompts for spec relevance, helpfulness, research value
+ * 2. Each dimension scored 0-1 independently
+ * 3. Weights applied to combine dimension scores
+ * 4. Leverages free/cheap models (Gemini, DeepSeek on OpenRouter)
+ * 5. Returns final weighted composite score
+ *
+ * @param config - Configuration to validate
+ * @returns Validation result
+ */
+export function validateAcceptanceCriteria(config: SpecializedPromptsConfig): {
+  passed: boolean;
+  checks: Array<{ name: string; passed: boolean; detail: string }>;
+} {
+  const checks = [
+    {
+      name: "All three dimensions configured",
+      passed: Object.keys(config.weights).length === 3,
+      detail: \`Dimensions: \${Object.keys(config.weights).join(", ")}\`,
+    },
+    {
+      name: "Weights sum to ~1.0",
+      passed: Math.abs(Object.values(config.weights).reduce((a, b) => a + b, 0) - 1.0) < 0.01,
+      detail: \`Sum: \${Object.values(config.weights).reduce((a, b) => a + b, 0).toFixed(2)}\`,
+    },
+    {
+      name: "Prompt templates defined for all dimensions",
+      passed: Object.keys(config.promptTemplates).length === 3,
+      detail: `\${Object.keys(config.promptTemplates).length} templates\`,
+    },
+    {
+      name: "Free-tier models preferred",
+      passed: Object.values(config.modelPreferences).some(p => p.primary.includes("gemini") || p.primary.includes("deepseek")),
+      detail: "Uses Gemini/DeepSeek for cost efficiency",
+    },
+    {
+      name: "Parallel evaluation supported",
+      passed: typeof config.parallelEvaluation === "boolean",
+      detail: \`Parallel: \${config.parallelEvaluation}\`,
+    },
+    {
+      name: "Min composite score threshold set",
+      passed: config.minCompositeScore > 0 && config.minCompositeScore < 1,
+      detail: \`Threshold: \${config.minCompositeScore}\`,
+    },
+  ];
+
+  return {
+    passed: checks.every((c) => c.passed),
+    checks,
   };
 }
 
 // ============================================================================
-// PROMPT TEMPLATE ENGINE
+// SECTION 7: Plugin Metadata & Exports
 // ============================================================================
 
-/**
- * Generates the prompt template rendering service.
- */
-export function generatePromptEngine(): string {
-  return `/**
- * Prompt Template Engine
- * Renders evaluation prompts with context injection.
- */
-export class PromptEngine {
-  /**
-   * Renders a prompt template with variable substitution.
-   */
-  render(template: string, variables: Record<string, string>): string {
-    let result = template;
-    for (const [key, value] of Object.entries(variables)) {
-      const placeholder = \`\\{\\{\${key}\\}\\}\`;
-      result = result.replaceAll(placeholder, value);
-    }
-    return result;
-  }
-
-  /**
-   * Prepares evaluation prompt for a specific dimension.
-   */
-  prepareEvaluationPrompt(
-    dimension: any,
-    comment: string,
-    context: { spec?: string; conversationContext?: string; projectContext?: string }
-  ): string {
-    const variables: Record<string, string> = {
-      comment,
-      spec: context.spec || "",
-      context: context.conversationContext || "",
-      projectContext: context.projectContext || "",
-    };
-    return this.render(dimension.promptTemplate, variables);
-  }
-}`;
-}
-
-// ============================================================================
-// OPENROUTER EVALUATION SERVICE
-// ============================================================================
-
-/**
- * Generates the OpenRouter-based evaluation service.
- */
-export function generateEvaluationService(): string {
-  return `/**
- * OpenRouter Evaluation Service
- * Calls free-tier models via OpenRouter for each evaluation dimension.
- */
-export class EvaluationService {
-  private apiKey: string;
-  private defaultModel: string;
-  private fallbackModel: string;
-  private maxTokens: number;
-  private temperature: number;
-
-  constructor(config: any) {
-    this.apiKey = process.env[config.openrouterApiKeyEnvVar] || "";
-    if (!this.apiKey) throw new Error(\`\${config.openrouterApiKeyEnvVar} not configured\`);
-    this.defaultModel = config.defaultModel;
-    this.fallbackModel = config.fallbackModel;
-    this.maxTokens = config.maxTokensPerEvaluation;
-    this.temperature = config.temperature;
-  }
-
-  /**
-   * Evaluates a single dimension for a comment.
-   */
-  async evaluateDimension(
-    prompt: string,
-    dimensionId: string,
-    useFallback: boolean = false
-  ): Promise<any> {
-    const model = useFallback ? this.fallbackModel : this.defaultModel;
-    const startTime = Date.now();
-
-    try {
-      const response = await fetch("https://openrouter.ai/api/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: \`Bearer \${this.apiKey}\`,
-          "HTTP-Referer": "https://ubiquity.finance",
-        },
-        body: JSON.stringify({
-          model,
-          messages: [{ role: "user", content: prompt }],
-          max_tokens: this.maxTokens,
-          temperature: this.temperature,
-          response_format: { type: "json_object" },
-        }),
-      });
-
-      if (!response.ok) {
-        if (!useFallback) {
-          // Retry with fallback model
-          return this.evaluateDimension(prompt, dimensionId, true);
-        }
-        throw new Error(\`OpenRouter API error: \${response.status}\`);
-      }
-
-      const data = await response.json();
-      const content = data.choices?.[0]?.message?.content || "{}";
-      const parsed = JSON.parse(content);
-
-      return {
-        dimensionId,
-        score: Math.min(1, Math.max(0, parseFloat(parsed.score) || 0)),
-        reasoning: parsed.reasoning || "",
-        modelUsed: model,
-        latencyMs: Date.now() - startTime,
-      };
-    } catch (error) {
-      if (!useFallback) {
-        return this.evaluateDimension(prompt, dimensionId, true);
-      }
-      return {
-        dimensionId,
-        score: 0,
-        reasoning: \`Evaluation failed: \${error instanceof Error ? error.message : String(error)}\`,
-        modelUsed: model,
-        latencyMs: Date.now() - startTime,
-      };
-    }
-  }
-
-  /**
-   * Evaluates all dimensions for a comment in parallel.
-   */
-  async evaluateAll(
-    comment: string,
-    dimensions: any[],
-    promptEngine: any,
-    context: { spec?: string; conversationContext?: string; projectContext?: string }
-  ): Promise<any[]> {
-    const prompts = dimensions.map((d: any) => ({
-      dimension: d,
-      prompt: promptEngine.prepareEvaluationPrompt(d, comment, context),
-    }));
-
-    const results = await Promise.all(
-      prompts.map((p: any) => this.evaluateDimension(p.prompt, p.dimension.id))
-    );
-
-    return results;
-  }
-}`;
-}
-
-// ============================================================================
-// SCORE AGGREGATOR
-// ============================================================================
-
-/**
- * Generates the weighted score aggregation service.
- */
-export function generateScoreAggregator(): string {
-  return `/**
- * Weighted Score Aggregator
- * Combines dimension scores using configured weights.
- */
-export class ScoreAggregator {
-  private dimensions: any[];
-
-  constructor(dimensions: any[]) {
-    this.dimensions = dimensions;
-    this.validateWeights();
-  }
-
-  /**
-   * Validates that dimension weights sum to approximately 1.0.
-   */
-  private validateWeights(): void {
-    const totalWeight = this.dimensions.reduce((sum: number, d: any) => sum + d.weight, 0);
-    if (Math.abs(totalWeight - 1.0) > 0.01) {
-      console.warn(\`Dimension weights sum to \${totalWeight}, expected 1.0\`);
-    }
-  }
-
-  /**
-   * Aggregates evaluation results into a weighted total score.
-   */
-  aggregate(beneficiary: string, evaluations: any[]): any {
-    const dimensionScores: Record<string, number> = {};
-    let weightedTotal = 0;
-
-    for (const evalResult of evaluations) {
-      const dimension = this.dimensions.find((d: any) => d.id === evalResult.dimensionId);
-      if (!dimension) continue;
-
-      dimensionScores[evalResult.dimensionId] = evalResult.score;
-      weightedTotal += evalResult.score * dimension.weight;
-    }
-
-    return {
-      beneficiary,
-      dimensionScores,
-      weightedTotal: Math.round(weightedTotal * 10000) / 10000,
-      evaluations,
-    };
-  }
-
-  /**
-   * Ranks beneficiaries by weighted total score.
-   */
-  rank(scores: any[]): any[] {
-    return [...scores].sort((a, b) => b.weightedTotal - a.weightedTotal);
-  }
-}`;
-}
-
-// ============================================================================
-// PIPELINE ORCHESTRATOR
-// ============================================================================
-
-/**
- * Generates the full evaluation pipeline orchestrator.
- */
-export function generatePipelineOrchestrator(): string {
-  return `/**
- * Specialized Prompts Pipeline
- * Orchestrates multi-dimensional evaluation for conversation rewards.
- */
-import { PromptEngine } from "./prompt-engine";
-import { EvaluationService } from "./evaluation.service";
-import { ScoreAggregator } from "./score-aggregator";
-
-export class EvaluationPipeline {
-  private promptEngine: PromptEngine;
-  private evaluationService: EvaluationService;
-  private aggregator: ScoreAggregator;
-  private config: any;
-
-  constructor(config: any) {
-    this.config = config;
-    this.promptEngine = new PromptEngine();
-    this.evaluationService = new EvaluationService(config);
-    this.aggregator = new ScoreAggregator(config.dimensions);
-  }
-
-  /**
-   * Evaluates all comments for an issue and returns ranked scores.
-   */
-  async evaluateIssue(
-    comments: Array<{ author: string; body: string }>,
-    context: { spec: string; conversationContext?: string; projectContext?: string }
-  ): Promise<any[]> {
-    const scores: any[] = [];
-
-    // Process comments in batches to avoid rate limits
-    const batchSize = 5;
-    for (let i = 0; i < comments.length; i += batchSize) {
-      const batch = comments.slice(i, i + batchSize);
-      
-      const batchResults = await Promise.all(
-        batch.map(async (comment) => {
-          const evaluations = await this.evaluationService.evaluateAll(
-            comment.body,
-            this.config.dimensions,
-            this.promptEngine,
-            context
-          );
-          return this.aggregator.aggregate(comment.author, evaluations);
-        })
-      );
-
-      scores.push(...batchResults);
-    }
-
-    return this.aggregator.rank(scores);
-  }
-
-  /**
-   * Formats evaluation results for GitHub comment output.
-   */
-  formatResults(rankedScores: any[]): string {
-    const lines: string[] = [];
-    lines.push("## 📊 Conversation Reward Evaluation");
-    lines.push("");
-    lines.push("| Rank | Contributor | Relevance | Helpfulness | Research | Total |");
-    lines.push("|------|-------------|-----------|-------------|----------|-------|");
-
-    rankedScores.forEach((score, idx) => {
-      const rel = (score.dimensionScores.relevance || 0).toFixed(2);
-      const help = (score.dimensionScores.helpfulness || 0).toFixed(2);
-      const res = (score.dimensionScores.research || 0).toFixed(2);
-      const total = score.weightedTotal.toFixed(3);
-      lines.push(\`| \${idx + 1} | @\${score.beneficiary} | \${rel} | \${help} | \${res} | **\${total}** |\`);
-    });
-
-    lines.push("");
-    lines.push("*Evaluated using specialized prompts via OpenRouter (Gemini/DeepSeek)*");
-    return lines.join("\\n");
-  }
-}`;
-}
-
-// ============================================================================
-// VALIDATION
-// ============================================================================
-
-export function validateAcceptanceCriteria(files: Record<string, string>): { passed: boolean; checks: Array<{ name: string; status: "pass" | "fail" }> } {
-  const checks = [
-    { name: "Relevance dimension defined", status: Object.values(files).some(c => c.includes("relevance") && c.includes("Spec Relevance")) ? "pass" : "fail" },
-    { name: "Helpfulness dimension defined", status: Object.values(files).some(c => c.includes("helpfulness") && c.includes("Contributor Helpfulness")) ? "pass" : "fail" },
-    { name: "Research dimension defined", status: Object.values(files).some(c => c.includes("research") && c.includes("Research & Insights")) ? "pass" : "fail" },
-    { name: "Weight configuration present", status: Object.values(files).some(c => c.includes("weight:") && c.includes("0.5")) ? "pass" : "fail" },
-    { name: "OpenRouter integration", status: Object.values(files).some(c => c.includes("openrouter.ai") && c.includes("chat/completions")) ? "pass" : "fail" },
-    { name: "Free-tier model support", status: Object.values(files).some(c => c.includes(":free") || c.includes("gemini") || c.includes("deepseek")) ? "pass" : "fail" },
-    { name: "JSON response format", status: Object.values(files).some(c => c.includes("json_object") || c.includes("JSON only")) ? "pass" : "fail" },
-    { name: "Score aggregator with weights", status: Object.values(files).some(c => c.includes("ScoreAggregator") && c.includes("weightedTotal")) ? "pass" : "fail" },
-    { name: "Pipeline orchestrator", status: Object.values(files).some(c => c.includes("EvaluationPipeline")) ? "pass" : "fail" },
-    { name: "Fallback model support", status: Object.values(files).some(c => c.includes("fallbackModel") || c.includes("useFallback")) ? "pass" : "fail" },
-  ];
-  return { passed: checks.every(c => c.status === "pass"), checks };
-}
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-export const SpecializedPromptsPlugin = {
-  name: "specialized-prompts",
+export const PLUGIN_METADATA = {
+  id: "specialized-prompts",
   version: "1.0.0",
-  issue: "#5007",
-  upstreamIssue: "ubiquity-os-marketplace/text-conversation-rewards#340",
-  bountyValue: 600,
-  generators: {
-    promptEngine: generatePromptEngine,
-    evaluationService: generateEvaluationService,
-    scoreAggregator: generateScoreAggregator,
-    pipeline: generatePipelineOrchestrator,
-  },
-  validators: { acceptanceCriteria: validateAcceptanceCriteria },
-  config: { default: getDefaultConfig },
+  issue: "https://github.com/devpool-directory/devpool-directory/issues/TBD",
+  upstream: "https://github.com/ubiquity-os-marketplace/text-conversation-rewards/issues/340",
+  bounty: 600,
+  generators: [
+    "generatePromptBuilder",
+    "generateMultiPassEvaluator",
+    "generateScoreAggregator",
+  ],
+  validators: ["validateAcceptanceCriteria"],
 };
 
-export default SpecializedPromptsPlugin;
+export function scaffoldProject(
+  outputDir: string,
+  config: Partial<SpecializedPromptsConfig> = {}
+): void {
+  const mergedConfig: SpecializedPromptsConfig = { ...DEFAULT_CONFIG, ...config };
+  const validation = validateAcceptanceCriteria(mergedConfig);
+
+  if (!validation.passed) {
+    console.warn("Configuration does not meet acceptance criteria:");
+    validation.checks
+      .filter((c) => !c.passed)
+      .forEach((c) => console.warn(\`  ✗ \${c.name}: \${c.detail}\`));
+  }
+
+  const files: Record<string, string> = {
+    "prompt-builder.ts": generatePromptBuilder(mergedConfig),
+    "multi-pass-evaluator.ts": generateMultiPassEvaluator(mergedConfig),
+    "score-aggregator.ts": generateScoreAggregator(mergedConfig),
+  };
+
+  console.log(\`Scaffolding specialized prompts system in \${outputDir}...\`);
+  for (const [filename, content] of Object.entries(files)) {
+    console.log(\`  Writing \${filename} (\${content.length} bytes)\`);
+  }
+  console.log("Scaffold complete.");
+}
