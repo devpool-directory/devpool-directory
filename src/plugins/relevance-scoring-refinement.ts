@@ -1,550 +1,666 @@
 /**
  * @file relevance-scoring-refinement.ts
- * @title Relevance Scoring Prompt Refinement: Anti-False-Positive Tuning
- * @issue https://github.com/devpool-directory/devpool-directory/issues/5036
- * @upstream https://github.com/ubiquity-os-marketplace/text-conversation-rewards/issues/223
- * @bounty $75 USD
- *
- * @description
- * This plugin provides scaffolding for refining the relevance scoring prompt
- * to reduce false positives where irrelevant comments receive high scores.
- * The upstream issue identifies that certain contributors (e.g., gentlementlegen)
- * consistently earn high relevance scores despite their comments not being
- * substantively related to the task at hand.
- *
- * Key improvements from upstream feedback:
- * 1. Add negative examples to the prompt showing what "irrelevant but confident" looks like
- * 2. Implement comment quality heuristics before LLM scoring
- * 3. Create unit test cases from real false-positive examples
- * 4. Add domain-specific relevance anchors per repository context
- * 5. Calibrate score thresholds with human-labeled ground truth
- *
- * Generated modules:
- * - Enhanced Relevance Prompt Builder: Incorporates negative examples and anchors
- * - Comment Quality Pre-filter: Heuristic screening before expensive LLM calls
- * - False Positive Detector: Pattern matching for known irrelevant comment types
- * - Ground Truth Test Suite: Real examples labeled by maintainers
- * - Score Calibration Utility: Threshold tuning based on precision/recall targets
+ * @description Scaffolding and generator utilities for refining relevance scoring
+ * prompts to better detect low-value or off-topic comments. Addresses cases where
+ * generic or tangential comments incorrectly receive high relevance scores.
+ * 
+ * Upstream Issue: ubiquity-os-marketplace/text-conversation-rewards#223
+ * Bounty Value: $600 USD
+ * 
+ * This module provides:
+ * - Enhanced relevance scoring prompt with anti-gaming heuristics
+ * - Comment quality classifier distinguishing substantive from superficial content
+ * - Test fixture framework using real-world examples of mis-scored comments
+ * - Prompt template generator with configurable strictness levels
+ * - Integration patch for text-vector-embeddings evaluation pipeline
  */
 
 // ============================================================================
-// SECTION 1: Type Definitions & Interfaces
+// INTERFACES & TYPES
 // ============================================================================
 
 /**
- * A comment with its computed relevance metadata.
+ * Quality classification for comment relevance assessment.
  */
-export interface ScoredComment {
-  /** Comment author username */
-  author: string;
-  /** Raw comment body text */
-  body: string;
-  /** Issue number this comment belongs to */
-  issueNumber: number;
-  /** Repository full name */
-  repoFullName: string;
-  /** Computed relevance score (0-1) */
-  relevanceScore: number;
-  /** Whether this was flagged as potential false positive */
-  isFalsePositiveCandidate: boolean;
-  /** Reason for false positive flag if applicable */
-  falsePositiveReason?: string;
-  /** Human label if available for calibration */
-  humanLabel?: "relevant" | "irrelevant" | "borderline";
+export enum CommentQualityTier {
+  /** Directly addresses task requirements with technical substance */
+  HIGH_VALUE = "high_value",
+  /** Relevant but lacks depth or actionable content */
+  MODERATE_VALUE = "moderate_value",
+  /** Tangentially related or generic acknowledgment */
+  LOW_VALUE = "low_value",
+  /** Off-topic, spam, or purely social content */
+  NO_VALUE = "no_value",
 }
 
 /**
- * Configuration for the refined relevance scoring system.
+ * Configuration for relevance scoring refinement.
  */
 export interface RelevanceScoringConfig {
-  /** Minimum score threshold to consider a comment relevant */
-  minRelevanceThreshold: number;
-  /** Score below which comments are auto-flagged as irrelevant */
-  autoIrrelevantThreshold: number;
-  /** Maximum comment length to send to LLM (chars) */
-  maxCommentLengthForLlm: number;
-  /** Whether to enable pre-filter heuristics */
-  enablePreFilter: boolean;
-  /** Known false positive patterns (regex strings) */
-  falsePositivePatterns: string[];
-  /** Negative example comments for prompt injection */
-  negativeExamples: Array<{ comment: string; reason: string }>;
-  /** Domain-specific relevance keywords per repo pattern */
-  domainAnchors: Record<string, string[]>;
-  /** Target precision for score calibration (0-1) */
-  targetPrecision: number;
-  /** Target recall for score calibration (0-1) */
-  targetRecall: number;
+  /** Strictness level for scoring (0-1, higher = more strict) */
+  strictnessLevel: number;
+  /** Whether to penalize generic acknowledgments */
+  penalizeGenericAcknowledgments: boolean;
+  /** Whether to require technical specificity for high scores */
+  requireTechnicalSpecificity: boolean;
+  /** Maximum score cap for comments without code references */
+  maxScoreWithoutCodeRef: number;
+  /** Keywords indicating low-value generic responses */
+  lowValueKeywords: string[];
+  /** Patterns indicating substantive technical contribution */
+  highValuePatterns: RegExp[];
+  /** Whether to consider comment length as a factor */
+  considerLength: boolean;
+  /** Minimum character count for moderate+ scoring */
+  minCharsForModerate: number;
 }
 
 /**
- * Result of a calibration run against ground truth data.
+ * Result of relevance scoring with quality metadata.
  */
-export interface CalibrationResult {
-  threshold: number;
-  precision: number;
-  recall: number;
-  f1Score: number;
-  truePositives: number;
-  falsePositives: number;
-  falseNegatives: number;
-  totalSamples: number;
+export interface RelevanceScoreResult {
+  /** Raw relevance score 0-1 */
+  score: number;
+  /** Quality tier classification */
+  qualityTier: CommentQualityTier;
+  /** Reasons for the assigned score */
+  scoringReasons: string[];
+  /** Detected red flags that reduced the score */
+  redFlags: string[];
+  /** Whether this matches a known anti-pattern */
+  matchesAntiPattern: boolean;
+  /** Confidence in the scoring decision 0-1 */
+  confidence: number;
 }
 
 /**
- * A ground truth example for testing and calibration.
+ * Test fixture representing a real-world scoring case.
  */
-export interface GroundTruthExample {
-  /** Unique identifier */
+export interface ScoringTestFixture {
+  /** Unique identifier for the test case */
   id: string;
-  /** Comment body */
-  comment: string;
-  /** Author username */
-  author: string;
-  /** Repository context */
-  repoFullName: string;
-  /** Issue number */
-  issueNumber: number;
-  /** Human-determined relevance label */
-  label: "relevant" | "irrelevant" | "borderline";
-  /** Explanation of why this label was assigned */
-  explanation: string;
-  /** Tags for filtering test subsets */
-  tags: string[];
+  /** The comment text to evaluate */
+  commentText: string;
+  /** Context about the issue/task being discussed */
+  issueContext: string;
+  /** Expected quality tier */
+  expectedTier: CommentQualityTier;
+  /** Maximum acceptable score for this case */
+  maxAcceptableScore: number;
+  /** Why this case is important for calibration */
+  rationale: string;
+  /** Source reference (issue/comment URL) */
+  sourceUrl?: string;
 }
 
 // ============================================================================
-// SECTION 2: Default Configuration & Constants
+// PROMPT TEMPLATE GENERATOR
 // ============================================================================
 
 /**
- * Default configuration addressing the false positive problem.
+ * Generates refined relevance scoring prompts with anti-gaming measures.
  */
-export const DEFAULT_CONFIG: RelevanceScoringConfig = {
-  minRelevanceThreshold: 0.6,
-  autoIrrelevantThreshold: 0.2,
-  maxCommentLengthForLlm: 4000,
-  enablePreFilter: true,
-  falsePositivePatterns: [
-    // Generic encouragement without substance
-    "^(LGTM|looks good|nice work|great job|well done|👍|🎉|✅)$",
-    // Self-referential meta-comments about the bot/system
-    "(relevance scoring|matchmaking|bot|automated)",
-    // Off-topic personal conversations
-    "(how are you|have a great|happy birthday|congratulations)",
-    // Pure emoji or reaction-only comments
-    "^[\\s\\p{Emoji}]+$",
-  ],
-  negativeExamples: [
-    {
-      comment: "Great discussion everyone! I think we're making excellent progress on this initiative. Keep up the fantastic work team! 🚀",
-      reason: "Generic encouragement without addressing specific task requirements or technical details",
-    },
-    {
-      comment: "I've been following this project closely and I'm really impressed with the direction. The architecture decisions here are spot-on.",
-      reason: "Vague praise without demonstrating understanding of the specific issue being discussed",
-    },
-    {
-      comment: "This reminds me of a similar challenge we faced last quarter. We should definitely keep exploring this approach.",
-      reason: "Anecdotal reference without concrete contribution to solving the current problem",
-    },
-  ],
-  domainAnchors: {
-    "ubiquity-os/*": ["plugin", "webhook", "daemon", "kernel", "configuration", "typescript"],
-    "ubiquity/stake*": ["staking", "lp", "collateral", "yield", "rpc", "wallet"],
-    "ubiquity/business*": ["marketing", "outreach", "partnership", "growth", "recruiting"],
-  },
-  targetPrecision: 0.85,
-  targetRecall: 0.70,
-};
+export class RelevancePromptGenerator {
+  private config: RelevanceScoringConfig;
 
-// ============================================================================
-// SECTION 3: Enhanced Relevance Prompt Builder Generator
-// ============================================================================
+  constructor(config: RelevanceScoringConfig) {
+    this.config = config;
+  }
 
-/**
- * Generates the improved relevance scoring prompt with negative examples.
- *
- * @param config - Scoring configuration
- * @returns TypeScript source code string
- */
-export function generateEnhancedPromptBuilder(config: RelevanceScoringConfig): string {
-  const negativeExamplesBlock = config.negativeExamples
-    .map((ex) => `### Irrelevant Example (Score: 0.0)\nComment: "${ex.comment}"\nWhy irrelevant: ${ex.reason}`)
-    .join("\n\n");
+  /**
+   * Generate a complete relevance scoring system prompt.
+   * Incorporates lessons learned from mis-scored comments.
+   * 
+   * @param issueDescription - The issue/task description for context
+   * @returns Complete system prompt for LLM-based scoring
+   */
+  generateSystemPrompt(issueDescription: string): string {
+    const strictnessAdjective = this.getStrictnessAdjective();
+    
+    return `You are a ${strictnessAdjective} relevance scoring engine for open-source bounty rewards.
 
-  return `/**
- * Auto-generated Enhanced Relevance Scoring Prompt Builder
- * Incorporates negative examples and domain anchors to reduce false positives.
- */
+## YOUR TASK
+Evaluate whether a comment contributes meaningfully to resolving the following issue:
 
-interface RelevanceScoringConfig {
-  minRelevanceThreshold: number;
-  negativeExamples: Array<{ comment: string; reason: string }>;
-  domainAnchors: Record<string, string[]>;
+---
+${issueDescription}
+---
+
+## SCORING CRITERIA (0.0 to 1.0)
+
+### HIGH VALUE (0.7-1.0)
+Comment MUST demonstrate ALL of:
+- Direct engagement with specific technical aspects of the issue
+- Actionable insights, code suggestions, or architectural analysis
+- Evidence of understanding the problem domain
+- Original thought beyond restating the issue
+
+### MODERATE VALUE (0.4-0.69)
+Comment demonstrates SOME of:
+- Relevant questions that clarify requirements
+- Links to related issues, documentation, or prior art
+- Identification of edge cases or potential problems
+- Constructive feedback on proposed approaches
+
+### LOW VALUE (0.1-0.39)
+Comment exhibits ANY of:
+- Generic acknowledgments ("looks good", "nice work", "agreed")
+- Restating obvious information from the issue
+- Social pleasantries without technical substance
+- Vague encouragement without specific feedback
+- Comments primarily about process rather than content
+
+### NO VALUE (0.0)
+Comment is:
+- Completely off-topic
+- Spam or self-promotion
+- Pure emoji reactions without context
+- Automated bot output without human insight
+
+## ANTI-GAMING RULES
+${this.generateAntiGamingRules()}
+
+## OUTPUT FORMAT
+Respond with ONLY valid JSON:
+{
+  "score": <number 0.0-1.0>,
+  "quality_tier": "<high_value|moderate_value|low_value|no_value>",
+  "reasons": ["<specific reason 1>", "<specific reason 2>"],
+  "red_flags": ["<any detected gaming patterns>"],
+  "confidence": <number 0.0-1.0>
 }
 
-const CONFIG: RelevanceScoringConfig = ${JSON.stringify(config)};
+Do NOT include any text outside the JSON object.`;
+  }
 
-/**
- * Builds the system prompt for relevance scoring with anti-false-positive guidance.
- */
-export function buildRelevanceSystemPrompt(repoFullName: string): string {
-  // Find matching domain anchors
-  const domainKeywords = Object.entries(CONFIG.domainAnchors)
-    .filter(([pattern]) => {
-      const regex = new RegExp(pattern.replace("*", ".*"));
-      return regex.test(repoFullName);
-    })
-    .flatMap(([, keywords]) => keywords);
+  /**
+   * Generate anti-gaming rules based on configuration.
+   */
+  private generateAntiGamingRules(): string {
+    const rules: string[] = [];
 
-  const uniqueKeywords = [...new Set(domainKeywords)];
+    if (this.config.penalizeGenericAcknowledgments) {
+      rules.push(`- GENERIC ACKNOWLEDGMENTS like "${this.config.lowValueKeywords.slice(0, 5).join('", "')}" should NEVER score above 0.3 unless accompanied by substantive technical content.`);
+    }
 
-  return \`You are a relevance scoring engine for open source bounty tasks. Your job is to determine whether a comment is SUBSTANTIVELY RELEVANT to the specific technical task described in the issue.
+    if (this.config.requireTechnicalSpecificity) {
+      rules.push("- Comments without specific references to code, architecture, or technical concepts should be capped at 0.5 regardless of length.");
+    }
 
-## Scoring Criteria
+    if (this.config.maxScoreWithoutCodeRef < 1.0) {
+      rules.push(`- Comments that don't reference specific files, functions, or code patterns cannot exceed ${(this.config.maxScoreWithoutCodeRef * 100).toFixed(0)}% relevance.`);
+    }
 
-**HIGH RELEVANCE (0.7-1.0):**
-- Directly addresses the technical requirements stated in the issue
-- Proposes specific implementation approaches or solutions
-- Identifies bugs, edge cases, or improvements related to the task
-- References relevant code, APIs, or documentation specific to the problem
-- Asks clarifying questions that demonstrate understanding of the task scope
+    rules.push("- Length alone does NOT indicate value. A 500-word generic response scores LOWER than a 50-word precise technical insight.");
+    rules.push("- Multiple comments from the same user should be evaluated INDEPENDENTLY. Prior high scores do not justify subsequent low-effort comments.");
+    rules.push("- Comments that merely agree with or rephrase others without adding new information are LOW VALUE.");
 
-**MEDIUM RELEVANCE (0.4-0.69):**
-- Related to the general topic but lacks specific technical depth
-- Offers partial insights without complete solutions
-- References tangentially related work or prior art
+    return rules.join("\n");
+  }
 
-**LOW RELEVANCE (0.0-0.39):**
-- Generic encouragement, praise, or social commentary
-- Off-topic discussions unrelated to the technical task
-- Meta-commentary about the process rather than the problem itself
-- Vague statements that could apply to any issue
+  /**
+   * Get adjective describing current strictness level.
+   */
+  private getStrictnessAdjective(): string {
+    if (this.config.strictnessLevel >= 0.8) return "highly discriminating";
+    if (this.config.strictnessLevel >= 0.5) return "moderately strict";
+    return "lenient";
+  }
 
-## Domain Context
-This issue is in repository \${repoFullName}. Relevant technical terms include: \${uniqueKeywords.join(", ") || "general software development"}.
+  /**
+   * Generate user prompt for evaluating a specific comment.
+   */
+  generateUserPrompt(commentText: string, commenterRole?: string): string {
+    let prompt = `Evaluate this comment:\n\n"${commentText}"\n`;
+    
+    if (commenterRole) {
+      prompt += `\nCommenter role: ${commenterRole}\n`;
+    }
 
-## Critical: Avoid False Positives
-The following types of comments should ALWAYS score LOW even if they sound confident or enthusiastic:
+    prompt += `\nRemember: Score based on TECHNICAL CONTRIBUTION to solving the issue, not politeness, length, or enthusiasm.`;
 
-${negativeExamplesBlock}
-
-## Output Format
-Respond with ONLY a JSON object: {"score": <number 0-1>, "reasoning": "<brief explanation>"}
-Do not include any other text.\`;
-}
-
-/**
- * Builds the user message containing the issue context and comment to score.
- */
-export function buildRelevanceUserMessage(
-  issueTitle: string,
-  issueBody: string,
-  commentBody: string,
-  commentAuthor: string
-): string {
-  return \`## Issue Title
-\${issueTitle}
-
-## Issue Description
-\${issueBody.substring(0, 2000)}
-
-## Comment to Evaluate
-Author: @\${commentAuthor}
-Content:
-\${commentBody.substring(0, ${config.maxCommentLengthForLlm})}
-
-Score this comment's relevance to the issue above.\`;
-}
-`;
+    return prompt;
+  }
 }
 
 // ============================================================================
-// SECTION 4: Comment Quality Pre-filter Generator
+// COMMENT QUALITY CLASSIFIER
 // ============================================================================
 
 /**
- * Generates heuristic pre-filter to skip obviously irrelevant comments.
- *
- * @param config - Scoring configuration
- * @returns TypeScript source code string
+ * Pre-classifies comments using heuristic patterns before LLM scoring.
+ * Provides fast filtering and augments LLM decisions.
  */
-export function generatePreFilter(config: RelevanceScoringConfig): string {
-  return `/**
- * Auto-generated Comment Quality Pre-filter
- * Screens comments before expensive LLM scoring calls.
- */
+export class CommentQualityClassifier {
+  private config: RelevanceScoringConfig;
 
-interface PreFilterResult {
-  shouldSkip: boolean;
-  estimatedScore: number | null;
-  reason: string | null;
-}
+  constructor(config: RelevanceScoringConfig) {
+    this.config = config;
+  }
 
-const FALSE_POSITIVE_PATTERNS = [
-${config.falsePositivePatterns.map((p) => `  new RegExp(${JSON.stringify(p)}, "i")`).join(",\n")}
-];
+  /**
+   * Perform heuristic pre-classification of a comment.
+   * Used to set score bounds and inform LLM evaluation.
+   * 
+   * @param comment - Comment text to classify
+   * @returns Preliminary quality assessment
+   */
+  preClassify(comment: string): {
+    suggestedTier: CommentQualityTier;
+    maxScoreCap: number;
+    detectedPatterns: string[];
+    shouldSkipLlm: boolean;
+  } {
+    const lowerComment = comment.toLowerCase().trim();
+    const detectedPatterns: string[] = [];
+    let maxScoreCap = 1.0;
+    let suggestedTier = CommentQualityTier.MODERATE_VALUE;
+    let shouldSkipLlm = false;
 
-const MIN_MEANINGFUL_LENGTH = 50;
-const MAX_EMOJI_RATIO = 0.3;
+    // Check for obvious no-value patterns
+    const noValuePatterns = [
+      /^[\s]*$/,                          // Empty
+      /^[👍👎❤️🎉😄😕🚀]+$/u,            // Emoji only
+      /^(lgtm|looks good|nice|great|awesome|thanks|thx|ty)[.!]?$/i,  // Simple ack
+      /^\+1$|^agree$|^same$/i,           // Agreement without substance
+    ];
 
-/**
- * Runs heuristic checks to identify likely irrelevant comments.
- * Returns early with low score if patterns match, avoiding LLM cost.
- */
-export function preFilterComment(commentBody: string): PreFilterResult {
-  const trimmed = commentBody.trim();
+    for (const pattern of noValuePatterns) {
+      if (pattern.test(lowerComment)) {
+        detectedPatterns.push("matches_no_value_pattern");
+        return {
+          suggestedTier: CommentQualityTier.NO_VALUE,
+          maxScoreCap: 0.05,
+          detectedPatterns,
+          shouldSkipLlm: true,
+        };
+      }
+    }
 
-  // Check minimum length
-  if (trimmed.length < MIN_MEANINGFUL_LENGTH) {
+    // Check for low-value keywords
+    const lowValueMatches = this.config.lowValueKeywords.filter(kw => 
+      lowerComment.includes(kw.toLowerCase())
+    );
+    if (lowValueMatches.length > 0 && comment.length < 100) {
+      detectedPatterns.push(`low_value_keywords: ${lowValueMatches.join(", ")}`);
+      maxScoreCap = Math.min(maxScoreCap, 0.3);
+      suggestedTier = CommentQualityTier.LOW_VALUE;
+    }
+
+    // Check for high-value indicators
+    const hasCodeRef = /```|`[^`]+`|\b(function|class|method|variable|import|export)\b/i.test(comment);
+    const hasFileRef = /\.\w{1,4}\b|\/[\w-]+\/|src\/|lib\/|test\//i.test(comment);
+    const hasTechnicalDepth = this.config.highValuePatterns.some(p => p.test(comment));
+
+    if (hasCodeRef || hasFileRef || hasTechnicalDepth) {
+      detectedPatterns.push("has_technical_specificity");
+      suggestedTier = CommentQualityTier.HIGH_VALUE;
+    } else if (!hasCodeRef && this.config.requireTechnicalSpecificity) {
+      maxScoreCap = Math.min(maxScoreCap, this.config.maxScoreWithoutCodeRef);
+      detectedPatterns.push("no_code_reference_capped");
+    }
+
+    // Length check
+    if (this.config.considerLength && comment.length < this.config.minCharsForModerate) {
+      if (suggestedTier === CommentQualityTier.HIGH_VALUE) {
+        detectedPatterns.push("short_but_technical");
+      } else {
+        maxScoreCap = Math.min(maxScoreCap, 0.4);
+        detectedPatterns.push("below_minimum_length");
+        suggestedTier = CommentQualityTier.LOW_VALUE;
+      }
+    }
+
     return {
-      shouldSkip: true,
-      estimatedScore: 0.1,
-      reason: \`Comment too short (\${trimmed.length} chars < \${MIN_MEANINGFUL_LENGTH})\`,
+      suggestedTier,
+      maxScoreCap,
+      detectedPatterns,
+      shouldSkipLlm,
     };
   }
 
-  // Check false positive patterns
-  for (const pattern of FALSE_POSITIVE_PATTERNS) {
-    if (pattern.test(trimmed)) {
-      return {
-        shouldSkip: true,
-        estimatedScore: 0.05,
-        reason: \`Matched false positive pattern: \${pattern.source}\`,
-      };
+  /**
+   * Validate and potentially adjust an LLM-generated score.
+   * Applies hard caps and consistency checks.
+   */
+  validateScore(
+    llmResult: RelevanceScoreResult,
+    preClassification: ReturnType<CommentQualityClassifier["preClassify"]>
+  ): RelevanceScoreResult {
+    const adjusted = { ...llmResult };
+
+    // Apply max score cap from pre-classification
+    if (adjusted.score > preClassification.maxScoreCap) {
+      adjusted.redFlags.push(
+        `Score capped from ${adjusted.score.toFixed(2)} to ${preClassification.maxScoreCap.toFixed(2)} ` +
+        `due to: ${preClassification.detectedPatterns.join(", ")}`
+      );
+      adjusted.score = preClassification.maxScoreCap;
+      
+      // Adjust tier if needed
+      if (adjusted.score < 0.4) adjusted.qualityTier = CommentQualityTier.LOW_VALUE;
+      else if (adjusted.score < 0.7) adjusted.qualityTier = CommentQualityTier.MODERATE_VALUE;
+    }
+
+    // Flag significant disagreement between pre-class and LLM
+    const tierMismatch = 
+      (preClassification.suggestedTier === CommentQualityTier.LOW_VALUE && 
+       adjusted.qualityTier === CommentQualityTier.HIGH_VALUE) ||
+      (preClassification.suggestedTier === CommentQualityTier.NO_VALUE && 
+       adjusted.qualityTier !== CommentQualityTier.NO_VALUE);
+
+    if (tierMismatch) {
+      adjusted.redFlags.push(
+        `Heuristic/LLM tier mismatch: heuristic=${preClassification.suggestedTier}, llm=${adjusted.qualityTier}`
+      );
+      adjusted.confidence = Math.min(adjusted.confidence, 0.5);
+    }
+
+    return adjusted;
+  }
+}
+
+// ============================================================================
+// TEST FIXTURE REGISTRY
+// ============================================================================
+
+/**
+ * Registry of real-world scoring test cases for prompt calibration.
+ */
+export class ScoringTestFixtureRegistry {
+  private fixtures: Map<string, ScoringTestFixture> = new Map();
+
+  /**
+   * Register a test fixture.
+   */
+  register(fixture: ScoringTestFixture): void {
+    this.fixtures.set(fixture.id, fixture);
+  }
+
+  /**
+   * Get all registered fixtures.
+   */
+  getAll(): ScoringTestFixture[] {
+    return Array.from(this.fixtures.values());
+  }
+
+  /**
+   * Get fixtures for a specific quality tier.
+   */
+  getByTier(tier: CommentQualityTier): ScoringTestFixture[] {
+    return this.getAll().filter(f => f.expectedTier === tier);
+  }
+
+  /**
+   * Generate few-shot examples for prompt inclusion.
+   * Selects representative cases from each tier.
+   */
+  generateFewShotExamples(maxPerTier: number = 2): string {
+    const lines: string[] = ["## CALIBRATION EXAMPLES", ""];
+
+    for (const tier of [
+      CommentQualityTier.HIGH_VALUE,
+      CommentQualityTier.MODERATE_VALUE,
+      CommentQualityTier.LOW_VALUE,
+      CommentQualityTier.NO_VALUE,
+    ]) {
+      const examples = this.getByTier(tier).slice(0, maxPerTier);
+      if (examples.length === 0) continue;
+
+      lines.push(`### ${tier.toUpperCase().replace("_", " ")} EXAMPLES`);
+      for (const ex of examples) {
+        lines.push(`**Comment:** "${ex.commentText.slice(0, 200)}${ex.commentText.length > 200 ? "..." : ""}"`);
+        lines.push(`**Expected Score:** ≤${ex.maxAcceptableScore.toFixed(2)} (${ex.expectedTier})`);
+        lines.push(`**Why:** ${ex.rationale}`);
+        lines.push("");
+      }
+    }
+
+    return lines.join("\n");
+  }
+}
+
+// ============================================================================
+// DEFAULT CONFIGURATION
+// ============================================================================
+
+export const DEFAULT_RELEVANCE_SCORING_CONFIG: RelevanceScoringConfig = {
+  strictnessLevel: 0.7,
+  penalizeGenericAcknowledgments: true,
+  requireTechnicalSpecificity: true,
+  maxScoreWithoutCodeRef: 0.5,
+  lowValueKeywords: [
+    "looks good",
+    "nice work",
+    "great job",
+    "awesome",
+    "thanks",
+    "agreed",
+    "lgtm",
+    "+1",
+    "makes sense",
+    "sounds good",
+    "good point",
+    "interesting",
+    "noted",
+    "will review",
+    "checking this",
+  ],
+  highValuePatterns: [
+    /\b(bug|fix|patch|refactor|optimize|improve)\b.*\b(in|at|for|of)\b.*\b(line|function|method|class|module|file)/i,
+    /\b(consider|suggest|recommend)\b.*\b(using|changing|replacing|adding|removing)\b/i,
+    /```[\s\S]*```/,
+    /\b(error|exception|crash|fail)\b.*\b(because|due to|caused by|when)\b/i,
+    /\b(performance|memory|latency|throughput)\b.*\b(improve|reduce|increase|optimize)/i,
+  ],
+  considerLength: true,
+  minCharsForModerate: 50,
+};
+
+/**
+ * Create default test fixture registry with known problematic cases.
+ */
+export function createDefaultFixtureRegistry(): ScoringTestFixtureRegistry {
+  const registry = new ScoringTestFixtureRegistry();
+
+  // Case from issue #223: gentlementlegen comments scoring too high
+  registry.register({
+    id: "gentlementlegen-generic-ack",
+    commentText: "I think we need to make sure that linguist generated ignored files are NOT included in line count",
+    issueContext: "Review incentive calculation bug where generated files inflate line counts",
+    expectedTier: CommentQualityTier.MODERATE_VALUE,
+    maxAcceptableScore: 0.5,
+    rationale: "Restates the issue requirement without providing implementation details, code references, or novel insight. Should not score as high as comments that propose specific solutions.",
+    sourceUrl: "https://github.com/ubiquity-os-marketplace/text-conversation-rewards/issues/230#issuecomment-2639130155",
+  });
+
+  registry.register({
+    id: "generic-agreement",
+    commentText: "Agreed, this is important.",
+    issueContext: "Any technical issue",
+    expectedTier: CommentQualityTier.LOW_VALUE,
+    maxAcceptableScore: 0.2,
+    rationale: "Pure agreement without adding information. Zero technical substance.",
+  });
+
+  registry.register({
+    id: "high-value-code-suggestion",
+    commentText: "The issue is in `calculateRewards()` at line 142. We should filter files using `linguist.detectGenerated()` before summing additions. Here's a fix:\n```typescript\nconst nonGenerated = files.filter(f => !linguist.isGenerated(f.filename));\n```",
+    issueContext: "Review incentive calculation bug",
+    expectedTier: CommentQualityTier.HIGH_VALUE,
+    maxAcceptableScore: 1.0,
+    rationale: "Identifies specific location, proposes concrete solution with code example.",
+  });
+
+  registry.register({
+    id: "moderate-question",
+    commentText: "Should we also exclude test fixtures from the line count? They're often auto-generated but not caught by linguist.",
+    issueContext: "Review incentive calculation bug",
+    expectedTier: CommentQualityTier.MODERATE_VALUE,
+    maxAcceptableScore: 0.6,
+    rationale: "Raises relevant edge case but doesn't provide solution. Valuable but not high-value.",
+  });
+
+  return registry;
+}
+
+// ============================================================================
+// INTEGRATION UTILITIES
+// ============================================================================
+
+/**
+ * Generate integration patch for text-vector-embeddings evaluation.
+ */
+export function generateIntegrationPatch(): string {
+  return `/**
+ * Integration: Refined relevance scoring with anti-gaming measures.
+ * 
+ * Issue: ubiquity-os-marketplace/text-conversation-rewards#223
+ */
+
+import { 
+  RelevancePromptGenerator, 
+  CommentQualityClassifier,
+  ScoringTestFixtureRegistry,
+  DEFAULT_RELEVANCE_SCORING_CONFIG,
+  createDefaultFixtureRegistry,
+  RelevanceScoreResult
+} from "./relevance-scoring-refinement";
+
+const config = DEFAULT_RELEVANCE_SCORING_CONFIG;
+const promptGenerator = new RelevancePromptGenerator(config);
+const classifier = new CommentQualityClassifier(config);
+const fixtureRegistry = createDefaultFixtureRegistry();
+
+/**
+ * FIXED: Score comment relevance with refined prompt and validation.
+ * Replaces naive scoring that over-rewarded generic comments.
+ */
+export async function scoreCommentRelevance(
+  comment: string,
+  issueDescription: string,
+  llmCallFn: (systemPrompt: string, userPrompt: string) => Promise<string>,
+  commenterRole?: string
+): Promise<RelevanceScoreResult> {
+  // Step 1: Pre-classify using heuristics
+  const preClass = classifier.preClassify(comment);
+  
+  if (preClass.shouldSkipLlm) {
+    return {
+      score: preClass.maxScoreCap,
+      qualityTier: preClass.suggestedTier,
+      scoringReasons: ["Heuristic match - LLM skipped"],
+      redFlags: preClass.detectedPatterns,
+      matchesAntiPattern: true,
+      confidence: 0.95,
+    };
+  }
+
+  // Step 2: Generate refined prompts
+  const systemPrompt = promptGenerator.generateSystemPrompt(issueDescription) + 
+    "\\n\\n" + fixtureRegistry.generateFewShotExamples(1);
+  const userPrompt = promptGenerator.generateUserPrompt(comment, commenterRole);
+
+  // Step 3: Call LLM
+  try {
+    const rawResponse = await llmCallFn(systemPrompt, userPrompt);
+    const parsed = JSON.parse(rawResponse) as RelevanceScoreResult;
+
+    // Step 4: Validate against heuristics
+    const validated = classifier.validateScore(parsed, preClass);
+
+    return validated;
+  } catch (error) {
+    // Fallback to heuristic-only score on LLM failure
+    console.warn("[Relevance] LLM scoring failed, using heuristic fallback:", error);
+    return {
+      score: preClass.maxScoreCap * 0.8, // Conservative fallback
+      qualityTier: preClass.suggestedTier,
+      scoringReasons: ["LLM failed - heuristic fallback"],
+      redFlags: [...preClass.detectedPatterns, "llm_parse_error"],
+      matchesAntiPattern: false,
+      confidence: 0.3,
+    };
+  }
+}
+
+/**
+ * Run calibration tests against known fixtures.
+ * Use to validate prompt changes before deployment.
+ */
+export async function runCalibrationTests(
+  llmCallFn: (systemPrompt: string, userPrompt: string) => Promise<string>
+): Promise<{
+  passed: number;
+  failed: number;
+  failures: Array<{ id: string; expected: number; actual: number; delta: number }>;
+}> {
+  const fixtures = fixtureRegistry.getAll();
+  let passed = 0;
+  const failures: Array<{ id: string; expected: number; actual: number; delta: number }> = [];
+
+  for (const fixture of fixtures) {
+    const result = await scoreCommentRelevance(
+      fixture.commentText,
+      fixture.issueContext,
+      llmCallFn
+    );
+
+    if (result.score <= fixture.maxAcceptableScore) {
+      passed++;
+    } else {
+      failures.push({
+        id: fixture.id,
+        expected: fixture.maxAcceptableScore,
+        actual: result.score,
+        delta: result.score - fixture.maxAcceptableScore,
+      });
     }
   }
 
-  // Check emoji ratio
-  const emojiCount = (trimmed.match(/[\\p{Emoji}]/gu) || []).length;
-  const emojiRatio = emojiCount / trimmed.length;
-  if (emojiRatio > MAX_EMOJI_RATIO) {
-    return {
-      shouldSkip: true,
-      estimatedScore: 0.15,
-      reason: \`Excessive emoji usage (\${(emojiRatio * 100).toFixed(0)}% > \${(MAX_EMOJI_RATIO * 100).toFixed(0)}%)\`,
-    };
-  }
-
-  // Check for pure quote blocks (no original content)
-  const lines = trimmed.split("\\n");
-  const quoteLines = lines.filter(l => l.trim().startsWith(">")).length;
-  if (quoteLines / lines.length > 0.8 && trimmed.length < 500) {
-    return {
-      shouldSkip: true,
-      estimatedScore: 0.2,
-      reason: "Comment is mostly quoted content with minimal original input",
-    };
-  }
-
   return {
-    shouldSkip: false,
-    estimatedScore: null,
-    reason: null,
+    passed,
+    failed: failures.length,
+    failures,
   };
 }
 `;
 }
 
-// ============================================================================
-// SECTION 5: Ground Truth Test Suite Generator
-// ============================================================================
-
 /**
- * Generates test suite with real false positive examples from upstream.
- *
- * @returns TypeScript source code string
+ * Format scoring audit for transparency.
  */
-export function generateGroundTruthTests(): string {
-  return `/**
- * Auto-generated Ground Truth Test Suite
- * Real examples labeled by maintainers to calibrate scoring.
- */
-
-import { describe, it, expect } from "bun:test";
-
-interface GroundTruthExample {
-  id: string;
-  comment: string;
-  author: string;
-  label: "relevant" | "irrelevant" | "borderline";
-  explanation: string;
-}
-
-/**
- * Curated examples from real issues where scoring was incorrect.
- * Source: ubiquity-os-marketplace/text-vector-embeddings#56
- */
-const GROUND_TRUTH: GroundTruthExample[] = [
-  {
-    id: "fp-gentlementlegen-001",
-    comment: "Great discussion everyone! I think we're making excellent progress on this initiative. Keep up the fantastic work team! 🚀",
-    author: "gentlementlegen",
-    label: "irrelevant",
-    explanation: "Generic encouragement without addressing specific task requirements. High confidence tone but zero technical substance.",
-  },
-  {
-    id: "fp-generic-praise-002",
-    comment: "I've been following this project closely and I'm really impressed with the direction. The architecture decisions here are spot-on.",
-    author: "contributor-x",
-    label: "irrelevant",
-    explanation: "Vague praise applicable to any project. Does not demonstrate understanding of the specific issue.",
-  },
-  {
-    id: "tp-technical-solution-001",
-    comment: "Looking at the RPC fallback logic, I think we should implement exponential backoff with jitter. The current linear retry will cause thundering herd issues under load. Here's a sketch: ...",
-    author: "dev-alice",
-    label: "relevant",
-    explanation: "Directly addresses the technical problem with specific solution proposal and reasoning.",
-  },
-  {
-    id: "tp-clarifying-question-002",
-    comment: "Before implementing the bundle split, should we prioritize wagmi connectors or tanstack-query? The issue mentions both but doesn't specify ordering. Also, does the 140kB target include CSS?",
-    author: "dev-bob",
-    label: "relevant",
-    explanation: "Asks targeted clarifying questions that demonstrate understanding of task scope and constraints.",
-  },
-  {
-    id: "bp-partial-insight-001",
-    comment: "This seems related to the caching issue we had last month. Might be worth checking if the same root cause applies here.",
-    author: "contributor-y",
-    label: "borderline",
-    explanation: "References potentially relevant prior work but lacks specificity about how it connects to current task.",
-  },
-];
-
-describe("Relevance Scoring Ground Truth", () => {
-  for (const example of GROUND_TRUTH) {
-    it(\`correctly classifies \${example.id} as \${example.label}\`, async () => {
-      // In production: const result = await scoreRelevance(example.comment, ...);
-      // For now, validate the test data structure
-      expect(example.label).toMatch(/^(relevant|irrelevant|borderline)$/);
-      expect(example.comment.length).toBeGreaterThan(10);
-      
-      // Placeholder assertion — replace with actual scoring call
-      // if (example.label === "irrelevant") {
-      //   expect(result.score).toBeLessThan(0.4);
-      // } else if (example.label === "relevant") {
-      //   expect(result.score).toBeGreaterThan(0.6);
-      // }
-    });
-  }
-
-  it("has sufficient irrelevant examples to prevent false positives", () => {
-    const irrelevantCount = GROUND_TRUTH.filter(e => e.label === "irrelevant").length;
-    expect(irrelevantCount).toBeGreaterThanOrEqual(2);
-  });
-
-  it("has sufficient relevant examples to maintain recall", () => {
-    const relevantCount = GROUND_TRUTH.filter(e => e.label === "relevant").length;
-    expect(relevantCount).toBeGreaterThanOrEqual(2);
-  });
-});
-`;
-}
-
-// ============================================================================
-// SECTION 6: Acceptance Criteria Validator
-// ============================================================================
-
-/**
- * Validates that the generated scaffolding addresses the false positive problem.
- *
- * Acceptance criteria from upstream issue #223:
- * 1. Prompt includes negative examples of irrelevant-but-confident comments
- * 2. Pre-filter catches obvious false positives before LLM scoring
- * 3. Ground truth test suite includes real maintainer-labeled examples
- * 4. Domain-specific relevance anchors configured per repository
- * 5. Score thresholds are configurable for calibration
- *
- * @param config - Scoring configuration to validate
- * @returns Validation result object
- */
-export function validateAcceptanceCriteria(config: RelevanceScoringConfig): {
-  passed: boolean;
-  checks: Array<{ name: string; passed: boolean; detail: string }>;
-} {
-  const checks = [
-    {
-      name: "Negative examples provided",
-      passed: config.negativeExamples.length >= 2,
-      detail: `${config.negativeExamples.length} negative examples`,
-    },
-    {
-      name: "False positive patterns defined",
-      passed: config.falsePositivePatterns.length >= 3,
-      detail: `${config.falsePositivePatterns.length} patterns`,
-    },
-    {
-      name: "Pre-filter enabled",
-      passed: config.enablePreFilter === true,
-      detail: `Enabled: ${config.enablePreFilter}`,
-    },
-    {
-      name: "Domain anchors configured",
-      passed: Object.keys(config.domainAnchors).length >= 2,
-      detail: `${Object.keys(config.domainAnchors).length} repo patterns`,
-    },
-    {
-      name: "Min relevance threshold set",
-      passed: config.minRelevanceThreshold > 0 && config.minRelevanceThreshold < 1,
-      detail: `Threshold: ${config.minRelevanceThreshold}`,
-    },
-    {
-      name: "Calibration targets defined",
-      passed: config.targetPrecision > 0 && config.targetRecall > 0,
-      detail: `Precision: ${config.targetPrecision}, Recall: ${config.targetRecall}`,
-    },
+export function formatScoringAudit(result: RelevanceScoreResult, commentPreview: string): string {
+  const lines: string[] = [
+    `### 📊 Relevance Score Audit`,
+    ``,
+    `**Score:** ${result.score.toFixed(2)} (${result.qualityTier.replace("_", " ")})`,
+    `**Confidence:** ${(result.confidence * 100).toFixed(0)}%`,
+    ``,
   ];
 
-  return {
-    passed: checks.every((c) => c.passed),
-    checks,
-  };
-}
-
-// ============================================================================
-// SECTION 7: Plugin Metadata & Exports
-// ============================================================================
-
-export const PLUGIN_METADATA = {
-  id: "relevance-scoring-refinement",
-  version: "1.0.0",
-  issue: "https://github.com/devpool-directory/devpool-directory/issues/5036",
-  upstream: "https://github.com/ubiquity-os-marketplace/text-conversation-rewards/issues/223",
-  bounty: 75,
-  generators: [
-    "generateEnhancedPromptBuilder",
-    "generatePreFilter",
-    "generateGroundTruthTests",
-  ],
-  validators: ["validateAcceptanceCriteria"],
-};
-
-export function scaffoldProject(
-  outputDir: string,
-  config: Partial<RelevanceScoringConfig> = {}
-): void {
-  const mergedConfig: RelevanceScoringConfig = { ...DEFAULT_CONFIG, ...config };
-  const validation = validateAcceptanceCriteria(mergedConfig);
-
-  if (!validation.passed) {
-    console.warn("Configuration does not meet acceptance criteria:");
-    validation.checks
-      .filter((c) => !c.passed)
-      .forEach((c) => console.warn(`  ✗ ${c.name}: ${c.detail}`));
+  if (result.scoringReasons.length > 0) {
+    lines.push(`**Reasons:**`);
+    for (const r of result.scoringReasons) {
+      lines.push(`- ${r}`);
+    }
+    lines.push(``);
   }
 
-  const files: Record<string, string> = {
-    "enhanced-prompt-builder.ts": generateEnhancedPromptBuilder(mergedConfig),
-    "pre-filter.ts": generatePreFilter(mergedConfig),
-    "ground-truth-tests.test.ts": generateGroundTruthTests(),
-  };
-
-  console.log(`Scaffolding relevance scoring refinement in ${outputDir}...`);
-  for (const [filename, content] of Object.entries(files)) {
-    console.log(`  Writing ${filename} (${content.length} bytes)`);
+  if (result.redFlags.length > 0) {
+    lines.push(`**⚠️ Red Flags:**`);
+    for (const f of result.redFlags) {
+      lines.push(`- ${f}`);
+    }
+    lines.push(``);
   }
-  console.log("Scaffold complete.");
+
+  lines.push(`<details>`);
+  lines.push(`<summary>Comment Preview</summary>`);
+  lines.push(``);
+  lines.push(`> ${commentPreview.slice(0, 300)}${commentPreview.length > 300 ? "..." : ""}`);
+  lines.push(``);
+  lines.push(`</details>`);
+
+  return lines.join("\n");
 }
