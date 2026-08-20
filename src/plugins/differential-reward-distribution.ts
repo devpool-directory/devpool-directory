@@ -1,80 +1,150 @@
 /**
- * @module DifferentialRewardDistribution
- * @description Handoff plugin for implementing differential reward distribution on reopened issues.
- * Generates scaffolding for tracking previous distributions, calculating positive-only deltas,
- * handling payment mode changes (direct/permit), and integrating with Supabase history schema.
- * Ensures beneficiaries only receive additional rewards when issues are reopened and recalculated.
- *
+ * @file differential-reward-distribution.ts
+ * @description Scaffolding and generator utilities for implementing differential
+ * reward distribution when issues are reopened. Calculates and distributes only
+ * the positive difference between previously granted rewards and new calculations.
+ * 
  * Upstream Issue: ubiquity-os-marketplace/text-conversation-rewards#301
- * DevPool Issue: #5012
  * Bounty Value: $600 USD
+ * 
+ * This module provides:
+ * - Transaction history tracking interfaces with Supabase schema generators
+ * - Differential calculation engine with audit trail
+ * - Payment mode transition handling (direct <-> permit)
+ * - Wallet insolvency fallback integration
+ * - Distribution comparison logging utilities
  */
 
 // ============================================================================
 // INTERFACES & TYPES
 // ============================================================================
 
-export interface IDistributionRecord {
+/**
+ * Represents a single reward transaction in the distribution history.
+ */
+export interface RewardTransaction {
+  /** Unique transaction identifier */
+  id: string;
+  /** Issue number this transaction belongs to */
+  issueNumber: number;
+  /** Repository owner/name */
+  repo: string;
+  /** Beneficiary wallet address or username */
   beneficiary: string;
+  /** Reward amount in base units (wei, cents, etc.) */
   amount: bigint;
-  paymentMode: "direct" | "permit";
+  /** Currency/token symbol */
+  currency: string;
+  /** Payment mode used for this transaction */
+  paymentMode: PaymentMode;
+  /** Transaction hash if on-chain, or internal reference */
   txHash?: string;
-  permitNonce?: string;
-  distributedAt: string;
-  issueNumber: number;
-  repoOwner: string;
-  repoName: string;
+  /** Whether the payment was successfully delivered */
+  paid: boolean;
+  /** Timestamp of the transaction */
+  timestamp: Date;
+  /** Optional metadata about failure reasons */
+  failureReason?: string;
 }
 
-export interface IRewardCalculation {
+/**
+ * Supported payment modes for reward distribution.
+ */
+export enum PaymentMode {
+  DIRECT = "direct",
+  PERMIT = "permit",
+  MIXED = "mixed",
+}
+
+/**
+ * Represents the calculated reward state for a beneficiary.
+ */
+export interface BeneficiaryRewardState {
+  /** Beneficiary identifier */
   beneficiary: string;
-  newAmount: bigint;
-  previousAmount: bigint;
-  difference: bigint;
-  requiresPayment: boolean;
+  /** Total calculated reward amount */
+  totalAmount: bigint;
+  /** Amount already distributed in previous rounds */
+  previouslyDistributed: bigint;
+  /** Positive difference to be paid now (0 if no additional reward) */
+  differentialAmount: bigint;
+  /** Payment mode for the differential */
+  paymentMode: PaymentMode;
+  /** Previous payment mode (for transition detection) */
+  previousPaymentMode?: PaymentMode;
+  /** Whether this beneficiary has any unpaid historical transactions */
+  hasUnpaidHistory: boolean;
 }
 
-export interface IDifferentialResult {
+/**
+ * Result of a differential distribution operation.
+ */
+export interface DifferentialDistributionResult {
+  /** Issue number processed */
   issueNumber: number;
-  totalNewRewards: bigint;
-  totalDifferential: bigint;
-  beneficiaries: IRewardCalculation[];
-  skippedBeneficiaries: string[];
-  paymentModeChanged: boolean;
-  previousPaymentMode?: "direct" | "permit";
-  currentPaymentMode: "direct" | "permit";
+  /** Repository identifier */
+  repo: string;
+  /** Total beneficiaries evaluated */
+  totalBeneficiaries: number;
+  /** Beneficiaries with positive differentials */
+  beneficiariesToPay: number;
+  /** Beneficiaries skipped (no change or negative diff) */
+  beneficiariesSkipped: number;
+  /** Total differential amount to distribute */
+  totalDifferentialAmount: bigint;
+  /** Individual beneficiary results */
+  beneficiaryResults: BeneficiaryDistributionResult[];
+  /** Audit log entries generated */
+  auditEntries: AuditLogEntry[];
+  /** Whether distribution was successful */
+  success: boolean;
+  /** Error message if failed */
+  error?: string;
 }
 
-export interface ISupabaseSchema {
-  tableName: string;
-  columns: Array<{
-    name: string;
-    type: string;
-    nullable: boolean;
-    description: string;
-  }>;
+/**
+ * Individual result for a single beneficiary in the distribution.
+ */
+export interface BeneficiaryDistributionResult {
+  beneficiary: string;
+  previousTotal: bigint;
+  newTotal: bigint;
+  differential: bigint;
+  action: "pay" | "skip" | "retry_failed";
+  paymentMode: PaymentMode;
+  modeTransitioned: boolean;
+  txHash?: string;
+  error?: string;
 }
 
-export interface IDifferentialConfig {
+/**
+ * Audit log entry for tracking distribution decisions.
+ */
+export interface AuditLogEntry {
+  timestamp: Date;
+  issueNumber: number;
+  repo: string;
+  beneficiary: string;
+  eventType: "calculated" | "distributed" | "skipped" | "mode_transition" | "error";
+  details: Record<string, unknown>;
+}
+
+/**
+ * Configuration for the differential distribution engine.
+ */
+export interface DifferentialDistributionConfig {
+  /** Supabase connection URL */
   supabaseUrl: string;
-  supabaseKeyEnvVar: string;
-  tableName: string;
-  enableAuditLogging: boolean;
-  skipZeroDifferences: boolean;
-}
-
-// ============================================================================
-// DEFAULT CONFIGURATION
-// ============================================================================
-
-export function getDefaultConfig(): IDifferentialConfig {
-  return {
-    supabaseUrl: process.env.SUPABASE_URL || "",
-    supabaseKeyEnvVar: "SUPABASE_SERVICE_ROLE_KEY",
-    tableName: "reward_distributions",
-    enableAuditLogging: true,
-    skipZeroDifferences: true,
-  };
+  /** Supabase service role key */
+  supabaseKey: string;
+  /** Default currency for rewards */
+  defaultCurrency: string;
+  /** Whether to enable dry-run mode (calculate but don't pay) */
+  dryRun: boolean;
+  /** Maximum retries for failed payments */
+  maxRetries: number;
+  /** Wallet insolvency threshold (below this, use permits) */
+  insolvencyThreshold: bigint;
 }
 
 // ============================================================================
@@ -82,175 +152,104 @@ export function getDefaultConfig(): IDifferentialConfig {
 // ============================================================================
 
 /**
- * Generates the Supabase table schema for tracking distribution history.
+ * Generates SQL migration scripts for extending the Supabase schema
+ * to track complete distribution history required for differential calculations.
+ * 
+ * @returns SQL migration script as string
  */
-export function generateSupabaseSchema(): ISupabaseSchema {
-  return {
-    tableName: "reward_distributions",
-    columns: [
-      { name: "id", type: "uuid", nullable: false, description: "Primary key" },
-      { name: "issue_number", type: "integer", nullable: false, description: "GitHub issue number" },
-      { name: "repo_owner", type: "text", nullable: false, description: "Repository owner" },
-      { name: "repo_name", type: "text", nullable: false, description: "Repository name" },
-      { name: "beneficiary", type: "text", nullable: false, description: "Beneficiary address or username" },
-      { name: "amount_wei", type: "numeric", nullable: false, description: "Reward amount in wei" },
-      { name: "payment_mode", type: "text", nullable: false, description: "direct or permit" },
-      { name: "tx_hash", type: "text", nullable: true, description: "Transaction hash for direct payments" },
-      { name: "permit_nonce", type: "text", nullable: true, description: "Permit nonce for permit payments" },
-      { name: "distributed_at", type: "timestamptz", nullable: false, description: "Distribution timestamp" },
-      { name: "created_at", type: "timestamptz", nullable: false, description: "Row creation timestamp" },
-    ],
-  };
-}
+export function generateSupabaseMigration(): string {
+  return `-- Migration: Add differential reward distribution tracking
+-- Generated at: ${new Date().toISOString()}
+-- Issue: ubiquity-os-marketplace/text-conversation-rewards#301
 
-/**
- * Generates SQL migration script for Supabase schema.
- */
-export function generateMigrationSQL(): string {
-  return `-- Migration: Create reward_distributions table for differential tracking
--- Run this in Supabase SQL Editor
-
-CREATE TABLE IF NOT EXISTS reward_distributions (
+-- Table for tracking all reward transactions per issue/beneficiary
+CREATE TABLE IF NOT EXISTS reward_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   issue_number INTEGER NOT NULL,
-  repo_owner TEXT NOT NULL,
-  repo_name TEXT NOT NULL,
+  repo TEXT NOT NULL,
   beneficiary TEXT NOT NULL,
-  amount_wei NUMERIC NOT NULL CHECK (amount_wei >= 0),
-  payment_mode TEXT NOT NULL CHECK (payment_mode IN ('direct', 'permit')),
+  amount NUMERIC(78, 0) NOT NULL, -- Support for wei-scale values
+  currency TEXT NOT NULL DEFAULT 'UBQ',
+  payment_mode TEXT NOT NULL CHECK (payment_mode IN ('direct', 'permit', 'mixed')),
   tx_hash TEXT,
-  permit_nonce TEXT,
-  distributed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  paid BOOLEAN NOT NULL DEFAULT FALSE,
+  failure_reason TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  
+  -- Indexes for efficient differential lookups
+  CONSTRAINT unique_issue_beneficiary_round UNIQUE (issue_number, repo, beneficiary, created_at)
 );
 
--- Index for fast lookup by issue
-CREATE INDEX IF NOT EXISTS idx_reward_distributions_issue 
-  ON reward_distributions(repo_owner, repo_name, issue_number);
+CREATE INDEX idx_reward_tx_issue_repo ON reward_transactions(issue_number, repo);
+CREATE INDEX idx_reward_tx_beneficiary ON reward_transactions(beneficiary);
+CREATE INDEX idx_reward_tx_paid ON reward_transactions(paid);
+CREATE INDEX idx_reward_tx_created ON reward_transactions(created_at DESC);
 
--- Index for beneficiary history
-CREATE INDEX IF NOT EXISTS idx_reward_distributions_beneficiary 
-  ON reward_distributions(beneficiary);
+-- View for aggregated reward state per beneficiary per issue
+CREATE OR REPLACE VIEW beneficiary_reward_summary AS
+SELECT 
+  issue_number,
+  repo,
+  beneficiary,
+  SUM(CASE WHEN paid THEN amount ELSE 0 END) as total_paid,
+  SUM(amount) as total_calculated,
+  COUNT(*) FILTER (WHERE NOT paid) as unpaid_count,
+  MAX(payment_mode) as last_payment_mode,
+  MAX(created_at) as last_transaction_at
+FROM reward_transactions
+GROUP BY issue_number, repo, beneficiary;
 
--- Unique constraint to prevent duplicate distributions per issue/beneficiary/mode
-CREATE UNIQUE INDEX IF NOT EXISTS idx_reward_distributions_unique 
-  ON reward_distributions(repo_owner, repo_name, issue_number, beneficiary, payment_mode);
+-- Function to get differential state for an issue
+CREATE OR REPLACE FUNCTION get_differential_state(
+  p_issue_number INTEGER,
+  p_repo TEXT
+) RETURNS TABLE (
+  beneficiary TEXT,
+  total_paid NUMERIC,
+  last_payment_mode TEXT,
+  unpaid_count INTEGER
+) AS $$
+BEGIN
+  RETURN QUERY
+  SELECT 
+    brs.beneficiary,
+    brs.total_paid,
+    brs.last_payment_mode,
+    brs.unpaid_count
+  FROM beneficiary_reward_summary brs
+  WHERE brs.issue_number = p_issue_number
+    AND brs.repo = p_repo;
+END;
+$$ LANGUAGE plpgsql STABLE;
 
--- Enable RLS (adjust policies as needed)
-ALTER TABLE reward_distributions ENABLE ROW LEVEL SECURITY;
+-- Trigger to update updated_at timestamp
+CREATE OR REPLACE FUNCTION update_reward_tx_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = NOW();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
 
--- Service role bypasses RLS; add user-facing policies if needed
+CREATE TRIGGER trigger_reward_tx_updated_at
+  BEFORE UPDATE ON reward_transactions
+  FOR EACH ROW
+  EXECUTE FUNCTION update_reward_tx_updated_at();
+
+-- RLS policies (adjust based on your auth setup)
+ALTER TABLE reward_transactions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Service can manage reward transactions"
+  ON reward_transactions
+  FOR ALL
+  USING (auth.role() = 'service_role');
+
+CREATE POLICY "Users can view own reward history"
+  ON reward_transactions
+  FOR SELECT
+  USING (beneficiary = auth.jwt()->>'sub');
 `;
-}
-
-// ============================================================================
-// DISTRIBUTION HISTORY SERVICE
-// ============================================================================
-
-/**
- * Generates the service for querying and storing distribution history.
- */
-export function generateDistributionHistoryService(): string {
-  return `/**
- * Distribution History Service
- * Manages Supabase records for reward distribution tracking.
- */
-import { createClient } from "@supabase/supabase-js";
-
-export class DistributionHistoryService {
-  private supabase: any;
-  private tableName: string;
-
-  constructor(supabaseUrl: string, supabaseKey: string, tableName: string = "reward_distributions") {
-    this.supabase = createClient(supabaseUrl, supabaseKey);
-    this.tableName = tableName;
-  }
-
-  /**
-   * Retrieves all previous distributions for a specific issue.
-   */
-  async getPreviousDistributions(
-    repoOwner: string,
-    repoName: string,
-    issueNumber: number
-  ): Promise<any[]> {
-    const { data, error } = await this.supabase
-      .from(this.tableName)
-      .select("*")
-      .eq("repo_owner", repoOwner)
-      .eq("repo_name", repoName)
-      .eq("issue_number", issueNumber)
-      .order("distributed_at", { ascending: false });
-
-    if (error) throw new Error(\`Failed to fetch distributions: \${error.message}\`);
-    return data || [];
-  }
-
-  /**
-   * Gets the most recent distribution per beneficiary for an issue.
-   * Used to calculate differential amounts.
-   */
-  async getLatestPerBeneficiary(
-    repoOwner: string,
-    repoName: string,
-    issueNumber: number
-  ): Promise<Map<string, any>> {
-    const all = await this.getPreviousDistributions(repoOwner, repoName, issueNumber);
-    const latest = new Map<string, any>();
-
-    for (const record of all) {
-      // Records are sorted desc, so first occurrence is latest
-      if (!latest.has(record.beneficiary)) {
-        latest.set(record.beneficiary, record);
-      }
-    }
-
-    return latest;
-  }
-
-  /**
-   * Records a new distribution after successful payment.
-   */
-  async recordDistribution(record: any): Promise<void> {
-    const { error } = await this.supabase.from(this.tableName).insert({
-      issue_number: record.issueNumber,
-      repo_owner: record.repoOwner,
-      repo_name: record.repoName,
-      beneficiary: record.beneficiary,
-      amount_wei: record.amount.toString(),
-      payment_mode: record.paymentMode,
-      tx_hash: record.txHash || null,
-      permit_nonce: record.permitNonce || null,
-      distributed_at: new Date().toISOString(),
-    });
-
-    if (error) throw new Error(\`Failed to record distribution: \${error.message}\`);
-  }
-
-  /**
-   * Validates that transaction history is consistent before processing.
-   */
-  async validateHistory(
-    repoOwner: string,
-    repoName: string,
-    issueNumber: number
-  ): Promise<{ valid: boolean; issues: string[] }> {
-    const issues: string[] = [];
-    const records = await this.getPreviousDistributions(repoOwner, repoName, issueNumber);
-
-    for (const r of records) {
-      if (!r.beneficiary) issues.push(\`Record \${r.id} missing beneficiary\`);
-      if (r.amount_wei === undefined || r.amount_wei === null) {
-        issues.push(\`Record \${r.id} missing amount\`);
-      }
-      if (!["direct", "permit"].includes(r.payment_mode)) {
-        issues.push(\`Record \${r.id} invalid payment_mode: \${r.payment_mode}\`);
-      }
-    }
-
-    return { valid: issues.length === 0, issues };
-  }
-}`;
 }
 
 // ============================================================================
@@ -258,191 +257,423 @@ export class DistributionHistoryService {
 // ============================================================================
 
 /**
- * Generates the core differential calculation logic.
+ * Core engine for calculating differential rewards.
+ * Compares new reward calculations against historical distributions.
  */
-export function generateDifferentialCalculator(): string {
-  return `/**
- * Differential Reward Calculator
- * Computes positive-only reward differences between old and new calculations.
- */
-export class DifferentialCalculator {
-  private skipZeroDifferences: boolean;
+export class DifferentialRewardCalculator {
+  private config: DifferentialDistributionConfig;
+  private auditLog: AuditLogEntry[] = [];
 
-  constructor(skipZeroDifferences: boolean = true) {
-    this.skipZeroDifferences = skipZeroDifferences;
+  constructor(config: DifferentialDistributionConfig) {
+    this.config = config;
   }
 
   /**
-   * Calculates differential rewards for all beneficiaries.
-   * Only returns beneficiaries with positive differences.
+   * Calculate differential rewards for all beneficiaries of an issue.
+   * 
+   * @param issueNumber - The issue being processed
+   * @param repo - Repository identifier (owner/name)
+   * @param newRewards - Map of beneficiary -> new calculated reward amount
+   * @param paymentMode - Current payment mode for this distribution round
+   * @returns Array of beneficiary reward states with differentials
    */
-  calculate(
+  async calculateDifferentials(
+    issueNumber: number,
+    repo: string,
     newRewards: Map<string, bigint>,
-    previousDistributions: Map<string, any>,
-    currentPaymentMode: "direct" | "permit",
-    previousPaymentMode?: "direct" | "permit"
-  ): any {
-    const beneficiaries: any[] = [];
-    const skippedBeneficiaries: string[] = [];
-    let totalDifferential = BigInt(0);
-    let totalNewRewards = BigInt(0);
+    paymentMode: PaymentMode
+  ): Promise<BeneficiaryRewardState[]> {
+    this.auditLog = [];
+    const states: BeneficiaryRewardState[] = [];
 
-    // Check if payment mode changed
-    const paymentModeChanged = previousPaymentMode !== undefined && 
-                                previousPaymentMode !== currentPaymentMode;
+    // Fetch historical distribution data
+    const history = await this.fetchDistributionHistory(issueNumber, repo);
 
-    for (const [beneficiary, newAmount] of newRewards.entries()) {
-      totalNewRewards += newAmount;
+    // Process each beneficiary in the new calculation
+    for (const [beneficiary, newAmount] of newRewards) {
+      const historicalData = history.get(beneficiary);
+      const previouslyDistributed = historicalData?.totalPaid ?? 0n;
+      const previousPaymentMode = historicalData?.lastPaymentMode;
+      const hasUnpaidHistory = (historicalData?.unpaidCount ?? 0) > 0;
 
-      const prevRecord = previousDistributions.get(beneficiary);
-      const previousAmount = prevRecord ? BigInt(prevRecord.amount_wei) : BigInt(0);
-      const difference = newAmount - previousAmount;
+      // Calculate positive difference only
+      const differential = newAmount > previouslyDistributed 
+        ? newAmount - previouslyDistributed 
+        : 0n;
 
-      if (difference > BigInt(0)) {
-        beneficiaries.push({
+      const state: BeneficiaryRewardState = {
+        beneficiary,
+        totalAmount: newAmount,
+        previouslyDistributed,
+        differentialAmount: differential,
+        paymentMode,
+        previousPaymentMode,
+        hasUnpaidHistory,
+      };
+
+      states.push(state);
+
+      // Log the calculation
+      this.logAudit({
+        timestamp: new Date(),
+        issueNumber,
+        repo,
+        beneficiary,
+        eventType: "calculated",
+        details: {
+          newAmount: newAmount.toString(),
+          previouslyDistributed: previouslyDistributed.toString(),
+          differential: differential.toString(),
+          paymentMode,
+          previousPaymentMode,
+          hasUnpaidHistory,
+        },
+      });
+    }
+
+    // Check for beneficiaries in history but not in new calculation
+    for (const [beneficiary, histData] of history) {
+      if (!newRewards.has(beneficiary) && histData.unpaidCount > 0) {
+        // Beneficiary had failed payments but is no longer eligible
+        this.logAudit({
+          timestamp: new Date(),
+          issueNumber,
+          repo,
           beneficiary,
-          newAmount,
-          previousAmount,
-          difference,
-          requiresPayment: true,
+          eventType: "skipped",
+          details: {
+            reason: "beneficiary_not_in_new_calculation",
+            unpaidCount: histData.unpaidCount,
+            totalPaid: histData.totalPaid.toString(),
+          },
         });
-        totalDifferential += difference;
-      } else {
-        skippedBeneficiaries.push(beneficiary);
       }
     }
 
-    return {
-      beneficiaries,
-      skippedBeneficiaries,
-      totalDifferential,
-      totalNewRewards,
-      paymentModeChanged,
-      previousPaymentMode,
-      currentPaymentMode,
-    };
+    return states;
   }
 
   /**
-   * Handles edge case where original payment failed but issue was reopened.
-   * If previous record exists but tx failed, treat as zero previous payment.
+   * Detect payment mode transitions and handle them appropriately.
+   * When switching between direct and permit modes, special handling
+   * may be required for accounting and user notification.
+   * 
+   * @param states - Beneficiary states to check for transitions
+   * @returns Updated states with transition flags
    */
-  adjustForFailedPayments(
-    calculations: any[],
-    failedTxHashes: Set<string>
-  ): any[] {
-    return calculations.map((calc: any) => {
-      // This would require checking tx status on-chain or via indexer
-      // For scaffold, we expose the hook point
-      return calc;
+  detectModeTransitions(states: BeneficiaryRewardState[]): BeneficiaryRewardState[] {
+    return states.map(state => {
+      const transitioned = state.previousPaymentMode !== undefined &&
+        state.previousPaymentMode !== state.paymentMode &&
+        state.differentialAmount > 0n;
+
+      if (transitioned) {
+        this.logAudit({
+          timestamp: new Date(),
+          issueNumber: 0, // Will be set by caller
+          repo: "",
+          beneficiary: state.beneficiary,
+          eventType: "mode_transition",
+          details: {
+            from: state.previousPaymentMode,
+            to: state.paymentMode,
+            differentialAmount: state.differentialAmount.toString(),
+          },
+        });
+      }
+
+      return state;
     });
   }
-}`;
+
+  /**
+   * Filter states to only those requiring payment action.
+   * Excludes zero differentials unless there are unpaid historical transactions.
+   * 
+   * @param states - All beneficiary states
+   * @returns States that require payment processing
+   */
+  filterActionableStates(states: BeneficiaryRewardState[]): BeneficiaryRewardState[] {
+    return states.filter(state => {
+      // Pay if there's a positive differential
+      if (state.differentialAmount > 0n) return true;
+      
+      // Retry if there are unpaid historical transactions
+      if (state.hasUnpaidHistory) return true;
+      
+      return false;
+    });
+  }
+
+  /**
+   * Get the accumulated audit log.
+   */
+  getAuditLog(): AuditLogEntry[] {
+    return [...this.auditLog];
+  }
+
+  private logAudit(entry: AuditLogEntry): void {
+    this.auditLog.push(entry);
+  }
+
+  private async fetchDistributionHistory(
+    issueNumber: number,
+    repo: string
+  ): Promise<Map<string, { totalPaid: bigint; lastPaymentMode?: PaymentMode; unpaidCount: number }>> {
+    // In production, this would query Supabase using the generated schema
+    // For scaffolding, we provide the query structure
+    
+    /*
+    const { data, error } = await supabase
+      .rpc('get_differential_state', {
+        p_issue_number: issueNumber,
+        p_repo: repo,
+      });
+    
+    if (error) throw new Error(`Failed to fetch history: ${error.message}`);
+    
+    const history = new Map();
+    for (const row of data) {
+      history.set(row.beneficiary, {
+        totalPaid: BigInt(row.total_paid),
+        lastPaymentMode: row.last_payment_mode as PaymentMode,
+        unpaidCount: row.unpaid_count,
+      });
+    }
+    return history;
+    */
+
+    // Placeholder for scaffolding - actual implementation connects to Supabase
+    console.warn("fetchDistributionHistory requires Supabase client initialization");
+    return new Map();
+  }
 }
 
 // ============================================================================
-// PAYMENT MODULE INTEGRATION
+// DISTRIBUTION EXECUTOR
 // ============================================================================
 
 /**
- * Generates the payment module extension for differential processing.
+ * Executes the differential distribution, coordinating between
+ * the calculator, payment modules, and audit logging.
  */
-export function generatePaymentModuleExtension(): string {
-  return `/**
- * Payment Module Extension for Differential Rewards
- * Integrates differential calculation into existing payment flow.
- */
-import { DifferentialCalculator } from "./differential-calculator";
-import { DistributionHistoryService } from "./distribution-history.service";
+export class DifferentialDistributionExecutor {
+  private calculator: DifferentialRewardCalculator;
+  private config: DifferentialDistributionConfig;
 
-export class DifferentialPaymentProcessor {
-  private calculator: DifferentialCalculator;
-  private historyService: DistributionHistoryService;
-
-  constructor(historyService: DistributionHistoryService) {
-    this.calculator = new DifferentialCalculator(true);
-    this.historyService = historyService;
+  constructor(config: DifferentialDistributionConfig) {
+    this.config = config;
+    this.calculator = new DifferentialRewardCalculator(config);
   }
 
   /**
-   * Processes differential rewards for a reopened issue.
-   * Returns only the transactions that need to be executed.
+   * Execute a complete differential distribution cycle.
+   * 
+   * @param params - Distribution parameters
+   * @returns Distribution result with full audit trail
    */
-  async processReopenedIssue(
-    repoOwner: string,
-    repoName: string,
+  async execute(params: {
+    issueNumber: number;
+    repo: string;
+    newRewards: Map<string, bigint>;
+    paymentMode: PaymentMode;
+    walletBalance?: bigint;
+  }): Promise<DifferentialDistributionResult> {
+    const { issueNumber, repo, newRewards, paymentMode, walletBalance } = params;
+
+    try {
+      // Step 1: Calculate differentials
+      let states = await this.calculator.calculateDifferentials(
+        issueNumber,
+        repo,
+        newRewards,
+        paymentMode
+      );
+
+      // Step 2: Detect and handle mode transitions
+      states = this.calculator.detectModeTransitions(states);
+
+      // Step 3: Filter to actionable states
+      const actionableStates = this.calculator.filterActionableStates(states);
+
+      // Step 4: Check wallet solvency if balance provided
+      const effectivePaymentMode = this.checkSolvency(
+        actionableStates,
+        paymentMode,
+        walletBalance
+      );
+
+      // Step 5: Execute payments (or dry run)
+      const beneficiaryResults: BeneficiaryDistributionResult[] = [];
+      let totalDifferential = 0n;
+      let paidCount = 0;
+      let skippedCount = 0;
+
+      for (const state of actionableStates) {
+        const result = await this.processBeneficiary(
+          state,
+          effectivePaymentMode,
+          issueNumber,
+          repo
+        );
+
+        beneficiaryResults.push(result);
+
+        if (result.action === "pay" || result.action === "retry_failed") {
+          totalDifferential += result.differential;
+          paidCount++;
+        } else {
+          skippedCount++;
+        }
+      }
+
+      return {
+        issueNumber,
+        repo,
+        totalBeneficiaries: states.length,
+        beneficiariesToPay: paidCount,
+        beneficiariesSkipped: skippedCount,
+        totalDifferentialAmount: totalDifferential,
+        beneficiaryResults,
+        auditEntries: this.calculator.getAuditLog(),
+        success: true,
+      };
+
+    } catch (error) {
+      return {
+        issueNumber,
+        repo,
+        totalBeneficiaries: 0,
+        beneficiariesToPay: 0,
+        beneficiariesSkipped: 0,
+        totalDifferentialAmount: 0n,
+        beneficiaryResults: [],
+        auditEntries: this.calculator.getAuditLog(),
+        success: false,
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  /**
+   * Check wallet solvency and potentially switch to permit mode.
+   * Integrates with the wallet insolvency fallback mechanism.
+   * 
+   * @param states - Actionable beneficiary states
+   * @param requestedMode - Originally requested payment mode
+   * @param walletBalance - Current wallet balance (if known)
+   * @returns Effective payment mode to use
+   */
+  private checkSolvency(
+    states: BeneficiaryRewardState[],
+    requestedMode: PaymentMode,
+    walletBalance?: bigint
+  ): PaymentMode {
+    if (walletBalance === undefined) return requestedMode;
+
+    const totalRequired = states.reduce((sum, s) => sum + s.differentialAmount, 0n);
+
+    if (requestedMode === PaymentMode.DIRECT && totalRequired > walletBalance) {
+      // Insufficient funds for direct payments - fall back to permits
+      console.warn(
+        `Wallet insolvency detected. Required: ${totalRequired}, Available: ${walletBalance}. ` +
+        `Switching to permit mode.`
+      );
+      return PaymentMode.PERMIT;
+    }
+
+    return requestedMode;
+  }
+
+  /**
+   * Process a single beneficiary's differential payment.
+   * 
+   * @param state - Beneficiary reward state
+   * @param paymentMode - Effective payment mode
+   * @param issueNumber - Issue number
+   * @param repo - Repository identifier
+   * @returns Individual distribution result
+   */
+  private async processBeneficiary(
+    state: BeneficiaryRewardState,
+    paymentMode: PaymentMode,
     issueNumber: number,
-    newRewardMap: Map<string, bigint>,
-    currentPaymentMode: "direct" | "permit"
-  ): Promise<any> {
-    // Step 1: Validate history integrity
-    const validation = await this.historyService.validateHistory(
-      repoOwner, repoName, issueNumber
-    );
-    if (!validation.valid) {
-      console.warn("Distribution history validation issues:", validation.issues);
-      // Continue but log warnings - don't block payment
+    repo: string
+  ): Promise<BeneficiaryDistributionResult> {
+    const modeTransitioned = state.previousPaymentMode !== undefined &&
+      state.previousPaymentMode !== paymentMode;
+
+    // Handle retry case for unpaid historical transactions
+    if (state.differentialAmount === 0n && state.hasUnpaidHistory) {
+      // This is a retry of failed payments, not a new differential
+      if (this.config.dryRun) {
+        return {
+          beneficiary: state.beneficiary,
+          previousTotal: state.previouslyDistributed,
+          newTotal: state.totalAmount,
+          differential: 0n,
+          action: "skip",
+          paymentMode,
+          modeTransitioned,
+        };
+      }
+
+      // In production, would retry the failed transactions here
+      return {
+        beneficiary: state.beneficiary,
+        previousTotal: state.previouslyDistributed,
+        newTotal: state.totalAmount,
+        differential: 0n,
+        action: "retry_failed",
+        paymentMode,
+        modeTransitioned,
+      };
     }
 
-    // Step 2: Get latest distributions per beneficiary
-    const previousDistributions = await this.historyService.getLatestPerBeneficiary(
-      repoOwner, repoName, issueNumber
-    );
-
-    // Step 3: Determine previous payment mode
-    let previousPaymentMode: "direct" | "permit" | undefined;
-    for (const record of previousDistributions.values()) {
-      previousPaymentMode = record.payment_mode;
-      break; // All should be same mode; take first
+    // Skip if no differential
+    if (state.differentialAmount === 0n) {
+      return {
+        beneficiary: state.beneficiary,
+        previousTotal: state.previouslyDistributed,
+        newTotal: state.totalAmount,
+        differential: 0n,
+        action: "skip",
+        paymentMode,
+        modeTransitioned,
+      };
     }
 
-    // Step 4: Calculate differentials
-    const result = this.calculator.calculate(
-      newRewardMap,
-      previousDistributions,
-      currentPaymentMode,
-      previousPaymentMode
-    );
-
-    // Step 5: Log audit trail
-    console.log(\`[Differential] Issue #\${issueNumber}: \${result.beneficiaries.length} beneficiaries need payment, \${result.skippedBeneficiaries.length} skipped\`);
-    console.log(\`[Differential] Total differential: \${result.totalDifferential} wei\`);
-    if (result.paymentModeChanged) {
-      console.log(\`[Differential] Payment mode changed from \${result.previousPaymentMode} to \${result.currentPaymentMode}\`);
+    // Dry run - don't actually pay
+    if (this.config.dryRun) {
+      return {
+        beneficiary: state.beneficiary,
+        previousTotal: state.previouslyDistributed,
+        newTotal: state.totalAmount,
+        differential: state.differentialAmount,
+        action: "skip",
+        paymentMode,
+        modeTransitioned,
+      };
     }
+
+    // In production, would call payment-module.ts here
+    // const txHash = await paymentModule.distribute(
+    //   state.beneficiary,
+    //   state.differentialAmount,
+    //   paymentMode
+    // );
 
     return {
-      ...result,
-      issueNumber,
-      repoOwner,
-      repoName,
+      beneficiary: state.beneficiary,
+      previousTotal: state.previouslyDistributed,
+      newTotal: state.totalAmount,
+      differential: state.differentialAmount,
+      action: "pay",
+      paymentMode,
+      modeTransitioned,
+      // txHash,
     };
   }
-
-  /**
-   * Records completed differential payments to history.
-   */
-  async recordCompletedPayments(
-    repoOwner: string,
-    repoName: string,
-    issueNumber: number,
-    payments: Array<{ beneficiary: string; amount: bigint; txHash?: string; permitNonce?: string }>,
-    paymentMode: "direct" | "permit"
-  ): Promise<void> {
-    for (const payment of payments) {
-      await this.historyService.recordDistribution({
-        issueNumber,
-        repoOwner,
-        repoName,
-        beneficiary: payment.beneficiary,
-        amount: payment.amount,
-        paymentMode,
-        txHash: payment.txHash,
-        permitNonce: payment.permitNonce,
-      });
-    }
-  }
-}`;
 }
 
 // ============================================================================
@@ -450,100 +681,296 @@ export class DifferentialPaymentProcessor {
 // ============================================================================
 
 /**
- * Generates the GitHub comment formatter showing differential amounts.
+ * Generates formatted GitHub comments showing differential distribution details.
+ * Provides clear audit trail visible to issue participants.
+ * 
+ * @param result - Distribution result to format
+ * @returns Markdown-formatted comment body
  */
-export function generateCommentFormatter(): string {
-  return `/**
- * Differential Reward Comment Formatter
- * Generates GitHub comments showing breakdown of differential payments.
- */
-export class DifferentialCommentFormatter {
-  /**
-   * Formats a GitHub comment showing differential reward details.
-   */
-  format(differentialResult: any): string {
-    const lines: string[] = [];
-    
-    lines.push("## 💰 Differential Reward Distribution");
-    lines.push("");
-    lines.push(\`**Issue:** #\${differentialResult.issueNumber}\`);
-    lines.push(\`**Total Additional Rewards:** \${this.formatWei(differentialResult.totalDifferential)} UUSD\`);
-    lines.push("");
-
-    if (differentialResult.paymentModeChanged) {
-      lines.push(\`⚠️ **Payment mode changed:** \${differentialResult.previousPaymentMode} → \${differentialResult.currentPaymentMode}\`);
-      lines.push("");
-    }
-
-    if (differentialResult.beneficiaries.length > 0) {
-      lines.push("### Beneficiaries Receiving Additional Rewards");
-      lines.push("| Beneficiary | Previous | New | Additional |");
-      lines.push("|-------------|----------|-----|------------|");
-      
-      for (const b of differentialResult.beneficiaries) {
-        lines.push(\`| \${b.beneficiary} | \${this.formatWei(b.previousAmount)} | \${this.formatWei(b.newAmount)} | **\${this.formatWei(b.difference)}** |\`);
-      }
-      lines.push("");
-    }
-
-    if (differentialResult.skippedBeneficiaries.length > 0) {
-      lines.push(\`### Skipped (\${differentialResult.skippedBeneficiaries.length} beneficiaries with no change)\`);
-      lines.push(\`\${differentialResult.skippedBeneficiaries.join(", ")}\`);
-      lines.push("");
-    }
-
-    lines.push("---");
-    lines.push("*Generated by UbiquityOS Differential Reward System*");
-
-    return lines.join("\\n");
+export function formatDistributionComment(result: DifferentialDistributionResult): string {
+  if (!result.success) {
+    return `### ⚠️ Differential Distribution Failed\n\n**Error:** ${result.error}\n\nPlease check the logs for details.`;
   }
 
-  private formatWei(wei: bigint): string {
-    const eth = Number(wei) / 1e18;
-    return eth.toFixed(4);
-  }
-}`;
-}
-
-// ============================================================================
-// VALIDATION
-// ============================================================================
-
-export function validateAcceptanceCriteria(files: Record<string, string>): { passed: boolean; checks: Array<{ name: string; status: "pass" | "fail" }> } {
-  const checks = [
-    { name: "Supabase schema defined", status: Object.values(files).some(c => c.includes("reward_distributions") && c.includes("amount_wei")) ? "pass" : "fail" },
-    { name: "Distribution history service", status: Object.values(files).some(c => c.includes("DistributionHistoryService")) ? "pass" : "fail" },
-    { name: "Differential calculator with positive-only logic", status: Object.values(files).some(c => c.includes("DifferentialCalculator") && c.includes("difference > BigInt(0)")) ? "pass" : "fail" },
-    { name: "Payment mode change detection", status: Object.values(files).some(c => c.includes("paymentModeChanged")) ? "pass" : "fail" },
-    { name: "Skip zero differences", status: Object.values(files).some(c => c.includes("skippedBeneficiaries")) ? "pass" : "fail" },
-    { name: "Payment module integration", status: Object.values(files).some(c => c.includes("DifferentialPaymentProcessor")) ? "pass" : "fail" },
-    { name: "GitHub comment formatter with differential table", status: Object.values(files).some(c => c.includes("DifferentialCommentFormatter") && c.includes("Additional")) ? "pass" : "fail" },
-    { name: "History validation before processing", status: Object.values(files).some(c => c.includes("validateHistory")) ? "pass" : "fail" },
-    { name: "SQL migration script generated", status: Object.values(files).some(c => c.includes("CREATE TABLE") && c.includes("reward_distributions")) ? "pass" : "fail" },
+  const lines: string[] = [
+    `### 💰 Differential Reward Distribution`,
+    ``,
+    `**Issue:** #${result.issueNumber}`,
+    `**Beneficiaries Evaluated:** ${result.totalBeneficiaries}`,
+    `**Payments Processed:** ${result.beneficiariesToPay}`,
+    `**Skipped (No Change):** ${result.beneficiariesSkipped}`,
+    `**Total Distributed:** ${formatAmount(result.totalDifferentialAmount)} UBQ`,
+    ``,
   ];
-  return { passed: checks.every(c => c.status === "pass"), checks };
+
+  if (result.beneficiaryResults.length > 0) {
+    lines.push(`| Beneficiary | Previous | New | Differential | Action |`);
+    lines.push(`|-------------|----------|-----|--------------|--------|`);
+
+    for (const br of result.beneficiaryResults) {
+      const actionEmoji = br.action === "pay" ? "✅" : br.action === "retry_failed" ? "🔄" : "⏭️";
+      lines.push(
+        `| ${br.beneficiary} | ${formatAmount(br.previousTotal)} | ${formatAmount(br.newTotal)} | ${formatAmount(br.differential)} | ${actionEmoji} ${br.action} |`
+      );
+    }
+  }
+
+  // Add mode transition warnings
+  const transitions = result.beneficiaryResults.filter(r => r.modeTransitioned);
+  if (transitions.length > 0) {
+    lines.push(``);
+    lines.push(`#### ⚡ Payment Mode Transitions`);
+    for (const t of transitions) {
+      lines.push(`- **${t.beneficiary}**: Switched to \`${t.paymentMode}\` mode`);
+    }
+  }
+
+  lines.push(``);
+  lines.push(`---`);
+  lines.push(`*Generated by Differential Reward Distribution Engine*`);
+
+  return lines.join("\n");
+}
+
+/**
+ * Format bigint amounts for display.
+ */
+function formatAmount(amount: bigint): string {
+  // Convert from wei-scale to human-readable (18 decimals)
+  const str = amount.toString().padStart(19, "0");
+  const intPart = str.slice(0, -18) || "0";
+  const decPart = str.slice(-18).replace(/0+$/, "") || "0";
+  return `${intPart}.${decPart.slice(0, 4)}`;
 }
 
 // ============================================================================
-// EXPORTS
+// PAYMENT MODULE INTEGRATION
 // ============================================================================
 
-export const DifferentialRewardPlugin = {
-  name: "differential-reward-distribution",
-  version: "1.0.0",
-  issue: "#5012",
-  upstreamIssue: "ubiquity-os-marketplace/text-conversation-rewards#301",
-  bountyValue: 600,
-  generators: {
-    supabaseSchema: generateSupabaseSchema,
-    migrationSQL: generateMigrationSQL,
-    historyService: generateDistributionHistoryService,
-    calculator: generateDifferentialCalculator,
-    paymentExtension: generatePaymentModuleExtension,
-    commentFormatter: generateCommentFormatter,
-  },
-  validators: { acceptanceCriteria: validateAcceptanceCriteria },
-  config: { default: getDefaultConfig },
-};
+/**
+ * Generates the integration code for payment-module.ts to support
+ * differential distribution. This patches the existing payment flow.
+ * 
+ * @returns TypeScript code to integrate into payment-module.ts
+ */
+export function generatePaymentModuleIntegration(): string {
+  return `/**
+ * Integration patch for payment-module.ts
+ * Adds differential distribution support for reopened issues.
+ * 
+ * Insert this into the existing payment module after the main
+ * distribute() function.
+ */
 
-export default DifferentialRewardPlugin;
+import { 
+  DifferentialDistributionExecutor,
+  DifferentialDistributionConfig,
+  PaymentMode,
+  formatDistributionComment 
+} from "./differential-reward-distribution";
+
+/**
+ * Extended distribution function that handles differential calculations
+ * for reopened issues. Call this instead of distribute() when the issue
+ * has been previously closed and rewarded.
+ * 
+ * @param context - Issue context with reopen detection
+ * @param rewards - Newly calculated rewards
+ * @param options - Distribution options including payment mode
+ */
+export async function distributeDifferential(
+  context: { issueNumber: number; repo: string; isReopened: boolean },
+  rewards: Map<string, bigint>,
+  options: { paymentMode: PaymentMode; walletBalance?: bigint }
+): Promise<void> {
+  if (!context.isReopened) {
+    // Not a reopened issue - use standard distribution
+    // await distribute(context, rewards, options);
+    return;
+  }
+
+  const config: DifferentialDistributionConfig = {
+    supabaseUrl: process.env.SUPABASE_URL!,
+    supabaseKey: process.env.SUPABASE_SERVICE_KEY!,
+    defaultCurrency: "UBQ",
+    dryRun: process.env.DRY_RUN === "true",
+    maxRetries: 3,
+    insolvencyThreshold: BigInt(process.env.INSOLVENCY_THRESHOLD || "1000000000000000000"),
+  };
+
+  const executor = new DifferentialDistributionExecutor(config);
+  const result = await executor.execute({
+    issueNumber: context.issueNumber,
+    repo: context.repo,
+    newRewards: rewards,
+    paymentMode: options.paymentMode,
+    walletBalance: options.walletBalance,
+  });
+
+  // Post distribution comment to GitHub
+  const comment = formatDistributionComment(result);
+  // await github.rest.issues.createComment({
+  //   owner: context.repo.split("/")[0],
+  //   repo: context.repo.split("/")[1],
+  //   issue_number: context.issueNumber,
+  //   body: comment,
+  // });
+
+  if (!result.success) {
+    throw new Error(\`Differential distribution failed: \${result.error}\`);
+  }
+}
+
+/**
+ * Detect if an issue is being reopened by checking its event history.
+ * 
+ * @param octokit - Authenticated Octokit instance
+ * @param owner - Repository owner
+ * @param repo - Repository name
+ * @param issueNumber - Issue number
+ * @returns True if the issue was previously closed and is now reopened
+ */
+export async function isIssueReopened(
+  octokit: any,
+  owner: string,
+  repo: string,
+  issueNumber: number
+): Promise<boolean> {
+  const { data: events } = await octokit.rest.issues.listEvents({
+    owner,
+    repo,
+    issue_number: issueNumber,
+    per_page: 100,
+  });
+
+  // Check for close -> reopen pattern
+  let wasClosed = false;
+  for (const event of events) {
+    if (event.event === "closed") wasClosed = true;
+    if (event.event === "reopened" && wasClosed) return true;
+  }
+
+  return false;
+}
+`;
+}
+
+// ============================================================================
+// VALIDATION UTILITIES
+// ============================================================================
+
+/**
+ * Validates that a distribution result is internally consistent.
+ * Used for testing and pre-deployment verification.
+ * 
+ * @param result - Distribution result to validate
+ * @returns Validation errors (empty array if valid)
+ */
+export function validateDistributionResult(result: DifferentialDistributionResult): string[] {
+  const errors: string[] = [];
+
+  // Check counts add up
+  const expectedTotal = result.beneficiariesToPay + result.beneficiariesSkipped;
+  if (expectedTotal !== result.totalBeneficiaries && result.success) {
+    errors.push(
+      \`Beneficiary count mismatch: \${result.beneficiariesToPay} + \${result.beneficiariesSkipped} != \${result.totalBeneficiaries}\`
+    );
+  }
+
+  // Check total differential matches sum of individual differentials
+  const sumDifferentials = result.beneficiaryResults.reduce(
+    (sum, br) => sum + (br.action === "pay" ? br.differential : 0n),
+    0n
+  );
+  if (sumDifferentials !== result.totalDifferentialAmount && result.success) {
+    errors.push(
+      \`Total differential mismatch: sum=\${sumDifferentials}, reported=\${result.totalDifferentialAmount}\`
+    );
+  }
+
+  // Check no negative differentials
+  for (const br of result.beneficiaryResults) {
+    if (br.differential < 0n) {
+      errors.push(\`Negative differential for \${br.beneficiary}: \${br.differential}\`);
+    }
+  }
+
+  // Check audit log exists
+  if (result.success && result.auditEntries.length === 0) {
+    errors.push("Successful distribution should have audit entries");
+  }
+
+  return errors;
+}
+
+/**
+ * Generates test fixtures for differential distribution scenarios.
+ * Useful for unit testing the calculator and executor.
+ * 
+ * @param scenario - Test scenario name
+ * @returns Test fixture data
+ */
+export function generateTestFixture(scenario: "basic" | "mode_transition" | "failed_retry" | "insolvency"): {
+  newRewards: Map<string, bigint>;
+  mockHistory: Map<string, { totalPaid: bigint; lastPaymentMode?: PaymentMode; unpaidCount: number }>;
+  expectedDifferentials: Map<string, bigint>;
+} {
+  switch (scenario) {
+    case "basic":
+      return {
+        newRewards: new Map([
+          ["user1", 150n],
+          ["user2", 50n],
+          ["user3", 25n],
+        ]),
+        mockHistory: new Map([
+          ["user1", { totalPaid: 100n, lastPaymentMode: PaymentMode.DIRECT, unpaidCount: 0 }],
+          ["user2", { totalPaid: 50n, lastPaymentMode: PaymentMode.DIRECT, unpaidCount: 0 }],
+        ]),
+        expectedDifferentials: new Map([
+          ["user1", 50n],
+          ["user2", 0n],
+          ["user3", 25n],
+        ]),
+      };
+
+    case "mode_transition":
+      return {
+        newRewards: new Map([
+          ["user1", 200n],
+        ]),
+        mockHistory: new Map([
+          ["user1", { totalPaid: 100n, lastPaymentMode: PaymentMode.DIRECT, unpaidCount: 0 }],
+        ]),
+        expectedDifferentials: new Map([
+          ["user1", 100n],
+        ]),
+      };
+
+    case "failed_retry":
+      return {
+        newRewards: new Map([
+          ["user1", 100n],
+        ]),
+        mockHistory: new Map([
+          ["user1", { totalPaid: 100n, lastPaymentMode: PaymentMode.DIRECT, unpaidCount: 1 }],
+        ]),
+        expectedDifferentials: new Map([
+          ["user1", 0n], // No new differential, but should retry
+        ]),
+      };
+
+    case "insolvency":
+      return {
+        newRewards: new Map([
+          ["user1", 1000n],
+          ["user2", 1000n],
+        ]),
+        mockHistory: new Map(),
+        expectedDifferentials: new Map([
+          ["user1", 1000n],
+          ["user2", 1000n],
+        ]),
+      };
+  }
+}
