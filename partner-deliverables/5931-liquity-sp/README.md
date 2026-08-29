@@ -24,4 +24,6 @@ cd ../ubiquity-dollar/packages/contracts
 forge test --match-contract StabilityPool   # expect 15 passed
 ```
 
+From devpool-directory root: `npm run verify:bounty-5931`
+
 Payout requires PR on **ubiquity/ubiquity-dollar** (see `PR_TEMPLATE.md`).

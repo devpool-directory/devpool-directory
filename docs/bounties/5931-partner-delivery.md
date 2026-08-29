@@ -19,7 +19,14 @@ Apply with `git am` on `ubiquity/ubiquity-dollar` `development` (see bundle READ
 ## Verify
 
 ```bash
-cd ubiquity-dollar/packages/contracts
+npm run verify:bounty-5931              # build + forge SP tests (15 passed)
+VERIFY_FULL=1 npm run verify:bounty-5931 # also runs full forge suite (396 passed)
+```
+
+Or manually:
+
+```bash
+cd ../ubiquity-dollar/packages/contracts
 forge test --match-contract StabilityPool   # 15 passed
 ```
 
