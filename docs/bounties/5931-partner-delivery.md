@@ -1,31 +1,30 @@
 # Bounty #5931 — Partner delivery pointer
 
-**Directory issue:** [devpool-directory#5931](https://github.com/devpool-directory/devpool-directory/issues/5931)  
-**Partner issue:** [ubiquity/ubiquity-dollar#997](https://github.com/ubiquity/ubiquity-dollar/issues/997)  
-**Reward tier:** $1200 (full integration + tests + rollback checklist)
+**Directory:** [devpool-directory#5931](https://github.com/devpool-directory/devpool-directory/issues/5931)  
+**Partner:** [ubiquity/ubiquity-dollar#997](https://github.com/ubiquity/ubiquity-dollar/issues/997)  
+**Tier:** $1200 (integration + tests + rollback checklist)
 
-## Implementation repository
+## Reviewable bundle (this repo)
 
-Solidity work is **not** in `devpool-directory`. It lives in **`ubiquity/ubiquity-dollar`**:
+[`partner-deliverables/5931-liquity-sp/`](../../partner-deliverables/5931-liquity-sp/)
 
-| Artifact | Path (in ubiquity-dollar clone) |
-|----------|----------------------------------|
-| Integration flow | `packages/contracts/migrations/STABILITY_POOL_INTEGRATION.md` |
-| Rollback checklist | `packages/contracts/migrations/STABILITY_POOL_ROLLBACK.md` |
-| Config example | `packages/contracts/.env.example` |
-| Test proof | `packages/contracts/test-proof/stability-pool-forge-test.txt` |
-| Mainnet migration | `packages/contracts/migrations/mainnet/Deploy003_StabilityPool.s.sol` |
+| Artifact | Path |
+|----------|------|
+| Full patch (+1797 lines) | `partner-deliverables/5931-liquity-sp/ubiquity-dollar-997.patch` |
+| Test proof | `partner-deliverables/5931-liquity-sp/stability-pool-forge-test.txt` |
+| PR template | `partner-deliverables/5931-liquity-sp/PR_TEMPLATE.md` |
 
-Local clone for this session: sibling `../ubiquity-dollar` on branch `development` (5+ commits ahead of `origin/development`).
+Apply with `git am` on `ubiquity/ubiquity-dollar` `development` (see bundle README).
 
-## Verify (implementation repo)
+## Verify
 
 ```bash
-cd packages/contracts
-forge test
-forge test --match-contract StabilityPool
+cd ubiquity-dollar/packages/contracts
+forge test --match-contract StabilityPool   # 15 passed
 ```
+
+Sibling clone: `../ubiquity-dollar` (6 commits ahead of `origin/development`).
 
 ## Payout gate
 
-Acceptance requires an **open/merged PR on `ubiquity/ubiquity-dollar`** closing #997, not changes to this directory repo.
+PR on **ubiquity/ubiquity-dollar** closing #997. This directory repo mirrors partner status.

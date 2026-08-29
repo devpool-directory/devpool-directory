@@ -1,0 +1,27 @@
+No files changed, compilation skipped
+
+Ran 2 tests for test/diamond/facets/StabilityPoolFork.t.sol:StabilityPoolForkTest
+[PASS] test_EtchedMainnetAddresses_DepositWithdraw() (gas: 339772)
+[PASS] test_EtchedMainnetAddresses_HarvestRewards() (gas: 506986)
+Suite result: ok. 2 passed; 0 failed; 0 skipped; finished in 6.70s (1.01ms CPU time)
+
+Ran 12 tests for test/diamond/facets/StabilityPoolFacet.t.sol:StabilityPoolFacetTest
+[PASS] testFuzz_DepositWithdraw(uint256) (runs: 256, μ: 334176, ~: 334222)
+[PASS] test_AdminRollbackControls() (gas: 341177)
+[PASS] test_DepositAndWithdraw() (gas: 366435)
+[PASS] test_GasMintHookOverheadUnderLimit() (gas: 736549)
+[PASS] test_HarvestRewards() (gas: 516383)
+[PASS] test_HarvestRewards_withRouting_compoundsAndBuybacks() (gas: 1204320)
+[PASS] test_MigrateExistingCollateral() (gas: 205106)
+[PASS] test_MintDepositsToStabilityPool() (gas: 438202)
+[PASS] test_NonAdminCannotTogglePause() (gas: 39519)
+[PASS] test_PausedBlocksDeposit() (gas: 205117)
+[PASS] test_PausedBlocksMintHook() (gas: 437020)
+[PASS] test_RedeemWithdrawsFromStabilityPool() (gas: 827575)
+Suite result: ok. 12 passed; 0 failed; 0 skipped; finished in 6.90s (507.19ms CPU time)
+
+Ran 1 test for test/diamond/facets/StabilityPoolLiveFork.t.sol:StabilityPoolLiveForkTest
+[PASS] test_LiveFork_RealLUSD_DepositWithdraw() (gas: 436742)
+Suite result: ok. 1 passed; 0 failed; 0 skipped; finished in 9.97s (463.05ms CPU time)
+
+Ran 3 test suites in 10.10s (23.57s CPU time): 15 tests passed, 0 failed, 0 skipped (15 total tests)
