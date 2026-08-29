@@ -32,8 +32,11 @@ echo "==> forge test --match-contract StabilityPool"
 forge test --match-contract StabilityPool
 
 if [[ "${VERIFY_FULL:-}" == "1" ]]; then
-  echo "==> forge test (full suite)"
-  forge test
+  FULL_LOG="${ROOT}/partner-deliverables/5931-liquity-sp/full-forge-test.txt"
+  SUMMARY="${ROOT}/partner-deliverables/5931-liquity-sp/full-forge-test-summary.txt"
+  echo "==> forge test (full suite) -> ${FULL_LOG}"
+  forge test 2>&1 | tee "${FULL_LOG}"
+  grep -E "Ran [0-9]+ test suites" "${FULL_LOG}" | tail -1 > "${SUMMARY}"
 fi
 
 echo "OK: bounty-5931 partner bundle verify passed"
