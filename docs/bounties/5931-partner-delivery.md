@@ -19,7 +19,8 @@ Apply with `git am` on `ubiquity/ubiquity-dollar` `development` (see bundle READ
 ## Verify
 
 ```bash
-npm run verify:bounty-5931              # build + forge SP tests (15 passed)
+npm run verify:bounty-5931              # forge SP tests (15 passed)
+npm test                                # meta wiring + SP forge (agent VERIFY_COMMAND)
 VERIFY_FULL=1 npm run verify:bounty-5931 # also runs full forge suite (396 passed)
 ```
 

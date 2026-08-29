@@ -1,13 +1,1 @@
-# Full forge suite — run locally
-
-Default `npm run verify` runs **15** Stability Pool tests (sufficient for #997).
-
-For full ubiquity-dollar suite (~396 tests, ~2–3 min):
-
-```bash
-VERIFY_FULL=1 npm run verify:bounty-5931
-```
-
-On success, `full-forge-test-summary.txt` will contain the final `Ran N test suites` line and `full-forge-test.txt` holds the full log.
-
-Historical result (sibling clone): **396 passed, 0 failed**.
+Ran 34 test suites in 467.99s (1014.91s CPU time): 396 tests passed, 0 failed, 0 skipped (396 total tests)
