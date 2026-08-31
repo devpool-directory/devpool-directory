@@ -9,6 +9,7 @@ dedupe-issues.jsonl
 dedupe-issues.all.jsonl
 dedupe-plan.json
 dedupe-to-delete.tsv
+.verify-worktrees/
 # Local analysis artifacts (do not commit)
 manual-del-*.tsv
 manual-del-*.log
