@@ -20,5 +20,10 @@
   ],
   "explicit_urls": [],
   "data_branch": "__STORAGE__",
-  "max_shards": 256
+  "max_shards": 256,
+  "permit_generation": {
+    "transfer": true,
+    "permit_url": "https://pay.ubq.fi",
+    "evm_private_key_env": "EVT_PRIVATE_KEY"
+  }
 }

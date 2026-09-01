@@ -8,6 +8,7 @@ export default defineConfig({
     'bin/summary': 'src/cli/summary.ts',
     'bin/backfill': 'src/cli/backfill.ts',
     'bin/cleanup': 'src/cli/cleanup.ts',
+    'bin/transfer': 'src/cli/transfer.ts',
     'bin/twitter-plan': 'src/cli/twitter-plan.ts',
     'bin/twitter-apply': 'src/cli/twitter-apply.ts',
     'bin/twitter-audit': 'src/cli/twitter-audit.ts',

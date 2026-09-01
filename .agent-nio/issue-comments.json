@@ -1,0 +1,58 @@
+{
+  "issue": {
+    "repo": "devpool-directory/devpool-directory",
+    "number": 5017,
+    "url": "https://github.com/devpool-directory/devpool-directory/issues/5017",
+    "title": "Automatic Transfer"
+  },
+  "analysis": {
+    "total": 2,
+    "attempt_count": 2,
+    "attempt_users": [
+      "sungdark"
+    ],
+    "settled_mentions": 0,
+    "maintainer_feedback_count": 0,
+    "missed_gap_mentions": 0,
+    "latest_attempt": {
+      "id": 4174417139,
+      "user": "sungdark",
+      "created_at": "2026-04-02T03:38:37Z",
+      "updated_at": "2026-04-02T03:38:37Z",
+      "body": "I'm working on this. Taking it now.",
+      "url": "https://github.com/devpool-directory/devpool-directory/issues/5017#issuecomment-4174417139",
+      "is_attempt": true,
+      "is_settled": false,
+      "is_maintainer_feedback": false,
+      "is_missed_gap": false
+    },
+    "latest_maintainer_feedback": null,
+    "latest_gap_hint": null
+  },
+  "comments": [
+    {
+      "id": 4166007872,
+      "user": "sungdark",
+      "created_at": "2026-03-31T22:29:30Z",
+      "updated_at": "2026-03-31T22:29:30Z",
+      "body": "Claiming this bounty. I'll implement the Automatic Transfer feature as described in ubiquity-os/permit-generation#6.",
+      "url": "https://github.com/devpool-directory/devpool-directory/issues/5017#issuecomment-4166007872",
+      "is_attempt": true,
+      "is_settled": false,
+      "is_maintainer_feedback": false,
+      "is_missed_gap": false
+    },
+    {
+      "id": 4174417139,
+      "user": "sungdark",
+      "created_at": "2026-04-02T03:38:37Z",
+      "updated_at": "2026-04-02T03:38:37Z",
+      "body": "I'm working on this. Taking it now.",
+      "url": "https://github.com/devpool-directory/devpool-directory/issues/5017#issuecomment-4174417139",
+      "is_attempt": true,
+      "is_settled": false,
+      "is_maintainer_feedback": false,
+      "is_missed_gap": false
+    }
+  ]
+}

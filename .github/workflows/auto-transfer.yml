@@ -1,0 +1,54 @@
+name: Automatic Transfer
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Dry run (no transfers or label writes)"
+        required: false
+        default: "false"
+      force:
+        description: "Re-process issues that already have Transfer labels"
+        required: false
+        default: "false"
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  transfer:
+    concurrency:
+      group: auto-transfer-${{ github.ref }}
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Create GitHub App token (repo)
+        id: app_token
+        uses: actions/create-github-app-token@v1
+        with:
+          app-id: ${{ secrets.APP_ID }}
+          private-key: ${{ secrets.APP_PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+      - name: Install deps
+        run: npm ci || npm i --no-audit --no-fund
+      - name: Run automatic transfer
+        run: |
+          ARGS=""
+          if [ "${{ github.event.inputs.dry_run }}" = "true" ]; then ARGS="$ARGS --dry-run"; fi
+          if [ "${{ github.event.inputs.force }}" = "true" ]; then ARGS="$ARGS --force"; fi
+          npx tsx src/cli/transfer.ts $ARGS
+        env:
+          GITHUB_TOKEN: ${{ steps.app_token.outputs.token }}
+          DIRECTORY_OWNER: ${{ github.repository_owner }}
+          DIRECTORY_REPO: ${{ github.event.repository.name }}
+          WRITE_TARGET_REPO: ${{ github.repository_owner }}/${{ github.event.repository.name }}
+          EVT_PRIVATE_KEY: ${{ secrets.EVT_PRIVATE_KEY }}
+          PERMIT_URL: ${{ vars.PERMIT_URL }}

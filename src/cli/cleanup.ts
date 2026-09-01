@@ -2,6 +2,8 @@
 import process from "node:process";
 import type { Endpoints } from "@octokit/types";
 import { getOctokitRead, getOctokitWrite, getOctokitDelete } from "../github/client";
+import { loadConfig } from "../config/load";
+import { maybeTriggerAutomaticTransfer } from "../transfer/automatic-transfer";
 
 function parsePartnerUrl(text: string): { owner: string; repo: string; number: number } | null {
   if (!text) return null;
@@ -27,6 +29,23 @@ async function main() {
   const okRead = getOctokitRead();
   const okWrite = dry ? (null as any) : getOctokitWrite();
   const okDelete = dry ? (null as any) : getOctokitDelete();
+
+  let permitConfig: { transfer: boolean; permit_url: string; evm_private_key_env: string } | null = null;
+  try {
+    const cfg = loadConfig();
+    if (cfg.permit_generation?.transfer) {
+      permitConfig = {
+        transfer: true,
+        permit_url: cfg.permit_generation.permit_url || "https://pay.ubq.fi",
+        evm_private_key_env: cfg.permit_generation.evm_private_key_env || "EVT_PRIVATE_KEY",
+      };
+    }
+  } catch {
+    // Config may be absent during partial runs
+  }
+
+  const evmPrivateKey = process.env[permitConfig?.evm_private_key_env || "EVT_PRIVATE_KEY"] || "";
+  const permitUrl = process.env.PERMIT_URL || permitConfig?.permit_url || "https://pay.ubq.fi";
 
   // Read via read client (PAT/anon) to avoid requiring write token for listing
   const dirIssues: Endpoints["GET /repos/{owner}/{repo}/issues"]["response"]["data"] = await okRead.paginate((okRead as any).issues.listForRepo, {
@@ -120,7 +139,7 @@ async function main() {
     let partner: Endpoints["GET /repos/{owner}/{repo}/issues/{issue_number}"]["response"]["data"] | null = null;
     try {
       const { data } = await okRead.issues.get({ owner: pOwner, repo: pRepo, issue_number: pNum });
-      partner = data;
+      partner = data as Endpoints["GET /repos/{owner}/{repo}/issues/{issue_number}"]["response"]["data"];
     } catch {
       // Partner not found -> delete all mirrors in this group
       for (const it of list) {
@@ -128,6 +147,8 @@ async function main() {
       }
       continue;
     }
+
+    if (!partner) continue;
 
     const partnerLabels = (partner.labels || []).map((l: any) => (typeof l === "string" ? l : l.name)).filter(Boolean);
     const priced = hasPrice(partnerLabels);
@@ -168,6 +189,21 @@ async function main() {
         }
       }
       kept++;
+
+      await maybeTriggerAutomaticTransfer({
+        enabled: Boolean(permitConfig?.transfer),
+        dry,
+        desiredState,
+        desiredReason,
+        partner,
+        partnerLabels,
+        directoryIssue: keep,
+        permitUrl,
+        evmPrivateKey,
+        owner,
+        repo,
+        octokitWrite: okWrite,
+      });
     } catch {
       // best-effort; continue
     }
