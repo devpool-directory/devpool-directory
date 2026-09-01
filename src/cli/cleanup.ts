@@ -117,10 +117,10 @@ async function main() {
     const pNum = Number(numStr);
 
     // Fetch partner issue
-    let partner: Endpoints["GET /repos/{owner}/{repo}/issues/{issue_number}"]["response"]["data"] | null = null;
+    let partner: Endpoints["GET /repos/{owner}/{repo}/issues/{issue_number}"]["response"]["data"];
     try {
       const { data } = await okRead.issues.get({ owner: pOwner, repo: pRepo, issue_number: pNum });
-      partner = data;
+      partner = data as Endpoints["GET /repos/{owner}/{repo}/issues/{issue_number}"]["response"]["data"];
     } catch {
       // Partner not found -> delete all mirrors in this group
       for (const it of list) {
