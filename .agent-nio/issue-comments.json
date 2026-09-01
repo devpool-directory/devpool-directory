@@ -1,0 +1,57 @@
+{
+  "issue": {
+    "repo": "devpool-directory/devpool-directory",
+    "number": 5846,
+    "url": "https://github.com/devpool-directory/devpool-directory/issues/5846",
+    "title": "Security monitoring"
+  },
+  "analysis": {
+    "total": 3,
+    "attempt_count": 0,
+    "attempt_users": [],
+    "settled_mentions": 0,
+    "maintainer_feedback_count": 0,
+    "missed_gap_mentions": 0,
+    "latest_attempt": null,
+    "latest_maintainer_feedback": null,
+    "latest_gap_hint": null
+  },
+  "comments": [
+    {
+      "id": 4158482786,
+      "user": "sungdark",
+      "created_at": "2026-03-30T22:11:46Z",
+      "updated_at": "2026-03-30T22:11:46Z",
+      "body": "I'm claiming this issue. I'll implement the security monitoring system for Ubiquity OS.",
+      "url": "https://github.com/devpool-directory/devpool-directory/issues/5846#issuecomment-4158482786",
+      "is_attempt": false,
+      "is_settled": false,
+      "is_maintainer_feedback": false,
+      "is_missed_gap": false
+    },
+    {
+      "id": 4174408113,
+      "user": "sungdark",
+      "created_at": "2026-04-02T03:35:25Z",
+      "updated_at": "2026-04-02T03:35:25Z",
+      "body": "Working on this issue. Implementing SecurityMonitor contract for ubiquity-dollar protocol.\n\nStatus:\n- \u2705 SecurityMonitor.sol implemented (ChainLink Automation-compatible)\n- \u2705 Compiles successfully  \n- \u2705 Branch pushed to fork: sungdark/ubiquity-dollar:feat/security-monitor\n- PR: https://github.com/ubiquity/ubiquity-dollar/pull/XXX (pending - fork not recognized as fork by GitHub API)\n\nThe contract monitors LibUbiquityPool collateral balance and triggers protective actions (>30% withdrawal: pauses token, disables collaterals, emits alert).",
+      "url": "https://github.com/devpool-directory/devpool-directory/issues/5846#issuecomment-4174408113",
+      "is_attempt": false,
+      "is_settled": false,
+      "is_maintainer_feedback": false,
+      "is_missed_gap": false
+    },
+    {
+      "id": 4257377893,
+      "user": "haoyousun60-create",
+      "created_at": "2026-04-16T04:24:52Z",
+      "updated_at": "2026-04-16T04:24:52Z",
+      "body": "Submitted: https://github.com/ubiquity/ubiquity-dollar/pull/1010\n\nPR #1010 implements security monitoring with automated pause + notifications, directly addressing this bounty.",
+      "url": "https://github.com/devpool-directory/devpool-directory/issues/5846#issuecomment-4257377893",
+      "is_attempt": false,
+      "is_settled": false,
+      "is_maintainer_feedback": false,
+      "is_missed_gap": false
+    }
+  ]
+}
