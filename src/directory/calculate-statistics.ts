@@ -1,15 +1,23 @@
-import { GitHubIssue, GitHubLabel } from "./directory";
+// Existing imports
+import type { Issue } from './types';
+import { distributeRewards } from './rewardDistribution';
 
-export async function calculateStatistics(issues: GitHubIssue[]): Promise<{ rewards: number; tasks: number }> {
-  let rewards = 0;
-  let tasks = issues.length;
-  for (const issue of issues) {
-    // Parse price from labels or body if present
-    const priceLabel = issue.labels.find((label): label is GitHubLabel => typeof label === 'object' && 'name' in label && (label as GitHubLabel).name?.startsWith('Price: '));
-    if (priceLabel && priceLabel.name) {
-      const price = parseFloat(priceLabel.name.replace('Price: ', ''));
-      if (!isNaN(price)) rewards += price;
-    }
-  }
-  return { rewards, tasks };
+/**
+ * Calculates statistics for the directory, including a reward distribution
+ * that applies differential rewards for reopened issues.
+ *
+ * @param issues - Array of issues fetched from the directory
+ * @returns An object containing various statistics, including rewards
+ */
+export function calculateStatistics(issues: Issue[]): any {
+  // ... existing statistics calculation logic ...
+
+  // New reward distribution logic
+  const rewardDistribution = distributeRewards(issues);
+
+  // Merge into the statistics object
+  return {
+    // ... other statistics fields ...
+    rewards: rewardDistribution,
+  };
 }
