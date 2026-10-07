@@ -1,0 +1,47 @@
+name: UbiquityOS Sprint Management Dashboard
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'bounties/**'
+      - '.github/workflows/sprint-dashboard.yml'
+  schedule:
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  sprint-dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.SPRINT_DASHBOARD_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install pyyaml requests
+
+      - name: Generate Sprint Dashboard
+        env:
+          GITHUB_TOKEN: ${{ secrets.SPRINT_DASHBOARD_TOKEN }}
+        run: python scripts/generate_sprint_dashboard.py
+
+      - name: Commit and Push Dashboard
+        run: |
+          git config user.name "sprint-bot"
+          git config user.email "sprint-bot@ubiquitous.dev"
+          git add docs/sprint-dashboard.md
+          git diff --staged --quiet || (
+            git commit -m "chore: update sprint dashboard [skip ci]" &&
+            git push
+          )
