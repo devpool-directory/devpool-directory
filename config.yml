@@ -1,0 +1,14 @@
+version: 1
+rewards:
+  enabled: true
+  role_rewards:
+    - role: "contributor"
+      amount: 10
+    - role: "maintainer"
+      amount: 50
+    - role: "admin"
+      amount: 100
+webhooks:
+  secret: "your-webhook-secret"
+  events:
+    - "member"
