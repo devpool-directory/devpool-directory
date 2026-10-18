@@ -52,10 +52,13 @@ async function fixture(run: (f: any) => Promise<void>) {
   let failPost = false;
   let failDelete = false;
   let postError: unknown;
+  let deleteError: unknown;
+  let accountError: unknown;
+  let clientMissing = false;
   let timelineRows: any[] | undefined;
   let timelineDone = true;
   let timelineErrors: any[] = [];
-  let timelineFailure = false;
+  let timelineFailure: unknown = false;
   let currentAccount = "account-1";
   let scanned = 0;
   let pendingTree: Array<{ path: string; content: string }> = [];
@@ -96,13 +99,13 @@ async function fixture(run: (f: any) => Promise<void>) {
     }
   } as unknown as Octokit;
   const twitter = { v2: {
-    me: async () => { apiCalls.push("me"); return { data: { id: currentAccount } }; },
+    me: async () => { apiCalls.push("me"); if (accountError) throw accountError; return { data: { id: currentAccount } }; },
     userTimeline: async (accountId: string, params: any) => {
       apiCalls.push("timeline");
       assert.equal(accountId, currentAccount);
       assert.deepEqual(params["tweet.fields"], ["created_at", "author_id", "entities"]);
       assert.equal(params.max_results, 100);
-      if (timelineFailure) throw new Error("timeline unavailable");
+      if (timelineFailure) throw timelineFailure instanceof Error ? timelineFailure : new Error("timeline unavailable");
       return { done: timelineDone, errors: timelineErrors, async *[Symbol.asyncIterator]() {
         for (const tweet of timelineRows ?? liveTweets) { scanned++; yield tweet; }
       } };
@@ -121,7 +124,7 @@ async function fixture(run: (f: any) => Promise<void>) {
         entities: { urls: [{ expanded_url: originalUrl, unwound_url: originalUrl, url: "https://t.co/short" }] } });
       return { data: { id: `tweet-${posts.length}` } };
     },
-    deleteTweet: async (id: string) => { apiCalls.push("delete"); if (failDelete) throw responseError(429); deletes.push(id); events.push("delete"); return { data: { deleted: true } }; }
+    deleteTweet: async (id: string) => { apiCalls.push("delete"); if (deleteError) throw deleteError; if (failDelete) throw responseError(429); deletes.push(id); events.push("delete"); return { data: { deleted: true } }; }
   } } as unknown as TwitterApi;
   const setDelta = (issues: PartnerIssue[]) => {
     const dir = path.join(scratch, "shards", "shard-0");
@@ -135,12 +138,14 @@ async function fixture(run: (f: any) => Promise<void>) {
   fs.writeFileSync(path.join(scratch, "issues-map.json"), "{}");
   process.chdir(scratch);
   try {
-    await run({ sources, saved, events, posts, deletes, apiCalls, liveTweets, setDelta, invoke: () => aggregate({ write, read, remove: write, twitter }),
+    await run({ sources, saved, events, posts, deletes, apiCalls, liveTweets, setDelta, invoke: () => aggregate({ write, read, remove: write, twitter: clientMissing ? undefined : twitter }),
       failSource: (value: boolean) => { failSource = value; }, failReceipt: (value: boolean) => { failReceipt = value; },
       failPost: (value: boolean) => { failPost = value; }, failedRead: (value?: "issues" | "prs") => { failedRead = value; },
       failDelete: (value: boolean) => { failDelete = value; },
       postError: (value: unknown) => { postError = value; }, account: (value: string) => { currentAccount = value; },
-      timeline: (rows?: any[], done = true, errors: any[] = [], failed = false) => {
+      deleteError: (value: unknown) => { deleteError = value; }, accountError: (value: unknown) => { accountError = value; },
+      clientMissing: (value: boolean) => { clientMissing = value; },
+      timeline: (rows?: any[], done = true, errors: any[] = [], failed: unknown = false) => {
         timelineRows = rows; timelineDone = done; timelineErrors = errors; timelineFailure = failed;
       }, scanned: () => scanned,
       shard: async (id: number) => {
@@ -223,6 +228,7 @@ for (const state of ["open", "closed"] as const) {
     await fixture(async (f) => {
       process.env.TWEET_ON_CREATE = "false";
       process.env.DELETE_TWEET_ON_COMPLETE = "false";
+      f.clientMissing(true);
       f.sources[0].state = state;
       if (state === "closed") f.saved["twitter-map.json"]["source-first"] = "existing-tweet";
       f.setDelta(f.sources);
@@ -382,3 +388,76 @@ test("a priced reopen clears obsolete cleanup while retaining and recovering an 
     assert.deepEqual(f.saved["twitter-pending.json"], {});
   });
 });
+
+for (const code of [401, 402, 403]) {
+  test(`definitive HTTP ${code} posting rejection fails visibly, clears the attempt, and retries from an empty delta`, async () => {
+    await fixture(async (f) => {
+      f.sources.push(source("second", 2)); f.setDelta(f.sources);
+      f.postError(responseError(code, { title: "do not echo provider payload" }));
+      await assert.rejects(f.invoke(), (error: any) => {
+        assert.match(error.message, new RegExp(`Twitter posting failed: HTTP ${code}`));
+        assert.doesNotMatch(error.message, /do not echo provider payload/);
+        assert.equal(error.cause, undefined);
+        return true;
+      });
+      assert.equal(f.apiCalls.filter((call: string) => call === "post").length, 1);
+      assert.deepEqual(f.posts, []); assert.deepEqual(f.saved["twitter-map.json"], {});
+      assert.equal(Object.keys(f.saved["twitter-pending.json"]).length, 2);
+      assert.equal(f.saved["twitter-pending.json"]["source-first"].createAttempt, undefined);
+      assert.equal(f.saved["sync-metadata.json"].perRepo["partner/first"].lastSyncISO, "2026-10-18T00:00:00Z");
+      f.postError(undefined); f.setDelta([]); await f.invoke(); await f.invoke();
+      assert.equal(f.posts.length, 2); assert.deepEqual(f.saved["twitter-pending.json"], {});
+      assert.equal(f.saved["twitter-map.json"]["source-first"], "tweet-1");
+      assert.equal(f.apiCalls.includes("timeline"), false);
+    });
+  });
+
+  test(`HTTP ${code} deletion failure preserves original IDs and stops later actions`, async () => {
+    await fixture(async (f) => {
+      f.sources.push(source("second", 2)); f.setDelta(f.sources); await f.invoke();
+      const map = structuredClone(f.saved["twitter-map.json"]);
+      f.sources.forEach((issue: PartnerIssue) => { issue.state = "closed"; }); f.setDelta(f.sources);
+      f.deleteError(responseError(code));
+      await assert.rejects(f.invoke(), new RegExp(`Twitter deletion failed: HTTP ${code}`));
+      assert.deepEqual(f.saved["twitter-map.json"], map); assert.deepEqual(f.deletes, []);
+      assert.equal(Object.keys(f.saved["twitter-pending.json"]).length, 2);
+      assert.equal(f.apiCalls.filter((call: string) => call === "delete").length, 1);
+      f.deleteError(undefined); f.setDelta([]); await f.invoke();
+      assert.deepEqual(f.deletes, ["tweet-1", "tweet-2"]); assert.deepEqual(f.saved["twitter-map.json"], {});
+    });
+  });
+}
+
+test("missing credentials fail enabled pending work while retaining the source publication for retry", async () => {
+  await fixture(async (f) => {
+    f.setDelta(f.sources); f.clientMissing(true);
+    await assert.rejects(f.invoke(), /credentials missing or incomplete/);
+    assert.ok(f.saved["twitter-pending.json"]["source-first"]);
+    assert.deepEqual(f.apiCalls, []);
+    f.clientMissing(false); f.setDelta([]); await f.invoke();
+    assert.equal(f.posts.length, 1);
+  });
+});
+
+for (const endpoint of ["account", "timeline"]) {
+  test(`${endpoint}-read HTTP 402 never clears an existing ambiguous creation attempt`, async () => {
+    await fixture(async (f) => {
+      f.setDelta(f.sources); f.failReceipt(true);
+      await assert.rejects(f.invoke(), /receipt persistence failed/);
+      const attempt = structuredClone(f.saved["twitter-pending.json"]["source-first"].createAttempt);
+      f.failReceipt(false); f.setDelta([]);
+      if (endpoint === "account") f.accountError(responseError(402));
+      else f.timeline(undefined, true, [], responseError(402));
+      await assert.rejects(f.invoke(), (error: any) => {
+        assert.match(error.message, /unresolved Twitter creation/);
+        assert.match(error.cause.message, /HTTP 402/);
+        assert.equal(error.cause.headers, undefined);
+        return true;
+      });
+      assert.deepEqual(f.saved["twitter-pending.json"]["source-first"].createAttempt, attempt);
+      assert.equal(f.posts.length, 1);
+      f.accountError(undefined); f.timeline(); await f.invoke();
+      assert.equal(f.posts.length, 1); assert.equal(f.saved["twitter-map.json"]["source-first"], "tweet-1");
+    });
+  });
+}

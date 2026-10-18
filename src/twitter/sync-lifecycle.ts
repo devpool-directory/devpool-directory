@@ -11,8 +11,15 @@ function canonicalUrl(value: string | undefined) {
 }
 
 function rejectedPost(error: unknown): error is ApiResponseError {
-  return error instanceof ApiResponseError && [400, 401, 403, 404, 422, 429].includes(error.code) &&
+  return error instanceof ApiResponseError && [400, 401, 402, 403, 404, 422, 429].includes(error.code) &&
     !error.hasErrorCode(187) && !/duplicat/i.test(JSON.stringify(error.data));
+}
+
+function hardFailure(operation: string, error: unknown) {
+  const reasons: Record<number, string> = { 401: "authentication rejected", 402: "payment required", 403: "permission denied" };
+  if (error instanceof ApiResponseError && reasons[error.code]) {
+    return new Error(`Twitter ${operation} failed: HTTP ${error.code} (${reasons[error.code]}); pending state retained`);
+  }
 }
 
 async function recoverAttempt(client: TwitterApi, attempt: CreateAttempt, accountId: string) {
@@ -50,10 +57,15 @@ export async function applyTwitterLifecycle(opts: {
 }) {
   const counts = { created: 0, deleted: 0 };
   const client = opts.client;
-  if (!client || (!opts.tweetOnCreate && !opts.deleteOnComplete)) return counts;
+  if (!opts.tweetOnCreate && !opts.deleteOnComplete) return counts;
+  if (!client) {
+    if (Object.keys(opts.pending).length) throw new Error("Twitter credentials missing or incomplete while enabled lifecycle work is pending");
+    return counts;
+  }
   let accountId: string | undefined;
   const account = async () => {
-    accountId ??= (await client.v2.me()).data.id;
+    try { accountId ??= (await client.v2.me()).data.id; }
+    catch (error) { throw hardFailure("account lookup", error) ?? error; }
     if (!accountId) throw new Error("cannot identify authenticated Twitter account");
     return accountId;
   };
@@ -67,7 +79,7 @@ export async function applyTwitterLifecycle(opts: {
     if (issue.createAttempt) {
       let recoveredId: string;
       try { recoveredId = await recoverAttempt(client, issue.createAttempt, await account()); }
-      catch (cause) { throw new Error(`unresolved Twitter creation for source ${nodeId}; refusing to repost`, { cause }); }
+      catch (cause) { throw new Error(`unresolved Twitter creation for source ${nodeId}; refusing to repost`, { cause: hardFailure("receipt lookup", cause) ?? cause }); }
       opts.twitterMap[nodeId] = recoveredId;
       const { createAttempt: _attempt, ...resolved } = issue;
       issue = resolved;
@@ -78,7 +90,11 @@ export async function applyTwitterLifecycle(opts: {
     if ((issue.cleanupOnly || issue.state === "closed") && opts.deleteOnComplete && opts.twitterMap[nodeId]) {
       const tweetId = opts.twitterMap[nodeId];
       try { if (!(await client.v2.deleteTweet(tweetId)).data.deleted) continue; }
-      catch (error) { if (!(error instanceof ApiResponseError) || error.code !== 404) continue; }
+      catch (error) {
+        const failure = hardFailure("deletion", error);
+        if (failure) throw failure;
+        if (!(error instanceof ApiResponseError) || error.code !== 404) continue;
+      }
       delete opts.twitterMap[nodeId];
       delete opts.pending[nodeId];
       counts.deleted++;
@@ -101,6 +117,8 @@ export async function applyTwitterLifecycle(opts: {
         if (rejectedPost(cause)) {
           opts.pending[nodeId] = issue;
           await save();
+          const failure = hardFailure("posting", cause);
+          if (failure) throw failure;
           console.warn(`[twitter] post rejected (${cause.code}); retaining candidate`);
           continue;
         }
