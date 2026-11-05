@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ubiquity Proposal Router</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="shell">
+      <section class="composer" aria-labelledby="router-title">
+        <div class="heading-row">
+          <div>
+            <p class="eyebrow">Ubiquity</p>
+            <h1 id="router-title">Proposal Router</h1>
+          </div>
+          <a class="repo-link" href="https://github.com/ubiquity/.github/issues/123">Issue #123</a>
+        </div>
+
+        <label for="proposal">Proposal</label>
+        <textarea
+          id="proposal"
+          rows="12"
+          placeholder="Describe the bug, feature, or product idea. Repository suggestions update as you type."
+        ></textarea>
+
+        <div class="field-grid">
+          <div>
+            <label for="title">Issue title</label>
+            <input id="title" type="text" placeholder="Auto-filled from the first proposal line" />
+          </div>
+          <div>
+            <label for="repository">Target repository</label>
+            <select id="repository"></select>
+          </div>
+        </div>
+
+        <div class="actions">
+          <a id="issue-link" class="primary-action" href="#" aria-disabled="true">Open GitHub Issue</a>
+          <button id="copy-link" type="button">Copy Link</button>
+        </div>
+      </section>
+
+      <aside class="results" aria-labelledby="results-title">
+        <h2 id="results-title">Suggested Repositories</h2>
+        <ol id="suggestions"></ol>
+      </aside>
+    </main>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
+
