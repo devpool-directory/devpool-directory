@@ -1,0 +1,51 @@
+[
+  {
+    "owner": "ubiquity",
+    "name": "pay.ubq.fi",
+    "description": "Payment, permits, cash out, invoices, claim flows, and payout user interfaces.",
+    "keywords": ["pay", "payment", "payout", "cash out", "cashout", "permit", "invoice", "claim", "safe", "wallet", "treasury"]
+  },
+  {
+    "owner": "ubiquity",
+    "name": "work.ubq.fi",
+    "description": "DevPool work discovery, issue browsing, task views, XP surfaces, and contributor dashboards.",
+    "keywords": ["work", "devpool", "task", "bounty", "xp", "dashboard", "contributor", "assignment", "hunter"]
+  },
+  {
+    "owner": "ubiquity-os",
+    "name": "ubiquity-os-kernel",
+    "description": "Core UbiquityOS runtime, plugin orchestration, command routing, and event handling.",
+    "keywords": ["kernel", "plugin", "runtime", "command", "webhook", "router", "orchestration", "bot"]
+  },
+  {
+    "owner": "ubiquity-os",
+    "name": "ubiquity-os-plugin-installer",
+    "description": "Plugin installation, configuration, marketplace setup, and repository onboarding.",
+    "keywords": ["install", "installer", "plugin", "marketplace", "configuration", "setup", "onboard", "repository"]
+  },
+  {
+    "owner": "ubiquity-os-marketplace",
+    "name": "text-conversation-rewards",
+    "description": "Conversation rewards, comment incentives, scoring, pricing, and XP computation.",
+    "keywords": ["comment", "conversation", "reward", "incentive", "score", "pricing", "xp", "label", "words"]
+  },
+  {
+    "owner": "ubiquity",
+    "name": "ubiquity-dollar",
+    "description": "Ubiquity Dollar protocol, smart contracts, governance, token emissions, and DeFi mechanics.",
+    "keywords": ["dollar", "uad", "ubq", "contract", "solidity", "governance", "emissions", "token", "defi"]
+  },
+  {
+    "owner": "ubiquity",
+    "name": "ubq.fi-router",
+    "description": "ubq.fi routing, shared navigation, landing routes, app discovery, and footer debugging links.",
+    "keywords": ["router", "route", "navigation", "footer", "landing", "ubq.fi", "redirect", "hash", "revision"]
+  },
+  {
+    "owner": "ubiquity",
+    "name": ".github",
+    "description": "Organization profile, reusable workflows, shared templates, and cross-repository tools.",
+    "keywords": ["github", "template", "workflow", "proposal", "organization", "profile", "shared", "meta"]
+  }
+]
+
