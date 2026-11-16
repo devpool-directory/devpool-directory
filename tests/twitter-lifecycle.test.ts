@@ -319,7 +319,7 @@ for (const change of ["closed", "unpriced", "cancelled"] as const) {
   });
 }
 
-for (const error of [new Error("transport timeout"), responseError(503), responseError(403, { errors: [{ code: 187, message: "duplicate content" }] })]) {
+for (const error of [new Error("transport timeout"), responseError(502), responseError(503), responseError(403, { errors: [{ code: 187, message: "duplicate content" }] })]) {
   test(`ambiguous post response ${error.message} retains its attempt and never blindly retries`, async () => {
     await fixture(async (f) => {
       f.setDelta(f.sources); f.postError(error);

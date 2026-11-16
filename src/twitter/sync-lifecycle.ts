@@ -104,7 +104,8 @@ export async function applyTwitterLifecycle(opts: {
           console.warn(`[twitter] post rejected (${cause.code}); retaining candidate`);
           continue;
         }
-        throw new Error(`ambiguous Twitter creation for source ${nodeId}; retaining durable attempt`, { cause });
+        const status = cause?.status ?? cause?.code;
+        throw new Error(`ambiguous Twitter creation for source ${nodeId} (status ${status ?? "transport"}); retaining durable attempt`, { cause });
       }
       opts.twitterMap[nodeId] = tweetId;
       delete opts.pending[nodeId];
