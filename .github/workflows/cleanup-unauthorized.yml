@@ -52,7 +52,7 @@ jobs:
             fi
             echo "$RESP" | jq -r --arg A1 "$ALLOWED_1" --arg A2 "$ALLOWED_2" '
               .data.repository.issues.nodes[] | select((.author.login != $A1) and (.author.login != $A2))
-              | select((.body // "") | test("^https://(www\\.)?github\\.com/[^/]+/[^/]+/issues/[0-9]+$"))
+              | select((.body // "") | test("^https://(www\\.)?github\\.com/[^/]+/[^/]+/issues/[0-9]+$") | not)
               | [.number, .id, .author.login, .body] | @tsv' >> del.tsv
             HAS_NEXT=$(echo "$RESP" | jq -r '.data.repository.issues.pageInfo.hasNextPage')
             CURSOR=$(echo "$RESP" | jq -r '.data.repository.issues.pageInfo.endCursor')

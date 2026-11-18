@@ -235,7 +235,9 @@ export async function main(clients?: { write: Octokit; read: Octokit; remove: Oc
   if (deleteOnComplete) {
     for (const issue of [...allIssues.filter((issue) => issue.state === "closed"),
       ...recovered.cancelledNodeIds.map((node) => issuesPrev?.[node]).filter(Boolean)]) {
-      if (twitterMap[issue.node_id]) twitterPending[issue.node_id] = { ...twitterPending[issue.node_id], ...issue, cleanupOnly: true };
+      if (twitterMap[issue.node_id] && !issue.labels.some((label: string) => /^Price:/.test(label))) {
+        twitterPending[issue.node_id] = { ...twitterPending[issue.node_id], ...issue, cleanupOnly: true };
+      }
     }
   }
 
