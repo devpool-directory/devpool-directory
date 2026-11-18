@@ -1,0 +1,5 @@
+
+> devpool-directory-v2@0.4.0 test
+> tsx --test tests/fetch-pagination.test.ts tests/sync-failure.test.ts tests/storage-load.test.ts tests/mirror-recovery.test.ts tests/twitter-lifecycle.test.ts tests/backfill-public.test.ts
+
+Accesso negato.
