@@ -108,7 +108,7 @@ for (const visibility of [undefined, null, "false"]) {
 test("historical backfill fails a visibility read without fetching or publishing source data", async () => {
   await fixture({ visibilityError: true }, async ({ invoke, saved, fetched, commits }: any) => {
     const before = structuredClone(saved);
-    await assert.rejects(invoke(), /visibility unavailable/);
+    assert.rejects(invoke(), /visibility unavailable/);
     assert.deepEqual(fetched, []);
     assert.deepEqual(commits, []);
     assert.deepEqual(saved, before);
