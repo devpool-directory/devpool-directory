@@ -1,5 +1,3 @@
-import dotenv from "dotenv";
-dotenv.config();
 import { readJsonFromStorage, writeArtifacts, writeTwitterMap } from "../artifacts/storage";
 import { initializeTwitterMap, TwitterMap } from "../twitter/initialize-twitter-map";
 import { buildDesiredSet } from "../twitter/desired";
