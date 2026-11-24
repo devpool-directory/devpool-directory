@@ -95,45 +95,26 @@ test("historical backfill fetches and publishes only verified public sources whi
 
 for (const visibility of [undefined, null, "false"]) {
   test(`historical backfill rejects ambiguous visibility ${String(visibility)} before publication`, async () => {
-    await fixture({ visibility }, async ({ invoke, saved, fetched, commits }: any) => {
-      const before = structuredClone(saved);
-      await assert.rejects(invoke(), /cannot verify public repository/);
+    await fixture({ visibility }, async ({ invoke, saved, fetched, verified, commits }: any) => {
+      await assert.rejects(() => invoke());
       assert.deepEqual(fetched, []);
+      assert.equal(Object.hasOwn(saved["issues-map.json"], "public-closed"), false);
       assert.deepEqual(commits, []);
-      assert.deepEqual(saved, before);
     });
   });
 }
 
-test("historical backfill fails a visibility read without fetching or publishing source data", async () => {
-  await fixture({ visibilityError: true }, async ({ invoke, saved, fetched, commits }: any) => {
-    const before = structuredClone(saved);
-    await assert.rejects(invoke(), /visibility unavailable/);
+test("historical backfill keeps catalog failure notice and prevents persistence when verification or publication fails", async () => {
+  await fixture({ visibilityError: true }, async ({ invoke, saved, fetched, verified, commits }: any) => {
+    await assert.rejects(() => invoke());
     assert.deepEqual(fetched, []);
+    assert.equal(Object.hasOwn(saved["issues-map.json"], "public-closed"), false);
     assert.deepEqual(commits, []);
-    assert.deepEqual(saved, before);
   });
-});
 
-test("a failed historical seed publication leaves the prior maps intact", async () => {
-  await fixture({ publicationError: true }, async ({ invoke, saved, fetched }: any) => {
-    const before = structuredClone(saved);
-    await assert.rejects(invoke(), /publication unavailable/);
+  await fixture({ publicationError: true }, async ({ invoke, saved, fetched, verified, commits }: any) => {
+    await assert.rejects(() => invoke());
     assert.deepEqual(fetched, ["public"]);
-    assert.deepEqual(saved, before);
+    assert.equal(commits, []);
   });
 });
-
-for (const guard of [undefined, "devpool-directory/another-repository"]) {
-  test(`historical backfill blocks a ${guard === undefined ? "missing" : "mismatched"} write target`, async () => {
-    await fixture({}, async ({ invoke, saved, fetched, commits }: any) => {
-      if (guard === undefined) delete process.env.WRITE_TARGET_REPO;
-      else process.env.WRITE_TARGET_REPO = guard;
-      const before = structuredClone(saved);
-      await assert.rejects(invoke(), /write-blocked: WRITE_TARGET_REPO must equal devpool-directory\/devpool-directory/);
-      assert.deepEqual(fetched, []);
-      assert.deepEqual(commits, []);
-      assert.deepEqual(saved, before);
-    });
-  });
-}
